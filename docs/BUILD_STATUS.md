@@ -79,8 +79,6 @@ Verification:
 - API verification for `/api/devices` and `/api/devices?capability=water_valve`.
 - Browser render verification for Water Management device coverage.
 
-## In Progress
-
 ### E04 - Event Bus, Telemetry, And Audit
 
 Status: complete and pushed to `origin/main`.
@@ -103,8 +101,33 @@ Verification:
 - API verification for `/api/events`, `/api/audit`, `/api/telemetry/summary`, and `/api/platform/overview`.
 - Browser render verification for the Operational Ledger dashboard.
 
+### E05 - Automation Engine And Safety Policy
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed automation engine seed package for rules, scenes, scenarios, and safety policies.
+- Deterministic rule matching for device telemetry and schedule-style triggers.
+- Condition evaluation against the device registry.
+- Command planning for valve, lock, EV, notification, and narrowband-path actions.
+- Safety policy gates for physical actuation, simulation, approval, signed commands, manual override, and constrained-link routing.
+- API endpoints for `/api/automations`, `/api/automations/evaluate`, `/api/automations/scenarios/:id/run`, and `/api/approvals`.
+- Command centre summary now includes armed automation and policy counts.
+- Automation dashboard panel for drill scenarios, rules, policies, and approval queue.
+- Tests for approval-gated leak response, approved execution readiness, manual override blocking, LoRaWAN command routing, and EV reserve guard.
+
+Verification:
+
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/automations`, `/api/automations/scenarios/:id/run`, and `/api/approvals`.
+- Browser render verification for the Automation Engine / Safety Policy panel, LoRaWAN leak drill, EV reserve drill, and approval queue.
+
 ## Next
 
-### E05 - Automation Engine And Safety Policy
+### E06 - Web Console And Global Command Centre
 
 Status: next planned build slice.

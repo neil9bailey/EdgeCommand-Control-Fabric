@@ -1,0 +1,262 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "engine": {
+    "id": "automation-engine",
+    "mode": "deterministic-local",
+    "defaultPolicy": "physical-safety-approval",
+    "rulesArmed": true
+  },
+  "policyDefinitions": [
+    {
+      "id": "physical-safety-approval",
+      "name": "Physical Safety Approval",
+      "risk": "high",
+      "scope": ["water_valve", "lock", "gate", "battery", "ev_charger"],
+      "requiresApproval": true,
+      "requiresSimulation": true,
+      "requiresSignedCommand": true,
+      "approvalRoles": ["Automation.Admin", "Automation.Security", "Automation.AgentApprover"],
+      "emergencyBypass": "simulation_only_until_e05_runtime",
+      "blockReasons": ["manual_override", "device_offline", "policy_approval_missing"]
+    },
+    {
+      "id": "narrowband-command-safety",
+      "name": "Narrowband Command Safety",
+      "risk": "high",
+      "scope": ["lorawan", "lte-m", "nb-iot"],
+      "requiresApproval": true,
+      "requiresSimulation": true,
+      "requiresSignedCommand": true,
+      "approvalRoles": ["Automation.Admin", "Automation.Security", "Automation.AgentApprover"],
+      "emergencyBypass": "compact_signed_p0_only",
+      "blockReasons": ["payload_too_large", "rich_media_blocked", "ack_required"]
+    },
+    {
+      "id": "privacy-boundary",
+      "name": "Privacy Boundary",
+      "risk": "medium",
+      "scope": ["camera", "occupancy", "elder_care"],
+      "requiresApproval": false,
+      "requiresSimulation": false,
+      "requiresSignedCommand": false,
+      "approvalRoles": ["Automation.Admin", "Automation.Security"],
+      "emergencyBypass": "not_allowed",
+      "blockReasons": ["privacy_mode_enabled", "bulk_media_narrowband"]
+    },
+    {
+      "id": "energy-reserve-guard",
+      "name": "Energy Reserve Guard",
+      "risk": "medium",
+      "scope": ["battery", "ev_charger", "solar_inverter"],
+      "requiresApproval": false,
+      "requiresSimulation": true,
+      "requiresSignedCommand": false,
+      "approvalRoles": ["Automation.Admin", "Automation.Operator"],
+      "emergencyBypass": "critical_load_only",
+      "blockReasons": ["battery_reserve", "tariff_window", "grid_outage"]
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule-home-leak-main-valve",
+      "name": "Home Leak Main Valve Protection",
+      "state": "armed",
+      "moduleId": "water-management",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "trigger": {
+        "deviceId": "dev-leak-utility-01",
+        "capability": "leak_sensor",
+        "field": "leak",
+        "operator": "equals",
+        "value": true
+      },
+      "conditions": [
+        { "deviceId": "dev-water-valve-main-01", "field": "manualOverride", "operator": "equals", "value": false },
+        { "deviceId": "dev-water-valve-main-01", "field": "position", "operator": "equals", "value": "open" }
+      ],
+      "actions": [
+        {
+          "id": "act-close-home-main-valve",
+          "type": "set_state",
+          "deviceId": "dev-water-valve-main-01",
+          "capability": "water_valve",
+          "desiredState": { "position": "closed" },
+          "requiresAck": true,
+          "encodedBytes": 42,
+          "pathPreference": ["lan", "lte-m", "lorawan"]
+        },
+        {
+          "id": "act-alert-home-leak",
+          "type": "notify",
+          "channel": "owner_push",
+          "message": "Leak detected in utility room. Main valve close requires approval."
+        }
+      ],
+      "policies": ["physical-safety-approval"],
+      "approvalMode": "required_before_actuation",
+      "simulationProfile": "water_leak_p0_failover"
+    },
+    {
+      "id": "rule-cottage-leak-lorawan-valve",
+      "name": "Remote Cottage LoRaWAN Leak Protection",
+      "state": "armed",
+      "moduleId": "water-management",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "trigger": {
+        "deviceId": "dev-cottage-leak-01",
+        "capability": "leak_sensor",
+        "field": "leak",
+        "operator": "equals",
+        "value": true
+      },
+      "conditions": [
+        { "deviceId": "dev-cottage-valve-01", "field": "manualOverride", "operator": "equals", "value": false },
+        { "deviceId": "dev-cottage-gateway-01", "field": "lorawan", "operator": "equals", "value": "ready" }
+      ],
+      "actions": [
+        {
+          "id": "act-close-cottage-valve",
+          "type": "set_state",
+          "deviceId": "dev-cottage-valve-01",
+          "capability": "water_valve",
+          "desiredState": { "position": "closed" },
+          "requiresAck": true,
+          "encodedBytes": 46,
+          "pathPreference": ["lorawan", "lte-m"]
+        },
+        {
+          "id": "act-alert-cottage-leak",
+          "type": "notify",
+          "channel": "owner_push",
+          "message": "Remote cottage leak detected. Compact LoRaWAN valve command is approval-gated."
+        }
+      ],
+      "policies": ["physical-safety-approval", "narrowband-command-safety"],
+      "approvalMode": "required_before_actuation",
+      "simulationProfile": "remote_cottage_p0_lorawan"
+    },
+    {
+      "id": "rule-front-door-night-lock-check",
+      "name": "Night Front Door Secure Check",
+      "state": "armed",
+      "moduleId": "security-access",
+      "risk": "medium",
+      "trafficClass": "P1_SECURITY",
+      "trigger": {
+        "type": "schedule",
+        "field": "time",
+        "operator": "equals",
+        "value": "22:30"
+      },
+      "conditions": [
+        { "deviceId": "dev-front-lock-01", "field": "locked", "operator": "equals", "value": false }
+      ],
+      "actions": [
+        {
+          "id": "act-lock-front-door",
+          "type": "set_state",
+          "deviceId": "dev-front-lock-01",
+          "capability": "lock",
+          "desiredState": { "locked": true },
+          "requiresAck": true,
+          "encodedBytes": 38,
+          "pathPreference": ["lan", "lte-m"]
+        }
+      ],
+      "policies": ["physical-safety-approval"],
+      "approvalMode": "required_before_actuation",
+      "simulationProfile": "security_lock_night"
+    },
+    {
+      "id": "rule-ev-battery-reserve-guard",
+      "name": "EV Charging Battery Reserve Guard",
+      "state": "armed",
+      "moduleId": "ev-charging",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "trigger": {
+        "deviceId": "dev-ev-charger-01",
+        "capability": "ev_charger",
+        "field": "pluggedIn",
+        "operator": "equals",
+        "value": true
+      },
+      "conditions": [
+        { "deviceId": "dev-ev-charger-01", "field": "charging", "operator": "equals", "value": false }
+      ],
+      "actions": [
+        {
+          "id": "act-hold-ev-charge",
+          "type": "hold",
+          "deviceId": "dev-ev-charger-01",
+          "capability": "ev_charger",
+          "desiredState": { "charging": false },
+          "requiresAck": false,
+          "encodedBytes": 34,
+          "pathPreference": ["lan"]
+        }
+      ],
+      "policies": ["energy-reserve-guard"],
+      "approvalMode": "policy_decision_only",
+      "simulationProfile": "energy_reserve_hold"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene-water-emergency",
+      "name": "Water Emergency Response",
+      "moduleId": "water-management",
+      "rules": ["rule-home-leak-main-valve", "rule-cottage-leak-lorawan-valve"],
+      "requiresApproval": true,
+      "dashboards": ["Water Management", "Narrowband Command Centre", "Safety Policy"]
+    },
+    {
+      "id": "scene-night-secure",
+      "name": "Night Secure",
+      "moduleId": "security-access",
+      "rules": ["rule-front-door-night-lock-check"],
+      "requiresApproval": true,
+      "dashboards": ["Security And Access", "Safety Policy"]
+    },
+    {
+      "id": "scene-energy-reserve",
+      "name": "Energy Reserve",
+      "moduleId": "ev-charging",
+      "rules": ["rule-ev-battery-reserve-guard"],
+      "requiresApproval": false,
+      "dashboards": ["Energy And Solar", "EV Charging"]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "scenario-home-leak",
+      "name": "Home Utility Leak Drill",
+      "event": {
+        "deviceId": "dev-leak-utility-01",
+        "capability": "leak_sensor",
+        "observedState": { "leak": true, "battery": 90, "rssi": -61 }
+      }
+    },
+    {
+      "id": "scenario-cottage-leak-lorawan",
+      "name": "Remote Cottage LoRaWAN Leak Drill",
+      "event": {
+        "deviceId": "dev-cottage-leak-01",
+        "capability": "leak_sensor",
+        "observedState": { "leak": true, "battery": 86, "path": "lorawan" }
+      }
+    },
+    {
+      "id": "scenario-ev-reserve",
+      "name": "EV Reserve Hold Drill",
+      "event": {
+        "deviceId": "dev-ev-charger-01",
+        "capability": "ev_charger",
+        "observedState": { "pluggedIn": true, "charging": false, "limitAmps": 16 }
+      }
+    }
+  ]
+}

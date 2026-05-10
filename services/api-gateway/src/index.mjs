@@ -21,6 +21,12 @@ import {
   requireRoles,
 } from "./auth.mjs";
 import { getSecretProviderStatus, loadExternalSecrets } from "./secrets.mjs";
+import {
+  evaluateAutomation,
+  findScenario,
+  loadAutomationEngine,
+  summarizeAutomationEngine,
+} from "./automationEngine.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -30,6 +36,7 @@ const port = Number(process.env.API_GATEWAY_PORT || process.env.PORT || 3101);
 const catalog = loadCatalog();
 const deviceRegistry = loadDeviceRegistry();
 const eventLedger = loadEventLedger();
+const automationEngine = loadAutomationEngine();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -44,10 +51,12 @@ function buildOverview() {
   const summary = summarizeCatalog(catalog);
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
+  const automationSummary = summarizeAutomationEngine(automationEngine);
   return {
     ...summary,
     devices: deviceSummary,
     events: eventSummary,
+    automation: automationSummary,
     runtime: {
       service: "api-gateway",
       mode: process.env.AUTH_MODE || "development",
@@ -66,6 +75,7 @@ function buildOverview() {
       agentMode: "deterministic mock",
       deviceRegistry: `${deviceSummary.deviceCount} devices / ${deviceSummary.capabilityCount} capabilities`,
       eventLedger: `${eventSummary.eventCount} events / ${eventSummary.auditRequired} audit-bound`,
+      automationEngine: `${automationSummary.armedRules} armed rules / ${automationSummary.policyCount} policies`,
     },
     links: [
       { id: "lan", name: "Local LAN", class: "lan_local", status: "healthy", score: 98, carries: ["P0", "P1", "P2", "P3", "P4"] },
@@ -277,6 +287,82 @@ app.get("/api/commands", (_req, res) => {
       events,
     }),
     rule: "Commands are proposed, critiqued, policy-gated, approved, signed, routed, and acknowledged.",
+  });
+});
+
+app.get("/api/automations", (_req, res) => {
+  res.json({
+    engine: automationEngine.engine,
+    policies: automationEngine.policyDefinitions,
+    rules: automationEngine.rules,
+    scenes: automationEngine.scenes,
+    scenarios: automationEngine.scenarios,
+    summary: summarizeAutomationEngine(automationEngine),
+  });
+});
+
+app.post(
+  "/api/automations/evaluate",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const scenario = req.body?.scenarioId ? findScenario(automationEngine, req.body.scenarioId) : req.body;
+    if (!scenario) {
+      res.status(404).json({ error: "scenario_not_found", id: req.body?.scenarioId });
+      return;
+    }
+
+    const mergedScenario = {
+      ...scenario,
+      ...req.body,
+      event: req.body?.event || scenario.event,
+    };
+    res.json(evaluateAutomation(automationEngine, deviceRegistry, mergedScenario, req.auth));
+  },
+);
+
+app.post(
+  "/api/automations/scenarios/:id/run",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const scenario = findScenario(automationEngine, req.params.id);
+    if (!scenario) {
+      res.status(404).json({ error: "scenario_not_found", id: req.params.id });
+      return;
+    }
+    res.json(evaluateAutomation(automationEngine, deviceRegistry, { ...scenario, ...req.body }, req.auth));
+  },
+);
+
+app.get("/api/approvals", (_req, res) => {
+  const scenario = findScenario(automationEngine, "scenario-cottage-leak-lorawan");
+  const evaluation = evaluateAutomation(automationEngine, deviceRegistry, scenario, {
+    subject: "system-preview",
+    name: "System Preview",
+    roles: ["Automation.AgentApprover"],
+  });
+  const approvals = evaluation.commands
+    .filter((command) => command.approvalRequired)
+    .map((command) => ({
+      id: `approval-${command.id}`,
+      commandId: command.id,
+      ruleId: command.ruleId,
+      deviceId: command.deviceId,
+      deviceName: command.deviceName,
+      moduleId: command.moduleId,
+      trafficClass: command.trafficClass,
+      selectedPath: command.selectedPath,
+      status: command.status,
+      requiredRoles: ["Automation.Admin", "Automation.Security", "Automation.AgentApprover"],
+      reasons: command.policyReasons,
+    }));
+
+  res.json({
+    approvals,
+    summary: {
+      pending: approvals.filter((approval) => approval.status === "pending_approval").length,
+      total: approvals.length,
+      sourceScenario: scenario.id,
+    },
   });
 });
 

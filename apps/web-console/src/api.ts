@@ -1,6 +1,9 @@
 import fallbackCatalog from "../../../packages/module-catalog/catalog.json";
 import type {
   AuthStatus,
+  ApprovalQueueResponse,
+  AutomationEvaluation,
+  AutomationResponse,
   DeviceRegistryResponse,
   EventLedgerResponse,
   IntentProposalResponse,
@@ -70,6 +73,32 @@ export async function fetchEvents(): Promise<EventLedgerResponse | null> {
   } catch {
     return null;
   }
+}
+
+export async function fetchAutomations(): Promise<AutomationResponse | null> {
+  try {
+    return await getJson<AutomationResponse>("/api/automations");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchApprovals(): Promise<ApprovalQueueResponse | null> {
+  try {
+    return await getJson<ApprovalQueueResponse>("/api/approvals");
+  } catch {
+    return null;
+  }
+}
+
+export async function runAutomationScenario(scenarioId: string): Promise<AutomationEvaluation> {
+  const response = await fetch(`${API_BASE}/api/automations/scenarios/${scenarioId}/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<AutomationEvaluation>;
 }
 
 export async function proposeIntent(intent: string): Promise<IntentProposalResponse> {

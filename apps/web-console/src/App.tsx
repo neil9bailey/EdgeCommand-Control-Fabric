@@ -34,9 +34,23 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { fetchAuthStatus, fetchCatalog, fetchDevices, fetchEvents, fetchNarrowbandRoutes, fetchOverview, proposeIntent } from "./api";
+import {
+  fetchApprovals,
+  fetchAuthStatus,
+  fetchAutomations,
+  fetchCatalog,
+  fetchDevices,
+  fetchEvents,
+  fetchNarrowbandRoutes,
+  fetchOverview,
+  proposeIntent,
+  runAutomationScenario,
+} from "./api";
 import type {
   AuthStatus,
+  ApprovalQueueResponse,
+  AutomationEvaluation,
+  AutomationResponse,
   DeviceDefinition,
   DeviceRegistryResponse,
   EventLedgerResponse,
@@ -133,6 +147,10 @@ function App() {
   const [deviceRegistry, setDeviceRegistry] = useState<DeviceRegistryResponse | null>(null);
   const [eventLedger, setEventLedger] = useState<EventLedgerResponse | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
+  const [automations, setAutomations] = useState<AutomationResponse | null>(null);
+  const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
+  const [automationEvaluation, setAutomationEvaluation] = useState<AutomationEvaluation | null>(null);
+  const [automationLoading, setAutomationLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState("Home Automation");
   const [activeModuleId, setActiveModuleId] = useState("water-management");
   const [query, setQuery] = useState("");
@@ -147,6 +165,8 @@ function App() {
     void fetchNarrowbandRoutes().then(setRoutes);
     void fetchDevices().then(setDeviceRegistry);
     void fetchEvents().then(setEventLedger);
+    void fetchAutomations().then(setAutomations);
+    void fetchApprovals().then(setApprovals);
   }, []);
 
   const modules = catalog?.modules || [];
@@ -176,6 +196,15 @@ function App() {
       setProposal(await proposeIntent(intent));
     } finally {
       setIntentLoading(false);
+    }
+  }
+
+  async function runScenario(scenarioId: string) {
+    setAutomationLoading(true);
+    try {
+      setAutomationEvaluation(await runAutomationScenario(scenarioId));
+    } finally {
+      setAutomationLoading(false);
     }
   }
 
@@ -243,9 +272,10 @@ function App() {
           <Metric label="Devices" value={deviceRegistry?.summary.deviceCount || overview?.devices?.deviceCount || "-"} detail="registry seed" tone="good" />
           <Metric label="Events" value={eventLedger?.summary.eventCount || overview?.events?.eventCount || "-"} detail="ledger records" tone="good" />
           <Metric label="Audit" value={eventLedger?.summary.auditRequired || overview?.events?.auditRequired || "-"} detail="durable gates" tone="warn" />
-          <Metric label="High Risk" value={overview?.highRisk || "-"} detail="policy gated" tone="danger" />
+          <Metric label="Rules" value={automations?.summary.armedRules || overview?.automation?.armedRules || "-"} detail="armed automations" tone="good" />
+          <Metric label="Policy" value={automations?.summary.policyCount || overview?.automation?.policyCount || "-"} detail="safety packs" tone="danger" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
-          <Metric label="Approvals" value={eventLedger?.summary.pendingApprovals || overview?.commandCentre.pendingApprovals || 4} detail="agent proposals" tone="warn" />
+          <Metric label="Approvals" value={approvals?.summary.pending || eventLedger?.summary.pendingApprovals || overview?.commandCentre.pendingApprovals || 4} detail="pending gates" tone="warn" />
           <Metric
             label="Identity"
             value={authStatus?.entraEnabled ? "Entra" : "Dev"}
@@ -254,6 +284,13 @@ function App() {
         </section>
 
         <EventAuditStrip eventLedger={eventLedger} fallbackSummary={overview?.events || null} />
+        <AutomationOpsPanel
+          automations={automations}
+          approvals={approvals}
+          evaluation={automationEvaluation}
+          loading={automationLoading}
+          onRunScenario={runScenario}
+        />
 
         <section className="main-grid">
           <div className="module-browser" aria-label="Module list">
@@ -289,6 +326,115 @@ function App() {
         </section>
       </main>
     </div>
+  );
+}
+
+function AutomationOpsPanel({
+  automations,
+  approvals,
+  evaluation,
+  loading,
+  onRunScenario,
+}: {
+  automations: AutomationResponse | null;
+  approvals: ApprovalQueueResponse | null;
+  evaluation: AutomationEvaluation | null;
+  loading: boolean;
+  onRunScenario: (scenarioId: string) => void;
+}) {
+  const scenarios = automations?.scenarios || [];
+  const rules = automations?.rules || [];
+  const policies = automations?.policies || [];
+  const commands = evaluation?.commands || approvals?.approvals || [];
+
+  return (
+    <section className="automation-ops" aria-label="Automation engine and safety policy">
+      <div className="section-header automation-header">
+        <div>
+          <p className="eyebrow">Automation Engine / Safety Policy</p>
+          <h2>Policy-Gated Command Planning</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${automations?.summary.armedRules || 0} armed`} />
+          <StatusPill tone="danger" label={`${automations?.summary.p0Rules || 0} P0 rules`} />
+          <StatusPill tone="warn" label={`${approvals?.summary.pending || 0} pending`} />
+        </div>
+      </div>
+
+      <div className="automation-grid">
+        <div className="automation-panel scenario-panel">
+          <div className="section-header compact">
+            <h3>Drill Scenarios</h3>
+            <FlaskConical size={18} />
+          </div>
+          <div className="scenario-list">
+            {scenarios.map((scenario) => (
+              <button key={scenario.id} onClick={() => onRunScenario(scenario.id)} disabled={loading}>
+                <span>{scenario.name}</span>
+                <em>{scenario.event.deviceId.replace(/^dev-/, "").replace(/-/g, " ")}</em>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="automation-panel rule-panel">
+          <div className="section-header compact">
+            <h3>Rules</h3>
+            <Settings2 size={18} />
+          </div>
+          <div className="rule-list">
+            {rules.slice(0, 4).map((rule) => (
+              <div key={rule.id} className="rule-row">
+                <div>
+                  <strong>{rule.name}</strong>
+                  <span>{rule.moduleId.replace(/-/g, " ")}</span>
+                </div>
+                <StatusPill tone={riskTone(rule.risk)} label={rule.trafficClass} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="automation-panel policy-panel">
+          <div className="section-header compact">
+            <h3>Policies</h3>
+            <Shield size={18} />
+          </div>
+          <div className="policy-list">
+            {policies.slice(0, 4).map((policy) => (
+              <div key={policy.id} className="policy-row">
+                <strong>{policy.name}</strong>
+                <span>{policy.requiresApproval ? "approval" : "policy"} / {policy.requiresSimulation ? "simulation" : "direct"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="automation-panel command-panel">
+          <div className="section-header compact">
+            <h3>{evaluation ? evaluation.scenarioName : "Approval Queue"}</h3>
+            <PlayCircle size={18} />
+          </div>
+          <div className="command-list">
+            {commands.slice(0, 4).map((command) => (
+              <div key={command.id} className="command-row">
+                <div>
+                  <strong>{command.deviceName}</strong>
+                  <span>{command.selectedPath} / {command.trafficClass}</span>
+                </div>
+                <StatusPill tone={command.status === "ready_to_execute" ? "good" : command.status === "blocked" ? "danger" : "warn"} label={command.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+            {commands.length === 0 && (
+              <div className="event-empty">
+                <Activity size={18} />
+                <span>Run a drill scenario to generate command plans.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

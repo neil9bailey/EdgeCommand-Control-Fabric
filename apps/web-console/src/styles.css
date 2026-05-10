@@ -275,7 +275,7 @@ h3 {
 
 .command-band {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
   gap: 10px;
   margin-bottom: 18px;
 }
@@ -421,6 +421,128 @@ h3 {
   padding: 14px;
   color: #204c61;
   background: var(--blue-soft);
+}
+
+.automation-ops {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.automation-header {
+  background:
+    linear-gradient(90deg, rgba(178, 59, 53, 0.12), rgba(31, 122, 92, 0.1)),
+    #fff8ec;
+}
+
+.automation-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 1.25fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.automation-panel {
+  min-height: 248px;
+  padding: 14px;
+  background: rgba(255, 253, 246, 0.98);
+}
+
+.scenario-list,
+.rule-list,
+.policy-list,
+.command-list {
+  display: grid;
+  gap: 8px;
+}
+
+.scenario-list button {
+  min-height: 58px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+  color: var(--coal);
+  text-align: left;
+  cursor: pointer;
+}
+
+.scenario-list button:hover {
+  border-color: #9f927f;
+  background: #fffdf6;
+}
+
+.scenario-list button:disabled {
+  opacity: 0.62;
+  cursor: progress;
+}
+
+.scenario-list span,
+.scenario-list em {
+  display: block;
+  min-width: 0;
+}
+
+.scenario-list span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.scenario-list em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  text-transform: capitalize;
+}
+
+.rule-row,
+.command-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.rule-row strong,
+.rule-row span,
+.command-row strong,
+.command-row span,
+.policy-row strong,
+.policy-row span {
+  display: block;
+}
+
+.rule-row strong,
+.command-row strong,
+.policy-row strong {
+  font-size: 12px;
+}
+
+.rule-row span,
+.command-row span,
+.policy-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.policy-row {
+  min-height: 55px;
+  padding: 10px;
+  border-left: 4px solid var(--amber);
+  border-radius: 0 8px 8px 0;
+  background: #fff8ec;
 }
 
 .main-grid {
@@ -972,6 +1094,10 @@ h3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .automation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .module-browser {
     position: relative;
     top: 0;
@@ -993,6 +1119,7 @@ h3 {
 
   .command-band,
   .event-grid,
+  .automation-grid,
   .dashboard-grid,
   .proposal-grid {
     grid-template-columns: 1fr;

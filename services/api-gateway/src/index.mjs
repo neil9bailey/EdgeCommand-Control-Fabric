@@ -87,6 +87,16 @@ import {
   previewClimateSetpoint,
   summarizeClimateHvac,
 } from "./climateHvac.mjs";
+import {
+  applyAccessPointCommand,
+  applySecurityProfile,
+  buildSecurityDashboard,
+  loadSecurityAccess,
+  previewAccessPointCommand,
+  previewSecurityIntent,
+  previewSecurityProfile,
+  summarizeSecurityAccess,
+} from "./securityAccess.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -104,6 +114,7 @@ const simulationLab = loadSimulationLab();
 const approvalWorkflow = loadApprovalWorkflow();
 const lightingScenes = loadLightingScenes();
 const climateHvac = loadClimateHvac();
+const securityAccess = loadSecurityAccess();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -126,6 +137,7 @@ function buildOverview() {
   const approvalSummary = summarizeApprovalWorkflow(approvalWorkflow);
   const lightingSummary = summarizeLightingScenes(lightingScenes, deviceRegistry);
   const climateSummary = summarizeClimateHvac(climateHvac, deviceRegistry);
+  const securitySummary = summarizeSecurityAccess(securityAccess, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -156,6 +168,7 @@ function buildOverview() {
       approvalWorkflow: `${approvalSummary.policyRuleCount} policies / ${approvalSummary.decisionCount} decisions`,
       lightingScenes: `${lightingSummary.enabledSceneCount} enabled scenes / ${lightingSummary.onlineFixtureCount} online fixtures`,
       climateHvac: `${climateSummary.enabledProfileCount} enabled profiles / ${climateSummary.onlineThermostatCount} online thermostats`,
+      securityAccess: `${securitySummary.enabledProfileCount} guarded profiles / ${securitySummary.accessPointCount} access points`,
     },
     links: defaultLinkInventory(),
   };
@@ -201,6 +214,7 @@ app.get("/api/command-centre", (_req, res) => {
     approvalWorkflow,
     lightingScenes,
     climateHvac,
+    securityAccess,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -497,6 +511,116 @@ app.post(
   (req, res) => {
     res.json(previewClimateIntent({
       climate: climateHvac,
+      deviceRegistry,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/security", (_req, res) => {
+  res.json(buildSecurityDashboard({
+    security: securityAccess,
+    deviceRegistry,
+  }));
+});
+
+app.get("/api/security/profiles/:id/preview", (req, res) => {
+  const result = previewSecurityProfile({
+    security: securityAccess,
+    deviceRegistry,
+    profileId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Security"] },
+  });
+  if (result.error === "security_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/security/profiles/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewSecurityProfile({
+      security: securityAccess,
+      deviceRegistry,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "security_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/security/profiles/:id/apply",
+  requireRoles(["Automation.Admin", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = applySecurityProfile({
+      security: securityAccess,
+      deviceRegistry,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "security_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.status === "blocked" || result.status === "approval_required" ? 409 : 200).json(result);
+  },
+);
+
+app.post(
+  "/api/security/access-points/:id/command/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewAccessPointCommand({
+      security: securityAccess,
+      deviceRegistry,
+      accessPointId: req.params.id,
+      action: req.body?.action || "state_check",
+      desiredState: req.body?.desiredState || {},
+      actor: req.auth,
+    });
+    if (result.error === "security_access_point_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/security/access-points/:id/command/apply",
+  requireRoles(["Automation.Admin", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = applyAccessPointCommand({
+      security: securityAccess,
+      deviceRegistry,
+      accessPointId: req.params.id,
+      action: req.body?.action || "state_check",
+      desiredState: req.body?.desiredState || {},
+      actor: req.auth,
+    });
+    if (result.error === "security_access_point_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.status === "blocked" || result.status === "approval_required" ? 409 : 200).json(result);
+  },
+);
+
+app.post(
+  "/api/security/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewSecurityIntent({
+      security: securityAccess,
       deviceRegistry,
       intent: req.body?.intent || "",
       actor: req.auth,

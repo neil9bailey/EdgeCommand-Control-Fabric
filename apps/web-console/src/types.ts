@@ -62,6 +62,7 @@ export interface PlatformOverview {
     simulationLab?: string;
     lightingScenes?: string;
     climateHvac?: string;
+    securityAccess?: string;
   };
   links: Array<{
     id: string;
@@ -1108,7 +1109,200 @@ export interface ClimateDashboardResponse {
   rule: string;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
+export interface SecuritySummary {
+  schemaVersion: string;
+  accessPointCount: number;
+  onlineDeviceCount: number;
+  securityDeviceCount: number;
+  profileCount: number;
+  enabledProfileCount: number;
+  approvalProfileCount: number;
+  policyCount: number;
+  intentRecipeCount: number;
+  recentRunCount: number;
+  byType: Record<string, number>;
+  byPath: Record<string, number>;
+}
+
+export interface SecurityAccessPoint {
+  id: string;
+  name: string;
+  siteId: string;
+  zoneId: string;
+  type: string;
+  lockDeviceId?: string;
+  alarmDeviceId?: string;
+  gateDeviceId?: string;
+  sensorDeviceId?: string;
+  risk: string;
+  trafficClass: string;
+  pathPreference: string[];
+  policies: string[];
+  devices?: Array<{
+    id: string;
+    name: string;
+    status: string;
+    adapter: string;
+    capabilities: string[];
+    observedState: Record<string, string | number | boolean>;
+    desiredState: Record<string, string | number | boolean>;
+  }>;
+}
+
+export interface SecurityProfile {
+  id: string;
+  name: string;
+  mode: string;
+  status: string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  policies: string[];
+  actions: Array<{
+    accessPointId: string;
+    action: string;
+    desiredState: Record<string, string | number | boolean>;
+  }>;
+  commandProfile: {
+    encodedBytes: number;
+    ackRequired: boolean;
+    ttlSeconds: number;
+  };
+}
+
+export interface SecurityPolicy {
+  id: string;
+  name: string;
+  risk: string;
+  scope: string[];
+  requiresApproval: boolean;
+  requiresAudit: boolean;
+  message: string;
+}
+
+export interface SecurityIntentRecipe {
+  id: string;
+  name: string;
+  keywords: string[];
+  profileId: string;
+  confidence: number;
+  exampleIntent: string;
+}
+
+export interface SecurityRun {
+  id: string;
+  profileId: string;
+  status: string;
+  actor: string;
+  commandCount: number;
+  summary: string;
+}
+
+export interface SecurityCommand {
+  id: string;
+  profileId: string;
+  accessPointId: string;
+  accessPointName: string;
+  deviceId: string | null;
+  deviceName: string;
+  siteId: string | null;
+  zoneId: string | null;
+  type: string;
+  moduleId: string;
+  capability: string;
+  action: string;
+  desiredState: Record<string, string | number | boolean>;
+  observedState: Record<string, string | number | boolean>;
+  trafficClass: string;
+  selectedPath: string;
+  encodedBytes: number;
+  ackRequired: boolean;
+  status: string;
+  canExecute: boolean;
+  requiresApproval: boolean;
+  policyDecision: string;
+  policyReasons: string[];
+}
+
+export interface SecurityPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: SecurityDashboardResponse["service"];
+  profile: {
+    id: string;
+    name: string;
+    mode: string;
+    status: string;
+    trafficClass: string;
+    requiresApproval: boolean;
+  };
+  actor: {
+    subject: string;
+    name: string;
+    roles: string[];
+  };
+  status: string;
+  summary: {
+    commandCount: number;
+    readyCount: number;
+    approvalCount: number;
+    blockedCount: number;
+    accessPointCount: number;
+    encodedBytes: number;
+  };
+  policy: {
+    result: string;
+    canApply: boolean;
+    requiresApproval: boolean;
+    policies: Array<{ id: string; name: string; risk: string; message: string }>;
+    criteria: Array<{ id: string; label: string; passed: boolean }>;
+  };
+  commands: SecurityCommand[];
+  nextActions: string[];
+  event: FabricEvent;
+  applyAttempted?: boolean;
+}
+
+export interface SecurityIntentPreview {
+  intent: string;
+  match: {
+    id: string;
+    name: string;
+    profileId: string;
+    confidence: number;
+    score: number;
+  };
+  preview: SecurityPreview;
+}
+
+export interface SecurityDashboardResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultProfileId: string;
+    defaultAccessPointId: string;
+    rule: string;
+  };
+  featureModule: {
+    moduleId: string;
+    state: string;
+    buildStrategy: string;
+    enabledBy: string[];
+    buildArtifacts: string[];
+  };
+  summary: SecuritySummary;
+  accessPoints: SecurityAccessPoint[];
+  profiles: SecurityProfile[];
+  policies: SecurityPolicy[];
+  intentRecipes: SecurityIntentRecipe[];
+  recentSecurityRuns: SecurityRun[];
+  rule: string;
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -1186,6 +1380,7 @@ export interface CommandCentreResponse {
   };
   lighting: LightingDashboardResponse;
   climate: ClimateDashboardResponse;
+  security: SecurityDashboardResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

@@ -323,8 +323,31 @@ Verification:
 - API verification for `/api/climate`, `/api/climate/profiles/:id/preview`, `/api/climate/profiles/:id/apply`, `/api/climate/zones/:id/setpoint/preview`, `/api/climate/intent/preview`, and `/api/command-centre`.
 - Browser verification for the Climate workspace, Climate And HVAC panel, comfort profile preview, simulated profile apply, unsafe setpoint guard, intent recipe matching, and clean browser console.
 
+### E14 - Security And Access
+
+Status: complete locally and ready to push to `origin/main`.
+
+Delivered:
+
+- File-backed Security And Access package with access points, lock, alarm, door contact, gate, policies, profiles, intent recipes, feature-module metadata, and recent run seeds.
+- Expanded device registry with alarm, door/contact capabilities, front-door contact, hall alarm panel, and remote cottage gate contact.
+- API gateway security service for dashboard data, secure profile preview, simulated secure profile apply, unlock/open approval guard, and intent-to-security preview.
+- `/api/security`, `/api/security/profiles/:id/preview`, `/api/security/profiles/:id/apply`, `/api/security/access-points/:id/command/preview`, `/api/security/access-points/:id/command/apply`, and `/api/security/intent/preview` endpoints.
+- MCP orchestrator security profile preview and high-risk security command proposal tools, permission gates, deterministic tool execution, and AIP security access proposals.
+- Global Command Centre Security workspace and Security And Access dashboard panel in the web console.
+- Tests for security package loading, dashboard enrichment, safe lock/arm/gate-check preview, simulated secure apply, remote unlock approval guard, intent recipe matching, MCP security tools, AIP security proposals, and command-centre integration.
+
+Verification:
+
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/security`, `/api/security/profiles/:id/preview`, `/api/security/access-points/:id/command/preview`, and `/api/command-centre`.
+- Browser verification for the Security workspace, Security And Access panel, unlock guard, and clean browser console.
+
 ## Next
 
-### E14 - Security And Access
+### E15 - Water Management
 
 Status: next planned build slice.

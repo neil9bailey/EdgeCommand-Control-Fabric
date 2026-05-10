@@ -447,9 +447,10 @@ Deliverables:
 
 Acceptance:
 
-- Security commands require correct role and policy.
-- Remote unlock is treated as high risk.
-- Audit trail is complete.
+- Security commands require correct role and policy. Complete in E14 foundation.
+- Remote unlock is treated as high risk. Complete in E14 foundation.
+- Audit trail is complete. Complete in E14 foundation.
+- Security profile preview and remote unlock/open guards are exposed through MCP tools, API endpoints, and the web console.
 
 ## E15 - Water Management
 

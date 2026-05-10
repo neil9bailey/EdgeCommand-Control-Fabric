@@ -40,6 +40,7 @@ import {
 import {
   applyClimateProfile,
   applyLightingScene,
+  applySecurityProfile,
   fetchClimate,
   fetchApprovals,
   fetchAuthStatus,
@@ -53,11 +54,15 @@ import {
   fetchNarrowbandRoutes,
   fetchOverview,
   fetchSimulationLab,
+  fetchSecurity,
   previewLightingIntent,
   previewLightingScene,
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
+  previewSecurityIntent,
+  previewSecurityProfile,
+  previewSecurityUnlock,
   proposeIntent,
   recordApprovalDecision,
   recordIntentDecision,
@@ -92,6 +97,9 @@ import type {
   PlatformOverview,
   SimulationLabResponse,
   SimulationReport,
+  SecurityDashboardResponse,
+  SecurityIntentPreview,
+  SecurityPreview,
 } from "./types";
 
 const categoryIcons: Record<string, LucideIcon> = {
@@ -132,6 +140,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   automations: Settings2,
   lighting: Lightbulb,
   climate: Thermometer,
+  security: LockKeyhole,
   agents: GitBranch,
   approvals: ClipboardCheck,
   risk: Shield,
@@ -225,6 +234,10 @@ function App() {
   const [climatePreview, setClimatePreview] = useState<ClimatePreview | null>(null);
   const [climateIntentPreview, setClimateIntentPreview] = useState<ClimateIntentPreview | null>(null);
   const [climateLoading, setClimateLoading] = useState<"preview" | "apply" | "intent" | "unsafe" | null>(null);
+  const [security, setSecurity] = useState<SecurityDashboardResponse | null>(null);
+  const [securityPreview, setSecurityPreview] = useState<SecurityPreview | null>(null);
+  const [securityIntentPreview, setSecurityIntentPreview] = useState<SecurityIntentPreview | null>(null);
+  const [securityLoading, setSecurityLoading] = useState<"preview" | "apply" | "intent" | "unlock" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -255,6 +268,7 @@ function App() {
     void fetchAutomations().then(setAutomations);
     void fetchLighting().then(setLighting);
     void fetchClimate().then(setClimate);
+    void fetchSecurity().then(setSecurity);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -383,6 +397,44 @@ function App() {
     }
   }
 
+  async function previewSecurity(profileId: string) {
+    setSecurityLoading("preview");
+    try {
+      setSecurityPreview(await previewSecurityProfile(profileId));
+    } finally {
+      setSecurityLoading(null);
+    }
+  }
+
+  async function applySecurity(profileId: string) {
+    setSecurityLoading("apply");
+    try {
+      setSecurityPreview(await applySecurityProfile(profileId));
+    } finally {
+      setSecurityLoading(null);
+    }
+  }
+
+  async function previewUnlockGuard(accessPointId: string) {
+    setSecurityLoading("unlock");
+    try {
+      setSecurityPreview(await previewSecurityUnlock(accessPointId));
+    } finally {
+      setSecurityLoading(null);
+    }
+  }
+
+  async function previewSecurityFromIntent(intentText: string) {
+    setSecurityLoading("intent");
+    try {
+      const result = await previewSecurityIntent(intentText);
+      setSecurityIntentPreview(result);
+      setSecurityPreview(result.preview);
+    } finally {
+      setSecurityLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -479,6 +531,7 @@ function App() {
           <Metric label="Policy" value={automations?.summary.policyCount || overview?.automation?.policyCount || "-"} detail="safety packs" tone="danger" />
           <Metric label="Lighting" value={lighting?.summary.enabledSceneCount || commandCentre?.lighting.summary.enabledSceneCount || "-"} detail="enabled scenes" tone="good" />
           <Metric label="Climate" value={climate?.summary.enabledProfileCount || commandCentre?.climate.summary.enabledProfileCount || "-"} detail="comfort profiles" tone="warn" />
+          <Metric label="Security" value={security?.summary.enabledProfileCount || commandCentre?.security.summary.enabledProfileCount || "-"} detail="guarded profiles" tone="danger" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -516,6 +569,16 @@ function App() {
           onApply={applyClimate}
           onUnsafePreview={previewClimateUnsafe}
           onIntentPreview={previewClimateFromIntent}
+        />
+        <SecurityAccessPanel
+          security={security || commandCentre?.security || null}
+          preview={securityPreview}
+          intentPreview={securityIntentPreview}
+          loading={securityLoading}
+          onPreview={previewSecurity}
+          onApply={applySecurity}
+          onUnlockPreview={previewUnlockGuard}
+          onIntentPreview={previewSecurityFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -1521,6 +1584,172 @@ function ClimateHvacPanel({
                 <StatusPill tone={schedule.status === "enabled" ? "good" : "muted"} label={schedule.status} />
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SecurityAccessPanel({
+  security,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onApply,
+  onUnlockPreview,
+  onIntentPreview,
+}: {
+  security: SecurityDashboardResponse | null;
+  preview: SecurityPreview | null;
+  intentPreview: SecurityIntentPreview | null;
+  loading: "preview" | "apply" | "intent" | "unlock" | null;
+  onPreview: (profileId: string) => void;
+  onApply: (profileId: string) => void;
+  onUnlockPreview: (accessPointId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const profiles = security?.profiles || [];
+  const accessPoints = security?.accessPoints || [];
+  const policies = security?.policies || [];
+  const recipes = security?.intentRecipes || [];
+  const activeProfileId = preview?.profile.id.replace(/^ad-hoc-/, "") || profiles[0]?.id;
+  const activeProfile = profiles.find((profile) => profile.id === activeProfileId) || profiles[0];
+  const activeRecipe = recipes.find((recipe) => recipe.profileId === activeProfile?.id) || recipes[0];
+  const unlockPoint = accessPoints.find((point) => point.type === "door_lock") || accessPoints[0];
+
+  return (
+    <section className="security-access-panel" aria-label="Security and access">
+      <div className="section-header security-header">
+        <div>
+          <p className="eyebrow">Security And Access</p>
+          <h2>Access Command Surface</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="danger" label={`${security?.summary.accessPointCount || 0} access`} />
+          <StatusPill tone={security?.summary.onlineDeviceCount === security?.summary.securityDeviceCount ? "good" : "warn"} label={`${security?.summary.onlineDeviceCount || 0}/${security?.summary.securityDeviceCount || 0} devices`} />
+          <StatusPill tone={preview?.status === "approval_required" ? "warn" : preview?.status === "executed_simulated" ? "good" : "neutral"} label={preview?.status.replace(/_/g, " ") || "guarded"} />
+        </div>
+      </div>
+
+      <div className="security-grid">
+        <div className="security-panel profile-picker-panel">
+          <div className="section-header compact">
+            <h3>Profiles</h3>
+            <LockKeyhole size={18} />
+          </div>
+          <div className="security-profile-list">
+            {profiles.map((profile) => (
+              <div className={`security-profile-row ${profile.id === activeProfile?.id ? "active" : ""}`} key={profile.id}>
+                <div>
+                  <strong>{profile.name}</strong>
+                  <span>{profile.mode.replace(/_/g, " ")} / {profile.actions.length} action(s)</span>
+                </div>
+                <div className="security-profile-actions">
+                  <button onClick={() => onPreview(profile.id)} disabled={Boolean(loading)}>
+                    <PlayCircle size={15} />
+                    <span>{loading === "preview" && profile.id === activeProfile?.id ? "Previewing" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onApply(profile.id)} disabled={Boolean(loading)}>
+                    <CheckCircle2 size={15} />
+                    <span>{loading === "apply" && profile.id === activeProfile?.id ? "Applying" : "Apply"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="security-intent-actions">
+            {activeRecipe && (
+              <button onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+                <Bot size={16} />
+                <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+              </button>
+            )}
+            {unlockPoint && (
+              <button className="guard" onClick={() => onUnlockPreview(unlockPoint.id)} disabled={Boolean(loading)}>
+                <Shield size={16} />
+                <span>{loading === "unlock" ? "Checking" : "Unlock guard"}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="security-panel">
+          <div className="section-header compact">
+            <h3>Access Points</h3>
+            <Home size={18} />
+          </div>
+          <div className="security-access-list">
+            {accessPoints.map((point) => (
+              <div className="security-access-row" key={point.id}>
+                <div>
+                  <strong>{point.name}</strong>
+                  <span>{point.type.replace(/_/g, " ")} / {point.pathPreference.join(" -> ")}</span>
+                </div>
+                <StatusPill tone={point.risk === "high" ? "danger" : "warn"} label={point.trafficClass} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="security-panel security-command-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.profile.name : "Command Plan"}</h3>
+            <Settings2 size={18} />
+          </div>
+          <div className="security-command-list">
+            {(preview?.commands || []).slice(0, 5).map((command) => (
+              <div className="security-command-row" key={command.id}>
+                <div>
+                  <strong>{command.deviceName}</strong>
+                  <span>{command.action.replace(/_/g, " ")} / {command.selectedPath} / {command.encodedBytes} bytes</span>
+                </div>
+                <StatusPill tone={command.policyDecision === "approval_required" ? "warn" : command.canExecute ? "good" : "danger"} label={command.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+            {!preview && (
+              <div className="event-empty">
+                <Activity size={18} />
+                <span>Preview a security profile to generate guarded command plans.</span>
+              </div>
+            )}
+          </div>
+          {intentPreview && (
+            <div className="security-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.profileId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="security-panel">
+          <div className="section-header compact">
+            <h3>Policy Boundary</h3>
+            <Shield size={18} />
+          </div>
+          <div className="security-policy-list">
+            {preview ? (
+              preview.policy.criteria.slice(0, 5).map((item) => (
+                <div className="security-policy-row" key={item.id}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{item.id.replace(/_/g, " ")}</span>
+                  </div>
+                  <StatusPill tone={item.passed ? "good" : "danger"} label={item.passed ? "pass" : "hold"} />
+                </div>
+              ))
+            ) : (
+              policies.slice(0, 4).map((policy) => (
+                <div className="security-policy-row" key={policy.id}>
+                  <div>
+                    <strong>{policy.name}</strong>
+                    <span>{policy.message}</span>
+                  </div>
+                  <StatusPill tone={policy.requiresApproval ? "warn" : "good"} label={policy.risk} />
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

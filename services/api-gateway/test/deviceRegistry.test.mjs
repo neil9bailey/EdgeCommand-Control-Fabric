@@ -28,7 +28,7 @@ test("registry supports capability and site filters", () => {
   assert.ok(waterValves.every((device) => device.capabilities.includes("water_valve")));
 
   const remoteDevices = filterDevices(registry, { siteId: "remote-cottage" });
-  assert.equal(remoteDevices.length, 4);
+  assert.equal(remoteDevices.length, 5);
   assert.ok(remoteDevices.every((device) => device.siteId === "remote-cottage"));
 });
 
@@ -41,4 +41,3 @@ test("registry finds hero scenario devices", () => {
   assert.equal(valve.narrowbandEligible, true);
   assert.equal(valve.desiredState.position, "open");
 });
-

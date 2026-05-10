@@ -42,6 +42,9 @@
     { "id": "hvac_mode", "class": "actuator", "risk": "medium", "trafficClass": "P2_CONTROL" },
     { "id": "lock", "class": "actuator", "risk": "high", "trafficClass": "P1_SECURITY" },
     { "id": "gate", "class": "actuator", "risk": "high", "trafficClass": "P1_SECURITY" },
+    { "id": "alarm", "class": "actuator", "risk": "high", "trafficClass": "P1_SECURITY" },
+    { "id": "door", "class": "sensor", "risk": "high", "trafficClass": "P1_SECURITY" },
+    { "id": "contact_sensor", "class": "sensor", "risk": "medium", "trafficClass": "P3_TELEMETRY" },
     { "id": "camera", "class": "media", "risk": "high", "trafficClass": "P4_BULK" },
     { "id": "occupancy", "class": "sensor", "risk": "medium", "trafficClass": "P3_TELEMETRY" },
     { "id": "air_quality", "class": "sensor", "risk": "medium", "trafficClass": "P3_TELEMETRY" },
@@ -245,6 +248,38 @@
       "narrowbandEligible": true
     },
     {
+      "id": "dev-front-door-contact-01",
+      "name": "Front Door Contact",
+      "siteId": "home-hq",
+      "zoneId": "front-entrance",
+      "adapter": "matter",
+      "manufacturer": "Simulated",
+      "model": "VL-Contact-MT1",
+      "trustTier": "paired",
+      "status": "online",
+      "lastSeen": "2026-05-10T05:00:01Z",
+      "capabilities": ["door", "contact_sensor", "heartbeat"],
+      "observedState": { "open": false, "tamper": false, "battery": 92 },
+      "desiredState": {},
+      "narrowbandEligible": true
+    },
+    {
+      "id": "dev-hall-alarm-panel-01",
+      "name": "Hall Alarm Panel",
+      "siteId": "home-hq",
+      "zoneId": "hall",
+      "adapter": "matter",
+      "manufacturer": "Simulated",
+      "model": "VL-Alarm-MT1",
+      "trustTier": "secure_inclusion",
+      "status": "online",
+      "lastSeen": "2026-05-10T05:00:01Z",
+      "capabilities": ["alarm", "heartbeat"],
+      "observedState": { "armed": "disarmed", "tamper": false, "battery": 100 },
+      "desiredState": { "armed": "disarmed" },
+      "narrowbandEligible": true
+    },
+    {
       "id": "dev-camera-drive-01",
       "name": "Drive Camera",
       "siteId": "home-hq",
@@ -370,6 +405,22 @@
       "capabilities": ["gate", "heartbeat"],
       "observedState": { "position": "closed", "battery": 69 },
       "desiredState": { "position": "closed" },
+      "narrowbandEligible": true
+    },
+    {
+      "id": "dev-cottage-gate-contact-01",
+      "name": "Cottage Gate Contact",
+      "siteId": "remote-cottage",
+      "zoneId": "cottage-gate",
+      "adapter": "lorawan",
+      "manufacturer": "Simulated",
+      "model": "VL-Contact-LR1",
+      "trustTier": "paired",
+      "status": "online",
+      "lastSeen": "2026-05-10T04:57:52Z",
+      "capabilities": ["door", "contact_sensor", "heartbeat"],
+      "observedState": { "open": false, "tamper": false, "battery": 86 },
+      "desiredState": {},
       "narrowbandEligible": true
     }
   ]

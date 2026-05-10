@@ -23,6 +23,9 @@ import type {
   PlatformOverview,
   SimulationLabResponse,
   SimulationReport,
+  SecurityDashboardResponse,
+  SecurityIntentPreview,
+  SecurityPreview,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3101";
@@ -152,6 +155,14 @@ export async function fetchClimate(): Promise<ClimateDashboardResponse | null> {
   }
 }
 
+export async function fetchSecurity(): Promise<SecurityDashboardResponse | null> {
+  try {
+    return await getJson<SecurityDashboardResponse>("/api/security");
+  } catch {
+    return null;
+  }
+}
+
 export async function previewLightingScene(sceneId: string): Promise<LightingScenePreview> {
   const response = await fetch(`${API_BASE}/api/lighting/scenes/${sceneId}/preview`, {
     method: "POST",
@@ -225,6 +236,46 @@ export async function previewClimateIntent(intent: string): Promise<ClimateInten
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<ClimateIntentPreview>;
+}
+
+export async function previewSecurityProfile(profileId: string): Promise<SecurityPreview> {
+  const response = await fetch(`${API_BASE}/api/security/profiles/${profileId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<SecurityPreview>;
+}
+
+export async function applySecurityProfile(profileId: string): Promise<SecurityPreview> {
+  const response = await fetch(`${API_BASE}/api/security/profiles/${profileId}/apply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<SecurityPreview>;
+}
+
+export async function previewSecurityUnlock(accessPointId: string): Promise<SecurityPreview> {
+  const response = await fetch(`${API_BASE}/api/security/access-points/${accessPointId}/command/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "unlock", desiredState: { locked: false } }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<SecurityPreview>;
+}
+
+export async function previewSecurityIntent(intent: string): Promise<SecurityIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/security/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<SecurityIntentPreview>;
 }
 
 export async function recordApprovalDecision(

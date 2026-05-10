@@ -8,6 +8,7 @@ import { summarizeDeviceRegistry } from "./deviceRegistry.mjs";
 import { filterEvents, summarizeEventLedger } from "./eventLedger.mjs";
 import { buildKraDashboard, summarizeKraEngine } from "./kraEngine.mjs";
 import { buildLightingDashboard, summarizeLightingScenes } from "./lightingScenes.mjs";
+import { buildSecurityDashboard, summarizeSecurityAccess } from "./securityAccess.mjs";
 import { summarizeMcpOrchestrator } from "./mcpOrchestrator.mjs";
 import {
   buildSimulationDashboard,
@@ -85,7 +86,7 @@ export function buildApprovalQueue(automationEngine, deviceRegistry, simulationL
   });
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -150,6 +151,18 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
         { label: "Zones", value: climateSummary.zoneCount },
         { label: "Setpoint", value: `${climateSummary.averageSetpointC}C` },
         { label: "Policies", value: climateSummary.policyCount },
+      ],
+    },
+    {
+      id: "security",
+      label: "Security",
+      headline: `${securitySummary.enabledProfileCount} profiles guarded`,
+      detail: `${securitySummary.onlineDeviceCount}/${securitySummary.securityDeviceCount} security devices online, ${securitySummary.approvalProfileCount} approval-bound profile`,
+      status: securitySummary.approvalProfileCount > 0 ? "governed" : "ready",
+      metrics: [
+        { label: "Access", value: securitySummary.accessPointCount },
+        { label: "Profiles", value: securitySummary.profileCount },
+        { label: "Policies", value: securitySummary.policyCount },
       ],
     },
     {
@@ -239,7 +252,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, lightingDashboard, climateDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
+function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -277,6 +290,20 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, devi
       status: "ready",
       detail: `${profile.mode} mode / ${profile.zoneTargets.length} zone target(s)`,
       evidence: [...profile.policies, profile.requiresApproval ? "approval-required" : "policy-gated"],
+    }));
+
+  const securityActions = (securityDashboard?.profiles || [])
+    .filter((profile) => profile.status === "enabled")
+    .slice(0, 3)
+    .map((profile) => ({
+      id: `security-${profile.id}`,
+      priority: profile.trafficClass,
+      workspaceId: "security",
+      title: `${profile.name} profile guarded`,
+      owner: "Security And Access",
+      status: profile.requiresApproval ? "approval_required" : "ready",
+      detail: `${profile.mode} mode / ${profile.actions.length} command plan item(s)`,
+      evidence: [...profile.policies, profile.requiresApproval ? "approval-required" : "unlock-boundary"],
     }));
 
   const deviceActions = devices
@@ -361,15 +388,16 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, devi
       };
     });
 
-  return [...approvalActions, ...lightingActions, ...climateActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 20);
+  return [...approvalActions, ...lightingActions, ...climateActions, ...securityActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 24);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, authStatus }) {
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
   const lightingSummary = summarizeLightingScenes(lightingScenes, deviceRegistry);
   const climateSummary = summarizeClimateHvac(climateHvac, deviceRegistry);
+  const securitySummary = summarizeSecurityAccess(securityAccess, deviceRegistry);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
@@ -405,6 +433,10 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     climate: climateHvac,
     deviceRegistry,
   });
+  const securityDashboard = buildSecurityDashboard({
+    security: securityAccess,
+    deviceRegistry,
+  });
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
   const auditEvents = filterEvents(eventLedger, { auditRequired: "true", limit: 8 });
@@ -415,6 +447,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     automationSummary,
     lightingSummary,
     climateSummary,
+    securitySummary,
     approvalSummary: approvalQueue.summary,
     mcpSummary,
     kraSummary,
@@ -465,6 +498,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       approvals: approvalQueue.approvals,
       lightingDashboard,
       climateDashboard,
+      securityDashboard,
       devices,
       routes: narrowbandRoutes.routes,
       auditEvents,
@@ -492,6 +526,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     },
     lighting: lightingDashboard,
     climate: climateDashboard,
+    security: securityDashboard,
     approvals: approvalQueue,
     agents: {
       orchestrator: mcpOrchestrator.orchestrator,

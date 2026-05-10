@@ -1,0 +1,198 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "security-access-service",
+    "name": "Security And Access",
+    "moduleId": "security-access",
+    "mode": "deterministic-local",
+    "executionBoundary": "simulated-security-command-plan-only",
+    "defaultProfileId": "profile-night-secure",
+    "defaultAccessPointId": "access-front-door",
+    "rule": "Security commands may plan secure, arm, lock, and state-check actions locally; remote unlock or open actions always require security role, human approval, audit evidence, and a separate signed command path."
+  },
+  "featureModule": {
+    "moduleId": "security-access",
+    "state": "foundation",
+    "buildStrategy": "feature-manifest-plus-service-plus-dashboard",
+    "enabledBy": ["human_intent", "module_marketplace", "operator_dashboard"],
+    "buildArtifacts": [
+      "packages/security-access/security-access.json",
+      "services/api-gateway/src/securityAccess.mjs",
+      "apps/web-console SecurityAccessPanel",
+      "api contracts and tests"
+    ]
+  },
+  "policies": [
+    {
+      "id": "security-role-required",
+      "name": "Security Role Required",
+      "risk": "high",
+      "scope": ["lock", "alarm", "gate", "door"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "message": "Security actions require a security-capable operator role."
+    },
+    {
+      "id": "remote-unlock-approval",
+      "name": "Remote Unlock Approval",
+      "risk": "high",
+      "scope": ["lock", "gate"],
+      "requiresApproval": true,
+      "requiresAudit": true,
+      "message": "Remote unlock, disarm, and gate-open actions are proposal-only until explicit human approval and signed command evidence exist."
+    },
+    {
+      "id": "door-state-before-lock",
+      "name": "Door State Before Lock",
+      "risk": "medium",
+      "scope": ["door", "lock"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "message": "Door contact state must be known before a lock command is considered ready."
+    },
+    {
+      "id": "narrowband-security-control-only",
+      "name": "Narrowband Security Control Only",
+      "risk": "high",
+      "scope": ["gate", "remote_gateway"],
+      "requiresApproval": true,
+      "requiresAudit": true,
+      "message": "Remote security traffic may use compact signed P1 control and state telemetry only."
+    }
+  ],
+  "accessPoints": [
+    {
+      "id": "access-front-door",
+      "name": "Front Door",
+      "siteId": "home-hq",
+      "zoneId": "front-entrance",
+      "type": "door_lock",
+      "lockDeviceId": "dev-front-lock-01",
+      "sensorDeviceId": "dev-front-door-contact-01",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY",
+      "pathPreference": ["lan", "zwave"],
+      "policies": ["security-role-required", "door-state-before-lock", "remote-unlock-approval"]
+    },
+    {
+      "id": "access-home-alarm",
+      "name": "Home Alarm Panel",
+      "siteId": "home-hq",
+      "zoneId": "hall",
+      "type": "alarm_panel",
+      "alarmDeviceId": "dev-hall-alarm-panel-01",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY",
+      "pathPreference": ["lan", "matter"],
+      "policies": ["security-role-required", "remote-unlock-approval"]
+    },
+    {
+      "id": "access-cottage-gate",
+      "name": "Cottage Gate",
+      "siteId": "remote-cottage",
+      "zoneId": "cottage-gate",
+      "type": "gate",
+      "gateDeviceId": "dev-cottage-gate-01",
+      "sensorDeviceId": "dev-cottage-gate-contact-01",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY",
+      "pathPreference": ["lte-m", "lorawan"],
+      "policies": ["security-role-required", "remote-unlock-approval", "narrowband-security-control-only"]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "profile-night-secure",
+      "name": "Night Secure",
+      "mode": "stay_armed",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": false,
+      "policies": ["security-role-required", "door-state-before-lock"],
+      "actions": [
+        { "accessPointId": "access-front-door", "action": "lock", "desiredState": { "locked": true } },
+        { "accessPointId": "access-home-alarm", "action": "arm_stay", "desiredState": { "armed": "stay" } },
+        { "accessPointId": "access-cottage-gate", "action": "state_check", "desiredState": { "position": "closed" } }
+      ],
+      "commandProfile": { "encodedBytes": 96, "ackRequired": true, "ttlSeconds": 180 }
+    },
+    {
+      "id": "profile-away-armed",
+      "name": "Away Armed",
+      "mode": "away_armed",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": false,
+      "policies": ["security-role-required", "door-state-before-lock", "narrowband-security-control-only"],
+      "actions": [
+        { "accessPointId": "access-front-door", "action": "lock", "desiredState": { "locked": true } },
+        { "accessPointId": "access-home-alarm", "action": "arm_away", "desiredState": { "armed": "away" } },
+        { "accessPointId": "access-cottage-gate", "action": "state_check", "desiredState": { "position": "closed" } }
+      ],
+      "commandProfile": { "encodedBytes": 108, "ackRequired": true, "ttlSeconds": 180 }
+    },
+    {
+      "id": "profile-gate-check",
+      "name": "Remote Gate Check",
+      "mode": "state_check",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": false,
+      "policies": ["security-role-required", "narrowband-security-control-only"],
+      "actions": [
+        { "accessPointId": "access-cottage-gate", "action": "state_check", "desiredState": { "position": "closed" } }
+      ],
+      "commandProfile": { "encodedBytes": 42, "ackRequired": true, "ttlSeconds": 120 }
+    },
+    {
+      "id": "profile-guarded-disarm",
+      "name": "Guarded Disarm",
+      "mode": "disarm",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": true,
+      "policies": ["security-role-required", "remote-unlock-approval"],
+      "actions": [
+        { "accessPointId": "access-home-alarm", "action": "disarm", "desiredState": { "armed": "disarmed" } }
+      ],
+      "commandProfile": { "encodedBytes": 54, "ackRequired": true, "ttlSeconds": 90 }
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-night-secure",
+      "name": "Secure the home for night",
+      "keywords": ["night", "secure", "lock", "arm", "sleep"],
+      "profileId": "profile-night-secure",
+      "confidence": 0.91,
+      "exampleIntent": "Secure the house for night and make sure the cottage gate is closed."
+    },
+    {
+      "id": "intent-away-armed",
+      "name": "Away security mode",
+      "keywords": ["away", "holiday", "leaving", "arm", "secure"],
+      "profileId": "profile-away-armed",
+      "confidence": 0.88,
+      "exampleIntent": "Arm the house for away mode and check all access points."
+    },
+    {
+      "id": "intent-remote-gate-check",
+      "name": "Remote gate state check",
+      "keywords": ["gate", "cottage", "remote", "check", "closed"],
+      "profileId": "profile-gate-check",
+      "confidence": 0.86,
+      "exampleIntent": "Check whether the remote cottage gate is closed."
+    }
+  ],
+  "recentSecurityRuns": [
+    {
+      "id": "security-run-20260510-001",
+      "profileId": "profile-night-secure",
+      "status": "simulated",
+      "actor": "system-preview",
+      "commandCount": 3,
+      "summary": "Night Secure preview generated lock, alarm stay-arm, and remote gate state-check command plans."
+    }
+  ]
+}

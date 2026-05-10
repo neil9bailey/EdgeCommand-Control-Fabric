@@ -28,13 +28,14 @@ test("MCP orchestrator loads registered tools, agents, sessions, and audit", () 
 
   assert.equal(orchestrator.orchestrator.tenant, "vendorlogic.io");
   assert.equal(summary.schemaVersion, "0.1.0");
-  assert.equal(summary.toolCount, 14);
-  assert.equal(summary.enabledTools, 14);
+  assert.equal(summary.toolCount, 16);
+  assert.equal(summary.enabledTools, 16);
   assert.equal(summary.agentCount, 5);
-  assert.equal(summary.approvalRequiredTools, 4);
-  assert.equal(summary.highRiskTools, 4);
+  assert.equal(summary.approvalRequiredTools, 5);
+  assert.equal(summary.highRiskTools, 6);
   assert.equal(summary.byModule["lighting-scenes"], 2);
   assert.equal(summary.byModule["climate-hvac"], 2);
+  assert.equal(summary.byModule["security-access"], 2);
   assert.equal(summary.byModule["mcp-orchestrator"], undefined);
 });
 
@@ -42,7 +43,7 @@ test("MCP tool filtering and lookup use registered manifests only", () => {
   const orchestrator = loadMcpOrchestrator();
   const highRiskTools = filterMcpTools(orchestrator, { risk: "high" });
 
-  assert.equal(highRiskTools.length, 4);
+  assert.equal(highRiskTools.length, 6);
   assert.equal(findMcpTool(orchestrator, "device.search").risk, "low");
   assert.equal(findMcpTool(orchestrator, "unknown.tool"), null);
 });
@@ -120,6 +121,30 @@ test("MCP execution simulates climate setpoint apply", () => {
   assert.equal(result.canExecute, true);
   assert.equal(result.result.applyStatus, "simulated");
   assert.equal(result.event.moduleId, "climate-hvac");
+});
+
+test("MCP session planning gates high-risk security command proposals", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const plan = planMcpSession(orchestrator, {
+    intent: "Secure the house for night, lock the front door, arm the alarm, and check the remote gate.",
+  }, operator);
+
+  assert.equal(plan.status, "needs_permission");
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "security.profile.preview" && tool.status === "ready"));
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "security.command.propose" && tool.status === "requires_permission"));
+});
+
+test("MCP execution simulates security profile preview", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const result = executeMcpTool(orchestrator, {
+    toolId: "security.profile.preview",
+    input: { profileId: "profile-night-secure" },
+  }, operator);
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.canExecute, true);
+  assert.equal(result.result.profileId, "profile-night-secure");
+  assert.equal(result.event.moduleId, "security-access");
 });
 
 test("MCP execution requires explicit permission for high-risk tools", () => {

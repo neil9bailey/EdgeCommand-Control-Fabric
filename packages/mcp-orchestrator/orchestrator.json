@@ -16,6 +16,8 @@
     { "id": "lighting:scene:apply", "name": "Apply Lighting Scene", "risk": "low" },
     { "id": "climate:profile:preview", "name": "Preview Climate Profile", "risk": "medium" },
     { "id": "climate:setpoint:apply", "name": "Apply Climate Setpoint", "risk": "medium" },
+    { "id": "security:profile:preview", "name": "Preview Security Profile", "risk": "high" },
+    { "id": "security:command:propose", "name": "Propose Security Command", "risk": "high" },
     { "id": "policy:evaluate", "name": "Evaluate Safety Policy", "risk": "medium" },
     { "id": "simulation:run", "name": "Run Simulation", "risk": "medium" },
     { "id": "connectivity:route:evaluate", "name": "Evaluate Connectivity Route", "risk": "medium" },
@@ -30,7 +32,7 @@
       "name": "Automation Intent Partner",
       "rule": "propose-only",
       "status": "enabled",
-      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "module.plan"]
+      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "security.profile.preview", "security.command.propose", "module.plan"]
     },
     {
       "id": "kra-agent",
@@ -166,6 +168,36 @@
       "requiresApproval": false,
       "auditRequired": true,
       "inputHints": ["zoneId", "setpointC", "mode", "holdMinutes"]
+    },
+    {
+      "id": "security.profile.preview",
+      "name": "Security Profile Preview",
+      "agentId": "aip-agent",
+      "moduleId": "security-access",
+      "description": "Preview lock, alarm, door, and gate command plans with security-role and unlock/open approval boundaries.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY",
+      "scopes": ["security:profile:preview"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["profileId", "intent", "accessPointId"]
+    },
+    {
+      "id": "security.command.propose",
+      "name": "Security Command Proposal",
+      "agentId": "aip-agent",
+      "moduleId": "security-access",
+      "description": "Prepare a high-risk security command proposal; remote unlock/open remains approval-gated and not executed.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY",
+      "scopes": ["security:command:propose"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": true,
+      "auditRequired": true,
+      "inputHints": ["accessPointId", "action", "reason", "desiredState"]
     },
     {
       "id": "policy.evaluate",
@@ -313,6 +345,14 @@
       "actor": "operator-local",
       "intent": "Make the house warm and comfortable for the evening while keeping safe setpoint limits.",
       "requestedTools": ["device.search", "climate.profile.preview", "climate.setpoint.apply", "policy.evaluate", "audit.record"]
+    },
+    {
+      "id": "mcp-session-security-night",
+      "name": "Night Security Planning",
+      "status": "needs_permission",
+      "actor": "operator-local",
+      "intent": "Secure the house for night, lock the front door, arm stay mode, and check the remote cottage gate.",
+      "requestedTools": ["device.search", "security.profile.preview", "security.command.propose", "policy.evaluate", "audit.record"]
     }
   ],
   "toolCalls": [
@@ -365,6 +405,26 @@
       "status": "completed",
       "decision": "allowed",
       "summary": "Generated an evening climate comfort preview with safe setpoint checks."
+    },
+    {
+      "id": "toolcall-20260510-006",
+      "sessionId": "mcp-session-security-night",
+      "toolId": "security.profile.preview",
+      "timestamp": "2026-05-10T05:24:10Z",
+      "actor": "operator-local",
+      "status": "completed",
+      "decision": "allowed",
+      "summary": "Generated a night secure profile preview with lock, alarm, gate-check, and approval-boundary evidence."
+    },
+    {
+      "id": "toolcall-20260510-007",
+      "sessionId": "mcp-session-security-night",
+      "toolId": "security.command.propose",
+      "timestamp": "2026-05-10T05:24:16Z",
+      "actor": "operator-local",
+      "status": "requires_permission",
+      "decision": "explicit_permission_required",
+      "summary": "High-risk remote unlock/open command proposal paused until explicit permission is attached."
     }
   ]
 }

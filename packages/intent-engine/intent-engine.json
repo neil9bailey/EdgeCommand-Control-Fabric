@@ -204,9 +204,19 @@
           "status": "approval_required",
           "risk": "high",
           "requiredGates": ["security_role", "human_approval", "audit_record"],
-          "requiredTools": ["device.search", "device.command.propose", "policy.evaluate", "audit.record"],
+          "requiredTools": ["device.search", "security.profile.preview", "security.command.propose", "policy.evaluate", "audit.record"],
           "impact": "Prepare an access-state check or command proposal without unlocking or opening anything.",
           "rollbackPath": "No physical access state changes occur through AIP."
+        },
+        {
+          "type": "secure_profile_preview",
+          "title": "Security profile preview",
+          "status": "needs_review",
+          "risk": "high",
+          "requiredGates": ["security_role", "audit_record", "unlock_open_boundary"],
+          "requiredTools": ["device.search", "security.profile.preview", "policy.evaluate", "audit.record"],
+          "impact": "Prepare lock, arm, and state-check commands while leaving unlock/open actions approval-gated.",
+          "rollbackPath": "No access state changes occur until the operator applies the simulated secure profile."
         }
       ]
     }
@@ -239,6 +249,13 @@
       "intentClass": "comfort_schedule",
       "confidence": "high",
       "summary": "Evening climate comfort profile with safe setpoint and audit evidence."
+    },
+    {
+      "id": "intent-session-security-night",
+      "status": "approval_required",
+      "intentClass": "security_plan",
+      "confidence": "high",
+      "summary": "Night secure profile with lock, alarm, gate check, and unlock/open boundary evidence."
     }
   ]
 }

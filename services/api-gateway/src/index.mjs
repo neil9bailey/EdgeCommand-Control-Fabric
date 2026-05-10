@@ -69,6 +69,14 @@ import {
   runSimulation,
   summarizeSimulationLab,
 } from "./simulationLab.mjs";
+import {
+  applyLightingScene,
+  buildLightingDashboard,
+  loadLightingScenes,
+  previewLightingIntent,
+  previewLightingScene,
+  summarizeLightingScenes,
+} from "./lightingScenes.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -84,6 +92,7 @@ const intentEngine = loadIntentEngine();
 const kraEngine = loadKraEngine();
 const simulationLab = loadSimulationLab();
 const approvalWorkflow = loadApprovalWorkflow();
+const lightingScenes = loadLightingScenes();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -104,6 +113,7 @@ function buildOverview() {
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
   const approvalSummary = summarizeApprovalWorkflow(approvalWorkflow);
+  const lightingSummary = summarizeLightingScenes(lightingScenes, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -132,6 +142,7 @@ function buildOverview() {
       riskAgent: `${kraSummary.rulePackCount} KRA rule packs / ${kraSummary.sourceCount} sources`,
       simulationLab: `${simulationSummary.scenarioCount} labs / ${simulationSummary.variantCount} variants`,
       approvalWorkflow: `${approvalSummary.policyRuleCount} policies / ${approvalSummary.decisionCount} decisions`,
+      lightingScenes: `${lightingSummary.enabledSceneCount} enabled scenes / ${lightingSummary.onlineFixtureCount} online fixtures`,
     },
     links: defaultLinkInventory(),
   };
@@ -175,6 +186,7 @@ app.get("/api/command-centre", (_req, res) => {
     kraEngine,
     simulationLab,
     approvalWorkflow,
+    lightingScenes,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -295,6 +307,76 @@ app.get("/api/automations", (_req, res) => {
     summary: summarizeAutomationEngine(automationEngine),
   });
 });
+
+app.get("/api/lighting", (_req, res) => {
+  res.json(buildLightingDashboard({
+    lighting: lightingScenes,
+    deviceRegistry,
+  }));
+});
+
+app.get("/api/lighting/scenes/:id/preview", (req, res) => {
+  const result = previewLightingScene({
+    lighting: lightingScenes,
+    deviceRegistry,
+    sceneId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "lighting_scene_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/lighting/scenes/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewLightingScene({
+      lighting: lightingScenes,
+      deviceRegistry,
+      sceneId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "lighting_scene_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/lighting/scenes/:id/apply",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = applyLightingScene({
+      lighting: lightingScenes,
+      deviceRegistry,
+      sceneId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "lighting_scene_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.status === "blocked" ? 409 : 200).json(result);
+  },
+);
+
+app.post(
+  "/api/lighting/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewLightingIntent({
+      lighting: lightingScenes,
+      deviceRegistry,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
 
 app.get("/api/mcp", (_req, res) => {
   res.json({

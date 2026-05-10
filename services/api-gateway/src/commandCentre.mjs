@@ -6,6 +6,7 @@ import {
 import { summarizeDeviceRegistry } from "./deviceRegistry.mjs";
 import { filterEvents, summarizeEventLedger } from "./eventLedger.mjs";
 import { buildKraDashboard, summarizeKraEngine } from "./kraEngine.mjs";
+import { buildLightingDashboard, summarizeLightingScenes } from "./lightingScenes.mjs";
 import { summarizeMcpOrchestrator } from "./mcpOrchestrator.mjs";
 import {
   buildSimulationDashboard,
@@ -83,7 +84,7 @@ export function buildApprovalQueue(automationEngine, deviceRegistry, simulationL
   });
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -124,6 +125,18 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
         { label: "Rules", value: automationSummary.ruleCount },
         { label: "P0", value: automationSummary.p0Rules },
         { label: "Scenes", value: automationSummary.sceneCount },
+      ],
+    },
+    {
+      id: "lighting",
+      label: "Lighting",
+      headline: `${lightingSummary.enabledSceneCount} scenes enabled`,
+      detail: `${lightingSummary.onlineFixtureCount}/${lightingSummary.fixtureCount} fixtures online, ${lightingSummary.enabledScheduleCount} schedules enabled`,
+      status: lightingSummary.onlineFixtureCount === lightingSummary.fixtureCount ? "ready" : "attention",
+      metrics: [
+        { label: "Zones", value: lightingSummary.zoneCount },
+        { label: "Fixtures", value: lightingSummary.fixtureCount },
+        { label: "Recipes", value: lightingSummary.intentRecipeCount },
       ],
     },
     {
@@ -213,16 +226,30 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
+function buildActionQueue({ approvals, lightingDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
-      workspaceId: "approvals",
-      title: `${approval.deviceName} approval`,
-      owner: titleFromId(approval.moduleId),
-      status: approval.status,
-      detail: `${approval.selectedPath} path requires ${approval.requiredRoles.length} approval role(s)`,
-      evidence: [...approval.reasons, approval.simulation?.attached ? "simulation-attached" : "simulation-missing"],
+    workspaceId: "approvals",
+    title: `${approval.deviceName} approval`,
+    owner: titleFromId(approval.moduleId),
+    status: approval.status,
+    detail: `${approval.selectedPath} path requires ${approval.requiredRoles.length} approval role(s)`,
+    evidence: [...approval.reasons, approval.simulation?.attached ? "simulation-attached" : "simulation-missing"],
+  }));
+
+  const lightingActions = (lightingDashboard?.scenes || [])
+    .filter((scene) => scene.status === "enabled")
+    .slice(0, 3)
+    .map((scene) => ({
+      id: `lighting-${scene.id}`,
+      priority: scene.trafficClass,
+      workspaceId: "lighting",
+      title: `${scene.name} scene ready`,
+      owner: "Lighting And Scenes",
+      status: "ready",
+      detail: `${scene.mode} mode / ${scene.zoneTargets.length} zone target(s)`,
+      evidence: [...scene.policies, scene.requiresApproval ? "approval-required" : "low-risk"],
     }));
 
   const deviceActions = devices
@@ -307,13 +334,14 @@ function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestr
       };
     });
 
-  return [...approvalActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 12);
+  return [...approvalActions, ...lightingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 14);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, authStatus }) {
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
+  const lightingSummary = summarizeLightingScenes(lightingScenes, deviceRegistry);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
@@ -341,6 +369,10 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     mcpOrchestrator,
     actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.AgentApprover"] },
   });
+  const lightingDashboard = buildLightingDashboard({
+    lighting: lightingScenes,
+    deviceRegistry,
+  });
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
   const auditEvents = filterEvents(eventLedger, { auditRequired: "true", limit: 8 });
@@ -349,6 +381,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     deviceSummary,
     eventSummary,
     automationSummary,
+    lightingSummary,
     approvalSummary: approvalQueue.summary,
     mcpSummary,
     kraSummary,
@@ -397,6 +430,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     workspaces,
     actionQueue: buildActionQueue({
       approvals: approvalQueue.approvals,
+      lightingDashboard,
       devices,
       routes: narrowbandRoutes.routes,
       auditEvents,
@@ -422,6 +456,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       approvals: approvalQueue.approvals,
       summary: automationSummary,
     },
+    lighting: lightingDashboard,
     approvals: approvalQueue,
     agents: {
       orchestrator: mcpOrchestrator.orchestrator,

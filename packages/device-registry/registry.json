@@ -20,6 +20,7 @@
     { "id": "utility-room", "siteId": "home-hq", "name": "Utility Room", "type": "plant" },
     { "id": "kitchen", "siteId": "home-hq", "name": "Kitchen", "type": "room" },
     { "id": "hall", "siteId": "home-hq", "name": "Hall", "type": "room" },
+    { "id": "living-room", "siteId": "home-hq", "name": "Living Room", "type": "room" },
     { "id": "front-entrance", "siteId": "home-hq", "name": "Front Entrance", "type": "access" },
     { "id": "energy-room", "siteId": "home-hq", "name": "Energy Room", "type": "plant" },
     { "id": "garden", "siteId": "home-hq", "name": "Garden", "type": "external" },
@@ -32,6 +33,8 @@
     { "id": "flow_meter", "class": "meter", "risk": "medium", "trafficClass": "P3_TELEMETRY" },
     { "id": "light", "class": "actuator", "risk": "low", "trafficClass": "P2_CONTROL" },
     { "id": "dimmer", "class": "actuator", "risk": "low", "trafficClass": "P2_CONTROL" },
+    { "id": "scene", "class": "virtual", "risk": "low", "trafficClass": "P2_CONTROL" },
+    { "id": "color_temperature", "class": "actuator", "risk": "low", "trafficClass": "P2_CONTROL" },
     { "id": "thermostat", "class": "actuator", "risk": "medium", "trafficClass": "P2_CONTROL" },
     { "id": "lock", "class": "actuator", "risk": "high", "trafficClass": "P1_SECURITY" },
     { "id": "gate", "class": "actuator", "risk": "high", "trafficClass": "P1_SECURITY" },
@@ -104,9 +107,57 @@
       "trustTier": "paired",
       "status": "online",
       "lastSeen": "2026-05-10T05:00:01Z",
+      "capabilities": ["light", "dimmer", "color_temperature"],
+      "observedState": { "on": true, "brightness": 72, "colorTemperatureK": 3500, "manualOverride": false },
+      "desiredState": { "on": true, "brightness": 72, "colorTemperatureK": 3500 },
+      "narrowbandEligible": false
+    },
+    {
+      "id": "dev-light-hall-01",
+      "name": "Hall Lantern",
+      "siteId": "home-hq",
+      "zoneId": "hall",
+      "adapter": "matter",
+      "manufacturer": "Simulated",
+      "model": "VL-Light-MT2",
+      "trustTier": "paired",
+      "status": "online",
+      "lastSeen": "2026-05-10T05:00:01Z",
+      "capabilities": ["light", "dimmer", "color_temperature"],
+      "observedState": { "on": true, "brightness": 45, "colorTemperatureK": 3000, "manualOverride": false },
+      "desiredState": { "on": true, "brightness": 45, "colorTemperatureK": 3000 },
+      "narrowbandEligible": false
+    },
+    {
+      "id": "dev-light-living-01",
+      "name": "Living Floor Wash",
+      "siteId": "home-hq",
+      "zoneId": "living-room",
+      "adapter": "zigbee",
+      "manufacturer": "Simulated",
+      "model": "VL-Light-ZB2",
+      "trustTier": "paired",
+      "status": "online",
+      "lastSeen": "2026-05-10T05:00:01Z",
+      "capabilities": ["light", "dimmer", "color_temperature"],
+      "observedState": { "on": true, "brightness": 36, "colorTemperatureK": 2700, "manualOverride": false },
+      "desiredState": { "on": true, "brightness": 36, "colorTemperatureK": 2700 },
+      "narrowbandEligible": false
+    },
+    {
+      "id": "dev-light-garden-path-01",
+      "name": "Garden Path Bollards",
+      "siteId": "home-hq",
+      "zoneId": "garden",
+      "adapter": "mqtt",
+      "manufacturer": "Simulated",
+      "model": "VL-Light-MQ2",
+      "trustTier": "paired",
+      "status": "online",
+      "lastSeen": "2026-05-10T05:00:01Z",
       "capabilities": ["light", "dimmer"],
-      "observedState": { "on": true, "brightness": 72 },
-      "desiredState": { "on": true, "brightness": 72 },
+      "observedState": { "on": false, "brightness": 0, "manualOverride": false },
+      "desiredState": { "on": false, "brightness": 0 },
       "narrowbandEligible": false
     },
     {
@@ -271,4 +322,3 @@
     }
   ]
 }
-

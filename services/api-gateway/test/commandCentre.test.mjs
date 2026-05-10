@@ -8,6 +8,7 @@ import { buildApprovalQueue, buildCommandCentre, defaultNarrowbandRoutes } from 
 import { loadDeviceRegistry } from "../src/deviceRegistry.mjs";
 import { loadEventLedger } from "../src/eventLedger.mjs";
 import { loadKraEngine } from "../src/kraEngine.mjs";
+import { loadLightingScenes } from "../src/lightingScenes.mjs";
 import { loadMcpOrchestrator } from "../src/mcpOrchestrator.mjs";
 import { loadSimulationLab } from "../src/simulationLab.mjs";
 
@@ -22,6 +23,7 @@ function commandCentreFixture() {
     kraEngine: loadKraEngine(),
     simulationLab: loadSimulationLab(),
     approvalWorkflow: loadApprovalWorkflow(),
+    lightingScenes: loadLightingScenes(),
     authStatus: publicAuthStatus(authConfig, {
       provider: "environment",
       keyVaultEnabled: false,
@@ -40,6 +42,7 @@ test("command centre builds all operational workspaces", () => {
     "modules",
     "devices",
     "automations",
+    "lighting",
     "approvals",
     "agents",
     "risk",
@@ -57,6 +60,7 @@ test("command centre action queue includes safety approval and route attention",
   const commandCentre = commandCentreFixture();
 
   assert.ok(commandCentre.actionQueue.some((action) => action.id.startsWith("approval-")));
+  assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "lighting"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "approvals"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "agents"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "risk"));
@@ -67,7 +71,9 @@ test("command centre action queue includes safety approval and route attention",
   assert.ok(commandCentre.automations.approvals.every((approval) => approval.simulation.attached));
   assert.equal(commandCentre.approvals.summary.readyForApproval, 1);
   assert.equal(commandCentre.approvals.policyRules.length, 5);
-  assert.equal(commandCentre.agents.summary.toolCount, 10);
+  assert.equal(commandCentre.lighting.summary.enabledSceneCount, 4);
+  assert.equal(commandCentre.lighting.summary.onlineFixtureCount, 4);
+  assert.equal(commandCentre.agents.summary.toolCount, 12);
   assert.equal(commandCentre.risk.summary.rulePackCount, 6);
   assert.equal(commandCentre.simulations.summary.scenarioCount, 3);
 });

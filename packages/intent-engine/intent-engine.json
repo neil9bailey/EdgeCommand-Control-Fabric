@@ -107,6 +107,37 @@
       ]
     },
     {
+      "id": "lighting-scene-control",
+      "name": "Lighting Scene Control",
+      "intentClass": "scene_control",
+      "keywords": ["light", "lighting", "scene", "dim", "bright", "warm", "evening", "night", "away", "presence", "cooking"],
+      "siteHints": ["home", "kitchen", "hall", "living", "garden"],
+      "targetModules": ["lighting-scenes", "automation-engine", "audit-ledger"],
+      "targetCapabilities": ["light", "dimmer", "scene", "color_temperature"],
+      "proposalTemplates": [
+        {
+          "type": "scene_preview",
+          "title": "Lighting scene preview",
+          "status": "needs_review",
+          "risk": "low",
+          "requiredGates": ["manual_override_check", "audit_record"],
+          "requiredTools": ["device.search", "lighting.scene.preview", "policy.evaluate", "audit.record"],
+          "impact": "Prepare grouped lighting commands with zone, brightness, fade, and manual override evidence.",
+          "rollbackPath": "No fixture state changes are made until the operator applies the simulated command plan."
+        },
+        {
+          "type": "scene_apply",
+          "title": "Low-risk lighting scene apply",
+          "status": "needs_review",
+          "risk": "low",
+          "requiredGates": ["operator_review", "manual_override_check", "audit_record"],
+          "requiredTools": ["lighting.scene.apply", "policy.evaluate", "audit.record"],
+          "impact": "Apply a low-risk scene through the lighting command boundary after review.",
+          "rollbackPath": "Previous scene can be replayed from the audit record or replaced by manual control."
+        }
+      ]
+    },
+    {
       "id": "energy-reserve",
       "name": "Energy Reserve Protection",
       "intentClass": "optimization_plan",
@@ -163,6 +194,13 @@
       "intentClass": "module_plan",
       "confidence": "medium",
       "summary": "MQTT and ESPHome module enablement plan."
+    },
+    {
+      "id": "intent-session-lighting-evening",
+      "status": "needs_review",
+      "intentClass": "scene_control",
+      "confidence": "high",
+      "summary": "Warm evening lighting scene with manual override and audit evidence."
     }
   ]
 }

@@ -38,6 +38,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  applyLightingScene,
   fetchApprovals,
   fetchAuthStatus,
   fetchAutomations,
@@ -46,9 +47,12 @@ import {
   fetchDevices,
   fetchEvents,
   fetchKra,
+  fetchLighting,
   fetchNarrowbandRoutes,
   fetchOverview,
   fetchSimulationLab,
+  previewLightingIntent,
+  previewLightingScene,
   proposeIntent,
   recordApprovalDecision,
   recordIntentDecision,
@@ -71,6 +75,9 @@ import type {
   IntentDecisionResponse,
   IntentProposalResponse,
   KraDashboardResponse,
+  LightingDashboardResponse,
+  LightingIntentPreview,
+  LightingScenePreview,
   ModuleCatalog,
   ModuleDefinition,
   NarrowbandRoutes,
@@ -115,6 +122,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   modules: Boxes,
   devices: Gauge,
   automations: Settings2,
+  lighting: Lightbulb,
   agents: GitBranch,
   approvals: ClipboardCheck,
   risk: Shield,
@@ -200,6 +208,10 @@ function App() {
   const [eventLedger, setEventLedger] = useState<EventLedgerResponse | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [automations, setAutomations] = useState<AutomationResponse | null>(null);
+  const [lighting, setLighting] = useState<LightingDashboardResponse | null>(null);
+  const [lightingPreview, setLightingPreview] = useState<LightingScenePreview | null>(null);
+  const [lightingIntentPreview, setLightingIntentPreview] = useState<LightingIntentPreview | null>(null);
+  const [lightingLoading, setLightingLoading] = useState<"preview" | "apply" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -228,6 +240,7 @@ function App() {
     void fetchDevices().then(setDeviceRegistry);
     void fetchEvents().then(setEventLedger);
     void fetchAutomations().then(setAutomations);
+    void fetchLighting().then(setLighting);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -286,6 +299,35 @@ function App() {
       setAutomationEvaluation(await runAutomationScenario(scenarioId));
     } finally {
       setAutomationLoading(false);
+    }
+  }
+
+  async function previewScene(sceneId: string) {
+    setLightingLoading("preview");
+    try {
+      setLightingPreview(await previewLightingScene(sceneId));
+    } finally {
+      setLightingLoading(null);
+    }
+  }
+
+  async function applyScene(sceneId: string) {
+    setLightingLoading("apply");
+    try {
+      setLightingPreview(await applyLightingScene(sceneId));
+    } finally {
+      setLightingLoading(null);
+    }
+  }
+
+  async function previewSceneIntent(intentText: string) {
+    setLightingLoading("intent");
+    try {
+      const result = await previewLightingIntent(intentText);
+      setLightingIntentPreview(result);
+      setLightingPreview(result.preview);
+    } finally {
+      setLightingLoading(null);
     }
   }
 
@@ -383,6 +425,7 @@ function App() {
           <Metric label="Audit" value={eventLedger?.summary.auditRequired || overview?.events?.auditRequired || "-"} detail="durable gates" tone="warn" />
           <Metric label="Rules" value={automations?.summary.armedRules || overview?.automation?.armedRules || "-"} detail="armed automations" tone="good" />
           <Metric label="Policy" value={automations?.summary.policyCount || overview?.automation?.policyCount || "-"} detail="safety packs" tone="danger" />
+          <Metric label="Lighting" value={lighting?.summary.enabledSceneCount || commandCentre?.lighting.summary.enabledSceneCount || "-"} detail="enabled scenes" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -402,6 +445,15 @@ function App() {
         />
 
         <EventAuditStrip eventLedger={eventLedger} fallbackSummary={overview?.events || null} />
+        <LightingScenesPanel
+          lighting={lighting || commandCentre?.lighting || null}
+          preview={lightingPreview}
+          intentPreview={lightingIntentPreview}
+          loading={lightingLoading}
+          onPreview={previewScene}
+          onApply={applyScene}
+          onIntentPreview={previewSceneIntent}
+        />
         <AutomationOpsPanel
           automations={automations}
           approvals={approvals}
@@ -652,6 +704,57 @@ function CommandCentreWorkspaceView({
             <span>{approval.selectedPath}</span>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (activeWorkspace === "lighting") {
+    return (
+      <div className="ops-workspace lighting-workspace">
+        <div className="state-rack lighting-state-rack">
+          <div>
+            <span>Scenes</span>
+            <strong>{commandCentre.lighting.summary.enabledSceneCount}</strong>
+          </div>
+          <div>
+            <span>Fixtures</span>
+            <strong>{commandCentre.lighting.summary.onlineFixtureCount}/{commandCentre.lighting.summary.fixtureCount}</strong>
+          </div>
+          <div>
+            <span>Schedules</span>
+            <strong>{commandCentre.lighting.summary.enabledScheduleCount}</strong>
+          </div>
+          <div>
+            <span>Recipes</span>
+            <strong>{commandCentre.lighting.summary.intentRecipeCount}</strong>
+          </div>
+        </div>
+        <div className="ops-table lighting-ops-table">
+          <div className="ops-row ops-head">
+            <span>Scene</span>
+            <span>Mode</span>
+            <span>Targets</span>
+            <span>Traffic</span>
+            <span>Gate</span>
+          </div>
+          {commandCentre.lighting.scenes.map((scene) => (
+            <div className="ops-row" key={scene.id}>
+              <strong>{scene.name}</strong>
+              <span>{scene.mode}</span>
+              <span>{scene.zoneTargets.length} zones</span>
+              <StatusPill tone={trafficTone(scene.trafficClass)} label={scene.trafficClass} />
+              <StatusPill tone={scene.requiresApproval ? "warn" : "good"} label={scene.requiresApproval ? "approval" : "direct"} />
+            </div>
+          ))}
+        </div>
+        <div className="agent-session-strip">
+          {commandCentre.lighting.zones.map((zone) => (
+            <div key={zone.id}>
+              <strong>{zone.name}</strong>
+              <span>{zone.onlineFixtures || 0}/{zone.fixtureIds.length} fixture(s) / {zone.circadianBand.replace(/-/g, " ")}</span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -967,6 +1070,168 @@ function ActionQueue({
         )}
       </div>
     </aside>
+  );
+}
+
+function LightingScenesPanel({
+  lighting,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onApply,
+  onIntentPreview,
+}: {
+  lighting: LightingDashboardResponse | null;
+  preview: LightingScenePreview | null;
+  intentPreview: LightingIntentPreview | null;
+  loading: "preview" | "apply" | "intent" | null;
+  onPreview: (sceneId: string) => void;
+  onApply: (sceneId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const scenes = lighting?.scenes || [];
+  const zones = lighting?.zones || [];
+  const schedules = lighting?.schedules || [];
+  const recipes = lighting?.intentRecipes || [];
+  const activeSceneId = preview?.scene.id || lighting?.service.defaultSceneId || scenes[0]?.id;
+  const activeScene = scenes.find((scene) => scene.id === activeSceneId) || scenes[0];
+  const activeRecipe = recipes.find((recipe) => recipe.sceneId === activeScene?.id) || recipes[0];
+
+  return (
+    <section className="lighting-scenes-panel" aria-label="Lighting and scenes">
+      <div className="section-header lighting-header">
+        <div>
+          <p className="eyebrow">Lighting And Scenes</p>
+          <h2>Scene Command Surface</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${lighting?.summary.enabledSceneCount || 0} enabled`} />
+          <StatusPill tone={lighting?.summary.onlineFixtureCount === lighting?.summary.fixtureCount ? "good" : "warn"} label={`${lighting?.summary.onlineFixtureCount || 0}/${lighting?.summary.fixtureCount || 0} fixtures`} />
+          <StatusPill tone={preview?.status === "blocked" ? "danger" : preview?.status === "executed_simulated" ? "good" : "neutral"} label={preview?.status.replace(/_/g, " ") || "ready"} />
+        </div>
+      </div>
+
+      <div className="lighting-grid">
+        <div className="lighting-panel scene-picker-panel">
+          <div className="section-header compact">
+            <h3>Scenes</h3>
+            <Lightbulb size={18} />
+          </div>
+          <div className="lighting-scene-list">
+            {scenes.map((scene) => (
+              <div className={`lighting-scene-row ${scene.id === activeSceneId ? "active" : ""}`} key={scene.id}>
+                <div>
+                  <strong>{scene.name}</strong>
+                  <span>{scene.mode} / {scene.zoneTargets.length} target(s)</span>
+                </div>
+                <div className="lighting-scene-actions">
+                  <button onClick={() => onPreview(scene.id)} disabled={Boolean(loading)}>
+                    <PlayCircle size={15} />
+                    <span>{loading === "preview" && scene.id === activeSceneId ? "Previewing" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onApply(scene.id)} disabled={Boolean(loading)}>
+                    <CheckCircle2 size={15} />
+                    <span>{loading === "apply" && scene.id === activeSceneId ? "Applying" : "Apply"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="lighting-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="lighting-panel">
+          <div className="section-header compact">
+            <h3>Zones</h3>
+            <Home size={18} />
+          </div>
+          <div className="lighting-zone-list">
+            {zones.map((zone) => (
+              <div className="lighting-zone-row" key={zone.id}>
+                <div>
+                  <strong>{zone.name}</strong>
+                  <span>{zone.targetLux} lux / {zone.circadianBand.replace(/-/g, " ")}</span>
+                </div>
+                <StatusPill tone={zone.onlineFixtures === zone.fixtureIds.length ? "good" : "warn"} label={`${zone.onlineFixtures || 0}/${zone.fixtureIds.length}`} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="lighting-panel command-plan-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.scene.name : "Command Plan"}</h3>
+            <Settings2 size={18} />
+          </div>
+          <div className="lighting-command-list">
+            {(preview?.commands || []).slice(0, 5).map((command) => (
+              <div className="lighting-command-row" key={command.id}>
+                <div>
+                  <strong>{command.deviceName}</strong>
+                  <span>{command.selectedPath} / {command.fadeMs}ms / {command.encodedBytes} bytes</span>
+                </div>
+                <StatusPill tone={command.canExecute ? "good" : "danger"} label={command.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+            {!preview && (
+              <div className="event-empty">
+                <Activity size={18} />
+                <span>Preview a scene to generate fixture-level command plans.</span>
+              </div>
+            )}
+          </div>
+          {intentPreview && (
+            <div className="lighting-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.sceneId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="lighting-panel">
+          <div className="section-header compact">
+            <h3>Policy And Schedule</h3>
+            <Shield size={18} />
+          </div>
+          <div className="lighting-policy-list">
+            {(preview?.policy.criteria || lighting?.policies || []).slice(0, 5).map((item) => (
+              "passed" in item ? (
+                <div className="lighting-policy-row" key={item.id}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{item.id.replace(/_/g, " ")}</span>
+                  </div>
+                  <StatusPill tone={item.passed ? "good" : "danger"} label={item.passed ? "pass" : "hold"} />
+                </div>
+              ) : (
+                <div className="lighting-policy-row" key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span>{item.message}</span>
+                  </div>
+                  <StatusPill tone="good" label={item.risk} />
+                </div>
+              )
+            ))}
+            {schedules.slice(0, 3).map((schedule) => (
+              <div className="lighting-policy-row schedule" key={schedule.id}>
+                <div>
+                  <strong>{schedule.name}</strong>
+                  <span>{schedule.time} / {schedule.days.length} day(s)</span>
+                </div>
+                <StatusPill tone={schedule.status === "enabled" ? "good" : "muted"} label={schedule.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

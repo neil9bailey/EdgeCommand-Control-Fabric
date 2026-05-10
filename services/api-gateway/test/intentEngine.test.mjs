@@ -24,11 +24,11 @@ test("intent engine loads deterministic AIP frames and seed sessions", () => {
   assert.equal(engine.engine.tenant, "vendorlogic.io");
   assert.equal(engine.engine.rule, "propose-only");
   assert.equal(summary.schemaVersion, "0.1.0");
-  assert.equal(summary.frameCount, 5);
-  assert.equal(summary.seedSessionCount, 2);
+  assert.equal(summary.frameCount, 6);
+  assert.equal(summary.seedSessionCount, 3);
   assert.equal(summary.proposeOnly, true);
   assert.ok(summary.highRiskFrames >= 4);
-  assert.equal(seeds.sessions.length, 2);
+  assert.equal(seeds.sessions.length, 3);
 });
 
 test("AIP proposes leak response and LoRaWAN fallback without execution", () => {
@@ -72,6 +72,24 @@ test("AIP creates module enablement plans through MCP without mutating infrastru
   assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "module.plan"));
   assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "module.enable"));
   assert.ok(session.aip.proposals.every((proposal) => proposal.executionRule.includes("proposes only")));
+});
+
+test("AIP proposes lighting scene plans through MCP without direct fixture mutation", () => {
+  const session = createIntentSession({
+    engine: loadIntentEngine(),
+    catalog: loadCatalog(),
+    mcpOrchestrator: loadMcpOrchestrator(),
+    intent: "Set a warm evening lighting scene and dim the hall lights.",
+    actor: operator,
+  });
+
+  assert.equal(session.intent.class, "scene_control");
+  assert.ok(session.intent.extractedSignals.targetModules.includes("lighting-scenes"));
+  assert.ok(session.aip.proposals.some((proposal) => proposal.type === "scene_preview"));
+  assert.ok(session.aip.proposals.some((proposal) => proposal.type === "scene_apply"));
+  assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "lighting.scene.preview" && tool.status === "ready"));
+  assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "lighting.scene.apply" && tool.status === "ready"));
+  assert.ok(session.aip.proposals.every((proposal) => proposal.canExecute === false));
 });
 
 test("intent decision records accept, modify, and reject outcomes", () => {

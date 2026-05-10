@@ -28,11 +28,12 @@ test("MCP orchestrator loads registered tools, agents, sessions, and audit", () 
 
   assert.equal(orchestrator.orchestrator.tenant, "vendorlogic.io");
   assert.equal(summary.schemaVersion, "0.1.0");
-  assert.equal(summary.toolCount, 10);
-  assert.equal(summary.enabledTools, 10);
+  assert.equal(summary.toolCount, 12);
+  assert.equal(summary.enabledTools, 12);
   assert.equal(summary.agentCount, 5);
   assert.equal(summary.approvalRequiredTools, 4);
   assert.equal(summary.highRiskTools, 4);
+  assert.equal(summary.byModule["lighting-scenes"], 2);
   assert.equal(summary.byModule["mcp-orchestrator"], undefined);
 });
 
@@ -68,6 +69,31 @@ test("MCP session planning denies unregistered tools", () => {
   assert.equal(plan.status, "blocked");
   assert.equal(plan.deniedCount, 1);
   assert.ok(plan.toolPlans.some((tool) => tool.toolId === "external.shell.delete" && tool.status === "denied_unregistered"));
+});
+
+test("MCP session planning supports low-risk lighting scene tools", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const plan = planMcpSession(orchestrator, {
+    intent: "Set a warm evening lighting scene and dim the hall lights.",
+  }, operator);
+
+  assert.equal(plan.status, "planned");
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "lighting.scene.preview" && tool.status === "ready"));
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "lighting.scene.apply" && tool.status === "ready"));
+  assert.equal(plan.requiresPermissionCount, 0);
+});
+
+test("MCP execution simulates lighting scene apply", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const result = executeMcpTool(orchestrator, {
+    toolId: "lighting.scene.apply",
+    input: { sceneId: "scene-evening-wind-down" },
+  }, operator);
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.canExecute, true);
+  assert.equal(result.result.applyStatus, "simulated");
+  assert.equal(result.event.moduleId, "lighting-scenes");
 });
 
 test("MCP execution requires explicit permission for high-risk tools", () => {

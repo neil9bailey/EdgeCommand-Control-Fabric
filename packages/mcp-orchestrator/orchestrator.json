@@ -12,6 +12,8 @@
     { "id": "device:read", "name": "Read Device Registry", "risk": "low" },
     { "id": "device:command:propose", "name": "Propose Device Command", "risk": "high" },
     { "id": "automation:rule:compile", "name": "Compile Automation Rule", "risk": "high" },
+    { "id": "lighting:scene:preview", "name": "Preview Lighting Scene", "risk": "low" },
+    { "id": "lighting:scene:apply", "name": "Apply Lighting Scene", "risk": "low" },
     { "id": "policy:evaluate", "name": "Evaluate Safety Policy", "risk": "medium" },
     { "id": "simulation:run", "name": "Run Simulation", "risk": "medium" },
     { "id": "connectivity:route:evaluate", "name": "Evaluate Connectivity Route", "risk": "medium" },
@@ -26,7 +28,7 @@
       "name": "Automation Intent Partner",
       "rule": "propose-only",
       "status": "enabled",
-      "tools": ["device.search", "automation.rule.compile", "module.plan"]
+      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "module.plan"]
     },
     {
       "id": "kra-agent",
@@ -102,6 +104,36 @@
       "requiresApproval": true,
       "auditRequired": true,
       "inputHints": ["intent", "targetModule", "simulationProfile"]
+    },
+    {
+      "id": "lighting.scene.preview",
+      "name": "Lighting Scene Preview",
+      "agentId": "aip-agent",
+      "moduleId": "lighting-scenes",
+      "description": "Preview grouped lighting scene commands with manual override, occupancy, and audit evidence.",
+      "status": "enabled",
+      "risk": "low",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["lighting:scene:preview"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.Viewer", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["sceneId", "intent", "zoneId"]
+    },
+    {
+      "id": "lighting.scene.apply",
+      "name": "Lighting Scene Apply",
+      "agentId": "aip-agent",
+      "moduleId": "lighting-scenes",
+      "description": "Apply a low-risk lighting scene through the simulated command boundary.",
+      "status": "enabled",
+      "risk": "low",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["lighting:scene:apply"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["sceneId", "reason", "sourceIntent"]
     },
     {
       "id": "policy.evaluate",
@@ -233,6 +265,14 @@
       "actor": "operator-local",
       "intent": "Plan the MQTT and ESPHome adapter module for local Docker enablement.",
       "requestedTools": ["module.plan", "policy.evaluate", "audit.record"]
+    },
+    {
+      "id": "mcp-session-lighting-scene",
+      "name": "Evening Lighting Scene Planning",
+      "status": "planned",
+      "actor": "operator-local",
+      "intent": "Set a warm evening lighting scene and record the simulated scene command plan.",
+      "requestedTools": ["device.search", "lighting.scene.preview", "lighting.scene.apply", "policy.evaluate", "audit.record"]
     }
   ],
   "toolCalls": [
@@ -265,6 +305,16 @@
       "status": "completed",
       "decision": "allowed",
       "summary": "Prepared module enablement plan without mutating Docker or Azure configuration."
+    },
+    {
+      "id": "toolcall-20260510-004",
+      "sessionId": "mcp-session-lighting-scene",
+      "toolId": "lighting.scene.preview",
+      "timestamp": "2026-05-10T05:12:10Z",
+      "actor": "operator-local",
+      "status": "completed",
+      "decision": "allowed",
+      "summary": "Generated a warm evening lighting scene preview with manual override checks."
     }
   ]
 }

@@ -387,6 +387,8 @@ Acceptance:
 
 ## E12 - Lighting And Scenes
 
+Status: complete in E12 foundation slice.
+
 Objective:
 
 Deliver the first standard home automation module.
@@ -404,6 +406,7 @@ Acceptance:
 - Simulated lights can be grouped and controlled.
 - Scenes can be created and triggered.
 - AIP can propose a lighting scene.
+- Lighting scene preview and apply are exposed through MCP tools, API endpoints, and the web console.
 
 ## E13 - Climate And HVAC
 
@@ -1084,4 +1087,3 @@ Acceptance:
 20. E34 Azure Container Apps IaC.
 
 This order proves the full product loop early: human intent, agent proposal, KRA critique, approval, simulation, execution, audit, dashboard, module enablement, and narrowband fallback.
-

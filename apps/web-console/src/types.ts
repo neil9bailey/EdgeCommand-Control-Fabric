@@ -60,6 +60,7 @@ export interface PlatformOverview {
     intentEngine?: string;
     riskAgent?: string;
     simulationLab?: string;
+    lightingScenes?: string;
   };
   links: Array<{
     id: string;
@@ -677,7 +678,218 @@ export interface SimulationLabResponse {
   rule: string;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
+export interface LightingSummary {
+  schemaVersion: string;
+  zoneCount: number;
+  fixtureCount: number;
+  onlineFixtureCount: number;
+  sceneCount: number;
+  enabledSceneCount: number;
+  scheduleCount: number;
+  enabledScheduleCount: number;
+  policyCount: number;
+  intentRecipeCount: number;
+  recentRunCount: number;
+  averageBrightness: number;
+  byMode: Record<string, number>;
+  byFixtureAdapter: Record<string, number>;
+}
+
+export interface LightingFixture {
+  id: string;
+  deviceId: string;
+  zoneId: string;
+  name: string;
+  fixtureType: string;
+  supports: string[];
+  defaultFadeMs: number;
+  manualOverride: boolean;
+  pathPreference: string[];
+  deviceName?: string;
+  status?: string;
+  adapter?: string;
+  observedState?: Record<string, string | number | boolean>;
+  desiredState?: Record<string, string | number | boolean>;
+}
+
+export interface LightingZone {
+  id: string;
+  siteId: string;
+  zoneId: string;
+  name: string;
+  targetLux: number;
+  occupancyMode: string;
+  circadianBand: string;
+  fixtureIds: string[];
+  fixtures?: LightingFixture[];
+  onlineFixtures?: number;
+}
+
+export interface LightingScene {
+  id: string;
+  name: string;
+  status: string;
+  mode: string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  policies: string[];
+  triggers: string[];
+  commandProfile: {
+    encodedBytes: number;
+    ackRequired: boolean;
+    ttlSeconds: number;
+  };
+  zoneTargets: Array<{
+    zoneId: string;
+    fixtureId?: string;
+    fixtureIds?: string[];
+    on: boolean;
+    brightness: number;
+    colorTemperatureK?: number;
+    fadeMs: number;
+  }>;
+}
+
+export interface LightingSchedule {
+  id: string;
+  name: string;
+  sceneId: string;
+  status: string;
+  time: string;
+  days: string[];
+}
+
+export interface LightingPolicy {
+  id: string;
+  name: string;
+  risk: string;
+  scope: string[];
+  requiresApproval: boolean;
+  requiresAudit: boolean;
+  message: string;
+}
+
+export interface LightingIntentRecipe {
+  id: string;
+  name: string;
+  keywords: string[];
+  sceneId: string;
+  confidence: number;
+  exampleIntent: string;
+}
+
+export interface LightingSceneRun {
+  id: string;
+  sceneId: string;
+  status: string;
+  actor: string;
+  commandCount: number;
+  summary: string;
+}
+
+export interface LightingCommand {
+  id: string;
+  sceneId: string;
+  fixtureId: string;
+  deviceId: string;
+  deviceName: string;
+  zoneId: string;
+  type: string;
+  moduleId: string;
+  capability: string;
+  desiredState: Record<string, string | number | boolean>;
+  fadeMs: number;
+  trafficClass: string;
+  selectedPath: string;
+  encodedBytes: number;
+  ackRequired: boolean;
+  status: string;
+  canExecute: boolean;
+  policyDecision: string;
+  policyReasons: string[];
+}
+
+export interface LightingScenePreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: LightingDashboardResponse["service"];
+  scene: {
+    id: string;
+    name: string;
+    mode: string;
+    status: string;
+    trafficClass: string;
+    triggers: string[];
+    requiresApproval: boolean;
+  };
+  actor: {
+    subject: string;
+    name: string;
+    roles: string[];
+  };
+  status: string;
+  summary: {
+    commandCount: number;
+    readyCount: number;
+    blockedCount: number;
+    zoneCount: number;
+    encodedBytes: number;
+  };
+  policy: {
+    result: string;
+    canApply: boolean;
+    requiresApproval: boolean;
+    policies: Array<{ id: string; name: string; risk: string; message: string }>;
+    criteria: Array<{ id: string; label: string; passed: boolean }>;
+  };
+  commands: LightingCommand[];
+  nextActions: string[];
+  event: FabricEvent;
+  applyAttempted?: boolean;
+}
+
+export interface LightingIntentPreview {
+  intent: string;
+  match: {
+    id: string;
+    name: string;
+    sceneId: string;
+    confidence: number;
+    score: number;
+  };
+  preview: LightingScenePreview;
+}
+
+export interface LightingDashboardResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultSceneId: string;
+    rule: string;
+  };
+  featureModule: {
+    moduleId: string;
+    state: string;
+    buildStrategy: string;
+    enabledBy: string[];
+    buildArtifacts: string[];
+  };
+  summary: LightingSummary;
+  zones: LightingZone[];
+  fixtures: LightingFixture[];
+  scenes: LightingScene[];
+  schedules: LightingSchedule[];
+  policies: LightingPolicy[];
+  intentRecipes: LightingIntentRecipe[];
+  recentSceneRuns: LightingSceneRun[];
+  rule: string;
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -753,6 +965,7 @@ export interface CommandCentreResponse {
     approvals: ApprovalQueueResponse["approvals"];
     summary: AutomationSummary;
   };
+  lighting: LightingDashboardResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

@@ -273,8 +273,33 @@ Verification:
 - API verification for `/api/approvals`, `/api/approvals/:id/decisions`, `/api/approvals/audit/export`, and `/api/command-centre`.
 - Browser verification for the Approvals workspace, approval workflow panel, policy criteria, KRA/simulation evidence, approval decision recording, signed command queue transition, and clean browser console.
 
+### E12 - Lighting And Scenes
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed Lighting And Scenes package with zones, fixtures, scene profiles, schedules, policies, intent recipes, feature-module metadata, and recent run seeds.
+- Expanded device registry with additional light fixtures, a living-room zone, scene and colour-temperature capabilities.
+- API gateway lighting service for dashboard data, scene preview, simulated scene apply, and intent-to-scene preview.
+- `/api/lighting`, `/api/lighting/scenes/:id/preview`, `/api/lighting/scenes/:id/apply`, and `/api/lighting/intent/preview` endpoints.
+- MCP orchestrator lighting scene preview/apply tools, low-risk permissions, deterministic tool execution, and AIP lighting scene frame.
+- Global Command Centre Lighting workspace and Lighting And Scenes dashboard panel in the web console.
+- Tests for lighting package loading, dashboard enrichment, preview planning, simulated apply, intent recipe matching, MCP lighting tools, AIP lighting proposals, and command-centre lighting integration.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/lighting`, `/api/lighting/scenes/:id/preview`, `/api/lighting/scenes/:id/apply`, `/api/lighting/intent/preview`, and `/api/command-centre`.
+- Browser verification for the Lighting workspace, Lighting And Scenes panel, scene preview, simulated scene apply, intent recipe matching, and clean browser console.
+
 ## Next
 
-### E12 - Lighting And Scenes
+### E13 - Climate And HVAC
 
 Status: next planned build slice.

@@ -11,6 +11,8 @@ const ROLE_SCOPES = {
     "device:read",
     "device:command:propose",
     "automation:rule:compile",
+    "lighting:scene:preview",
+    "lighting:scene:apply",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -22,6 +24,8 @@ const ROLE_SCOPES = {
     "device:read",
     "device:command:propose",
     "automation:rule:compile",
+    "lighting:scene:preview",
+    "lighting:scene:apply",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -33,6 +37,8 @@ const ROLE_SCOPES = {
   "Automation.Security": [
     "device:read",
     "device:command:propose",
+    "lighting:scene:preview",
+    "lighting:scene:apply",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -123,6 +129,10 @@ function inferToolIdsFromIntent(orchestrator, intent = "") {
   }
   if (/enable|deploy|install/.test(text) && /module|feature|adapter/.test(text)) {
     tools.add("module.enable");
+  }
+  if (/light|lighting|scene|dim|bright|warm|evening|night path|away presence|cooking/.test(text)) {
+    tools.add("lighting.scene.preview");
+    tools.add("lighting.scene.apply");
   }
 
   const registered = toolMap(orchestrator);
@@ -281,6 +291,12 @@ function deterministicToolResult(tool, input = {}) {
   }
   if (tool.id === "automation.rule.compile") {
     return { compiled: true, ruleState: "draft", requiredGates: ["simulation", "human_approval", "signed_command"] };
+  }
+  if (tool.id === "lighting.scene.preview") {
+    return { previewStatus: "ready", sceneId: input.sceneId || "scene-evening-wind-down", commandCount: 3, execution: "not_executed" };
+  }
+  if (tool.id === "lighting.scene.apply") {
+    return { applyStatus: "simulated", sceneId: input.sceneId || "scene-evening-wind-down", execution: "simulated_command_plan" };
   }
   if (tool.id === "policy.evaluate") {
     return { decision: "needs_review", requiredGates: ["simulation", "approval"], policy: "physical-safety-approval" };

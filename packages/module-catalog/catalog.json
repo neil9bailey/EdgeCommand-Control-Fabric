@@ -371,16 +371,16 @@
       "id": "lighting-scenes",
       "name": "Lighting And Scenes",
       "category": "Home Automation",
-      "state": "mocked",
+      "state": "foundation",
       "risk": "low",
-      "description": "Room lighting, grouped control, schedules, mood scenes, and occupancy-aware lighting.",
-      "services": ["lighting-service"],
+      "description": "Room lighting, grouped control, schedules, mood scenes, occupancy-aware lighting, and intent-triggered scene command plans.",
+      "services": ["lighting-service", "scene-service"],
       "dashboards": ["Lighting"],
       "agents": ["automation-planner"],
       "adapters": ["matter", "zigbee", "zwave", "mqtt"],
-      "capabilities": ["light", "dimmer", "scene"],
+      "capabilities": ["light", "dimmer", "scene", "color_temperature"],
       "policies": ["manual-override-first"],
-      "kpis": ["12 zones", "8 scenes", "occupancy ready"],
+      "kpis": ["4 seeded zones", "4 executable scenes", "AIP scene recipes"],
       "trafficClass": "P2_CONTROL"
     },
     {
@@ -944,4 +944,3 @@
     }
   ]
 }
-

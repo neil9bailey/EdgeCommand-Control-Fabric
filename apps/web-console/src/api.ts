@@ -11,6 +11,9 @@ import type {
   IntentDecisionResponse,
   IntentProposalResponse,
   KraDashboardResponse,
+  LightingDashboardResponse,
+  LightingIntentPreview,
+  LightingScenePreview,
   McpResponse,
   ModuleCatalog,
   NarrowbandRoutes,
@@ -128,6 +131,44 @@ export async function fetchApprovals(): Promise<ApprovalQueueResponse | null> {
   } catch {
     return null;
   }
+}
+
+export async function fetchLighting(): Promise<LightingDashboardResponse | null> {
+  try {
+    return await getJson<LightingDashboardResponse>("/api/lighting");
+  } catch {
+    return null;
+  }
+}
+
+export async function previewLightingScene(sceneId: string): Promise<LightingScenePreview> {
+  const response = await fetch(`${API_BASE}/api/lighting/scenes/${sceneId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<LightingScenePreview>;
+}
+
+export async function applyLightingScene(sceneId: string): Promise<LightingScenePreview> {
+  const response = await fetch(`${API_BASE}/api/lighting/scenes/${sceneId}/apply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<LightingScenePreview>;
+}
+
+export async function previewLightingIntent(intent: string): Promise<LightingIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/lighting/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<LightingIntentPreview>;
 }
 
 export async function recordApprovalDecision(

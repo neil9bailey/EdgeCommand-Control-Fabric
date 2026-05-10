@@ -333,7 +333,7 @@ h3 {
 
 .workspace-tabs {
   display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
+  grid-template-columns: repeat(11, minmax(0, 1fr));
   gap: 1px;
   background: var(--line);
 }
@@ -492,6 +492,10 @@ h3 {
 
 .automation-ops-table .ops-row {
   grid-template-columns: minmax(168px, 1.35fr) minmax(118px, 0.9fr) minmax(74px, 0.55fr) minmax(112px, 0.8fr) minmax(104px, 0.75fr);
+}
+
+.lighting-ops-table .ops-row {
+  grid-template-columns: minmax(168px, 1.35fr) minmax(92px, 0.7fr) minmax(82px, 0.65fr) minmax(104px, 0.75fr) minmax(84px, 0.65fr);
 }
 
 .approval-ops-table .ops-row {
@@ -885,6 +889,167 @@ h3 {
   border-left: 4px solid var(--amber);
   border-radius: 0 8px 8px 0;
   background: #fff8ec;
+}
+
+.lighting-scenes-panel {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.lighting-header {
+  background:
+    linear-gradient(90deg, rgba(31, 122, 92, 0.14), rgba(182, 122, 29, 0.1)),
+    #fff8ec;
+}
+
+.lighting-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.9fr 1.1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.lighting-panel {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(255, 253, 246, 0.98);
+}
+
+.lighting-scene-list,
+.lighting-zone-list,
+.lighting-command-list,
+.lighting-policy-list {
+  display: grid;
+  gap: 8px;
+}
+
+.lighting-scene-row,
+.lighting-zone-row,
+.lighting-command-row,
+.lighting-policy-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.lighting-scene-row.active {
+  box-shadow: inset 4px 0 0 var(--green);
+}
+
+.lighting-policy-row.schedule {
+  border-left: 4px solid var(--blue);
+  border-radius: 0 8px 8px 0;
+}
+
+.lighting-scene-row strong,
+.lighting-scene-row span,
+.lighting-zone-row strong,
+.lighting-zone-row span,
+.lighting-command-row strong,
+.lighting-command-row span,
+.lighting-policy-row strong,
+.lighting-policy-row span {
+  display: block;
+  min-width: 0;
+}
+
+.lighting-scene-row strong,
+.lighting-zone-row strong,
+.lighting-command-row strong,
+.lighting-policy-row strong {
+  font-size: 12px;
+}
+
+.lighting-scene-row span,
+.lighting-zone-row span,
+.lighting-command-row span,
+.lighting-policy-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.lighting-scene-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.lighting-scene-actions button,
+.lighting-intent-button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff8ec;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.lighting-scene-actions button:nth-child(2) {
+  background: var(--coal);
+}
+
+.lighting-scene-actions button:disabled,
+.lighting-intent-button:disabled {
+  opacity: 0.62;
+  cursor: progress;
+}
+
+.lighting-intent-button {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--blue);
+}
+
+.lighting-intent-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lighting-intent-result {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #a7d3bd;
+  border-radius: 8px;
+  background: var(--green-soft);
+  color: #135941;
+}
+
+.lighting-intent-result strong,
+.lighting-intent-result span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lighting-intent-result strong {
+  font-size: 12px;
+}
+
+.lighting-intent-result span {
+  font-size: 11px;
 }
 
 .approval-workflow-panel {
@@ -1994,6 +2159,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .lighting-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .approval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2044,6 +2213,7 @@ h3 {
   .command-band,
     .event-grid,
     .automation-grid,
+    .lighting-grid,
     .approval-grid,
     .simulation-grid,
     .kra-grid,

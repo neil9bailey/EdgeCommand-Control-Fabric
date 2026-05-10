@@ -394,7 +394,7 @@ export function runSimulation({
     };
   }
 
-  const reportId = `sim_report_${Date.now()}`;
+  const reportId = `sim_report_${simulationScenario.id}_${Date.now()}`;
   const createdAt = new Date().toISOString();
   const variantResults = variants.map((variant) => buildVariantResult({
     reportId,

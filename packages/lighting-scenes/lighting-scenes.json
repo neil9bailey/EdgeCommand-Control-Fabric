@@ -1,0 +1,268 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "lighting-scenes-service",
+    "name": "Lighting And Scenes",
+    "moduleId": "lighting-scenes",
+    "mode": "deterministic-local",
+    "executionBoundary": "simulated-scene-command-plan-only",
+    "defaultSceneId": "scene-evening-wind-down",
+    "rule": "Lighting scenes may plan and simulate low-risk commands locally; real adapters execute only after policy, audit, and manual override checks."
+  },
+  "featureModule": {
+    "moduleId": "lighting-scenes",
+    "state": "foundation",
+    "buildStrategy": "feature-manifest-plus-service-plus-dashboard",
+    "enabledBy": ["human_intent", "module_marketplace", "operator_dashboard"],
+    "buildArtifacts": [
+      "packages/lighting-scenes/lighting-scenes.json",
+      "services/api-gateway/src/lightingScenes.mjs",
+      "apps/web-console LightingScenesPanel",
+      "api contracts and tests"
+    ]
+  },
+  "policies": [
+    {
+      "id": "manual-override-first",
+      "name": "Manual Override First",
+      "risk": "low",
+      "scope": ["light", "dimmer", "scene"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "message": "A fixture with manual override active is held out of a scene plan."
+    },
+    {
+      "id": "occupancy-aware-lighting",
+      "name": "Occupancy Aware Lighting",
+      "risk": "low",
+      "scope": ["occupancy", "presence", "scene"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "message": "Occupancy can adapt scenes but cannot bypass explicit off, privacy, or manual override state."
+    },
+    {
+      "id": "night-light-level-guard",
+      "name": "Night Light Level Guard",
+      "risk": "low",
+      "scope": ["night_path", "dimmer"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "message": "Night path scenes prefer low brightness, warm colour temperature, and short command envelopes."
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "fixture-kitchen-downlights",
+      "deviceId": "dev-light-kitchen-01",
+      "zoneId": "kitchen",
+      "name": "Kitchen Downlights",
+      "fixtureType": "ceiling_group",
+      "supports": ["on", "brightness", "colorTemperatureK"],
+      "defaultFadeMs": 700,
+      "manualOverride": false,
+      "pathPreference": ["lan", "matter"]
+    },
+    {
+      "id": "fixture-hall-lantern",
+      "deviceId": "dev-light-hall-01",
+      "zoneId": "hall",
+      "name": "Hall Lantern",
+      "fixtureType": "pendant",
+      "supports": ["on", "brightness", "colorTemperatureK"],
+      "defaultFadeMs": 900,
+      "manualOverride": false,
+      "pathPreference": ["lan", "matter"]
+    },
+    {
+      "id": "fixture-living-floorwash",
+      "deviceId": "dev-light-living-01",
+      "zoneId": "living-room",
+      "name": "Living Floor Wash",
+      "fixtureType": "ambient_group",
+      "supports": ["on", "brightness", "colorTemperatureK"],
+      "defaultFadeMs": 1400,
+      "manualOverride": false,
+      "pathPreference": ["lan", "zigbee"]
+    },
+    {
+      "id": "fixture-garden-path",
+      "deviceId": "dev-light-garden-path-01",
+      "zoneId": "garden",
+      "name": "Garden Path Bollards",
+      "fixtureType": "path_group",
+      "supports": ["on", "brightness"],
+      "defaultFadeMs": 1000,
+      "manualOverride": false,
+      "pathPreference": ["lan", "zigbee", "mqtt"]
+    }
+  ],
+  "zones": [
+    {
+      "id": "lighting-zone-kitchen",
+      "siteId": "home-hq",
+      "zoneId": "kitchen",
+      "name": "Kitchen",
+      "targetLux": 420,
+      "occupancyMode": "active",
+      "circadianBand": "neutral-task",
+      "fixtureIds": ["fixture-kitchen-downlights"]
+    },
+    {
+      "id": "lighting-zone-hall",
+      "siteId": "home-hq",
+      "zoneId": "hall",
+      "name": "Hall",
+      "targetLux": 180,
+      "occupancyMode": "path",
+      "circadianBand": "warm-transition",
+      "fixtureIds": ["fixture-hall-lantern"]
+    },
+    {
+      "id": "lighting-zone-living",
+      "siteId": "home-hq",
+      "zoneId": "living-room",
+      "name": "Living Room",
+      "targetLux": 240,
+      "occupancyMode": "relaxed",
+      "circadianBand": "warm-evening",
+      "fixtureIds": ["fixture-living-floorwash"]
+    },
+    {
+      "id": "lighting-zone-garden",
+      "siteId": "home-hq",
+      "zoneId": "garden",
+      "name": "Garden Path",
+      "targetLux": 80,
+      "occupancyMode": "external-path",
+      "circadianBand": "low-glare",
+      "fixtureIds": ["fixture-garden-path"]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene-cooking-focus",
+      "name": "Cooking Focus",
+      "status": "enabled",
+      "mode": "task",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["manual-override-first"],
+      "triggers": ["operator", "voice", "app"],
+      "commandProfile": { "encodedBytes": 58, "ackRequired": false, "ttlSeconds": 120 },
+      "zoneTargets": [
+        { "zoneId": "kitchen", "on": true, "brightness": 88, "colorTemperatureK": 4100, "fadeMs": 700 },
+        { "zoneId": "hall", "on": true, "brightness": 38, "colorTemperatureK": 3200, "fadeMs": 900 }
+      ]
+    },
+    {
+      "id": "scene-evening-wind-down",
+      "name": "Evening Wind Down",
+      "status": "enabled",
+      "mode": "comfort",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["manual-override-first", "occupancy-aware-lighting"],
+      "triggers": ["schedule", "operator", "voice", "presence"],
+      "commandProfile": { "encodedBytes": 72, "ackRequired": false, "ttlSeconds": 180 },
+      "zoneTargets": [
+        { "zoneId": "kitchen", "on": true, "brightness": 42, "colorTemperatureK": 2700, "fadeMs": 1200 },
+        { "zoneId": "hall", "on": true, "brightness": 30, "colorTemperatureK": 2600, "fadeMs": 1200 },
+        { "zoneId": "living-room", "on": true, "brightness": 36, "colorTemperatureK": 2400, "fadeMs": 1600 }
+      ]
+    },
+    {
+      "id": "scene-night-path",
+      "name": "Night Path",
+      "status": "enabled",
+      "mode": "safety",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["manual-override-first", "night-light-level-guard"],
+      "triggers": ["motion", "operator", "schedule"],
+      "commandProfile": { "encodedBytes": 46, "ackRequired": false, "ttlSeconds": 90 },
+      "zoneTargets": [
+        { "zoneId": "hall", "on": true, "brightness": 12, "colorTemperatureK": 2200, "fadeMs": 500 },
+        { "zoneId": "kitchen", "on": true, "brightness": 8, "colorTemperatureK": 2200, "fadeMs": 500 }
+      ]
+    },
+    {
+      "id": "scene-away-presence",
+      "name": "Away Presence",
+      "status": "enabled",
+      "mode": "presence",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["manual-override-first", "occupancy-aware-lighting"],
+      "triggers": ["schedule", "security_mode", "operator"],
+      "commandProfile": { "encodedBytes": 64, "ackRequired": false, "ttlSeconds": 300 },
+      "zoneTargets": [
+        { "zoneId": "living-room", "on": true, "brightness": 28, "colorTemperatureK": 2700, "fadeMs": 1800 },
+        { "zoneId": "hall", "on": true, "brightness": 22, "colorTemperatureK": 2600, "fadeMs": 1600 },
+        { "zoneId": "garden", "on": true, "brightness": 18, "fadeMs": 1000 }
+      ]
+    }
+  ],
+  "schedules": [
+    {
+      "id": "schedule-evening-wind-down",
+      "name": "Evening Wind Down Schedule",
+      "sceneId": "scene-evening-wind-down",
+      "status": "enabled",
+      "time": "19:30",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    },
+    {
+      "id": "schedule-night-path",
+      "name": "Night Path Low Light",
+      "sceneId": "scene-night-path",
+      "status": "enabled",
+      "time": "23:15",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    },
+    {
+      "id": "schedule-away-presence",
+      "name": "Away Presence Rotation",
+      "sceneId": "scene-away-presence",
+      "status": "draft",
+      "time": "randomized:18:20-22:40",
+      "days": ["fri", "sat", "sun"]
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-cooking-focus",
+      "name": "Bright kitchen task lighting",
+      "keywords": ["kitchen", "cooking", "bright", "task"],
+      "sceneId": "scene-cooking-focus",
+      "confidence": 0.92,
+      "exampleIntent": "Make the kitchen bright for cooking."
+    },
+    {
+      "id": "intent-evening-wind-down",
+      "name": "Warm evening lighting",
+      "keywords": ["evening", "relax", "warm", "dim"],
+      "sceneId": "scene-evening-wind-down",
+      "confidence": 0.88,
+      "exampleIntent": "Set the house to a warm evening scene."
+    },
+    {
+      "id": "intent-away-presence",
+      "name": "Presence simulation while away",
+      "keywords": ["away", "holiday", "presence", "security"],
+      "sceneId": "scene-away-presence",
+      "confidence": 0.84,
+      "exampleIntent": "Make it look occupied while we are away."
+    }
+  ],
+  "recentSceneRuns": [
+    {
+      "id": "light-run-20260510-001",
+      "sceneId": "scene-evening-wind-down",
+      "status": "simulated",
+      "actor": "system-preview",
+      "commandCount": 3,
+      "summary": "Evening Wind Down preview generated three low-risk command plan items."
+    }
+  ]
+}

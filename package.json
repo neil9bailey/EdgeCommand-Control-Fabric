@@ -1,0 +1,20 @@
+{
+  "name": "edgecommand-control-fabric",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/web-console",
+    "services/api-gateway"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c #1f7a5c,#aa4b2f \"npm run dev -w services/api-gateway\" \"npm run dev -w apps/web-console\"",
+    "build": "npm run build -w apps/web-console",
+    "test": "npm run test -w services/api-gateway && npm run typecheck -w apps/web-console",
+    "health": "node scripts/health-check.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
+

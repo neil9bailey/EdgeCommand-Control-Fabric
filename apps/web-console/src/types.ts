@@ -67,6 +67,9 @@ export interface PlatformOverview {
     energyManagement?: string;
     sensingPresence?: string;
     moduleManifest?: string;
+    moduleBuilder?: string;
+    moduleMarketplace?: string;
+    moduleCertification?: string;
   };
   links: Array<{
     id: string;
@@ -2176,6 +2179,151 @@ export interface ModuleMarketplaceResponse {
   rule: string;
 }
 
+export interface ModuleCertificationSummary {
+  schemaVersion: string;
+  profileCount: number;
+  passed: number;
+  readyForCertification: number;
+  approvalRequired: number;
+  failed: number;
+  blocked: number;
+  canEnable: number;
+  testSuiteCount: number;
+  harnessRunCount: number;
+  evidenceRequirementCount: number;
+  queueReady: number;
+  byStatus: Record<string, number>;
+  byRisk: Record<string, number>;
+  byTargetEnvironment: Record<string, number>;
+}
+
+export interface ModuleCertificationEvidence {
+  id: string;
+  type: string;
+  status: string;
+  summary: string;
+}
+
+export interface ModuleCertificationGate {
+  id: string;
+  name: string;
+  evidenceType: string;
+  status: string;
+}
+
+export interface ModuleCertificationSuite {
+  id: string;
+  name: string;
+  scope: string;
+  requiredEvidence: string[];
+  commands: string[];
+  risk: "low" | "medium" | "high" | string;
+  status?: string;
+  durationMs?: number;
+}
+
+export interface ModuleCertificationHarnessRun {
+  id: string;
+  profileId: string;
+  moduleId: string;
+  status: string;
+  actor: string;
+  suiteResults: Array<{ suiteId: string; status: string; durationMs: number }>;
+  summary: string;
+}
+
+export interface ModuleCertificationProfile {
+  id: string;
+  name: string;
+  moduleId: string;
+  requestId: string;
+  buildPlanId: string;
+  targetEnvironment: string;
+  status: string;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  requiredEvidence: string[];
+  testSuiteIds: string[];
+  gates: ModuleCertificationGate[];
+  evidence: ModuleCertificationEvidence[];
+  nextActions: string[];
+  readiness: {
+    canEnable: boolean;
+    inferredStatus: string;
+    missingEvidence: string[];
+    attachedEvidence: string[];
+    suiteCount: number;
+    passedSuites: number;
+    pendingSuites: number;
+    failedSuites: number;
+    requiresApproval: boolean;
+    marketplaceStatus: string;
+    buildQueueStatus: string | null;
+  };
+  flag?: ModuleFeatureFlag | null;
+  listing?: ModuleMarketplaceListing | null;
+  request?: ModuleMarketplaceRequest | null;
+  testSuites: ModuleCertificationSuite[];
+  harnessRun?: ModuleCertificationHarnessRun | null;
+}
+
+export interface ModuleCertificationPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ModuleCertificationResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  profile: ModuleCertificationProfile;
+  gates: ModuleCertificationGate[];
+  evidence: ModuleCertificationEvidence[];
+  testSuites: ModuleCertificationSuite[];
+  harnessRun: ModuleCertificationHarnessRun | null;
+  marketplacePreview: ModuleMarketplacePreview | null;
+  buildPreview: ModuleBuildPreview | null;
+  summary: {
+    canEnable: boolean;
+    requiresApproval: boolean;
+    missingEvidence: string[];
+    attachedEvidence: string[];
+    passedSuites: number;
+    pendingSuites: number;
+    failedSuites: number;
+    queueReady: boolean;
+  };
+  nextActions: string[];
+  event: FabricEvent;
+}
+
+export interface ModuleCertificationIntentPreview {
+  intent: string;
+  match: null | { id: string; name: string; profileId: string; confidence: number; score: number };
+  preview: ModuleCertificationPreview;
+}
+
+export interface ModuleCertificationResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultProfileId: string;
+    defaultHarnessRunId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  summary: ModuleCertificationSummary;
+  certificationStates: Array<{ id: string; name: string; canEnable: boolean; requiresApproval: boolean }>;
+  evidenceTypes: string[];
+  testSuites: ModuleCertificationSuite[];
+  profiles: ModuleCertificationProfile[];
+  harnessRuns: ModuleCertificationHarnessRun[];
+  intentRecipes: Array<{ id: string; name: string; keywords: string[]; profileId: string; confidence: number; exampleIntent: string }>;
+  rule: string;
+}
+
 export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
@@ -2245,6 +2393,7 @@ export interface CommandCentreResponse {
     manifest?: ModuleManifestResponse;
     builder?: ModuleBuilderResponse;
     marketplace?: ModuleMarketplaceResponse;
+    certification?: ModuleCertificationResponse;
   };
   devices: CommandCentreDevice[];
   automations: {
@@ -2264,6 +2413,7 @@ export interface CommandCentreResponse {
   moduleManifest?: ModuleManifestResponse;
   moduleBuilder?: ModuleBuilderResponse;
   moduleMarketplace?: ModuleMarketplaceResponse;
+  moduleCertification?: ModuleCertificationResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

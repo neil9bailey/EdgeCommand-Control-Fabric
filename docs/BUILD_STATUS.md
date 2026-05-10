@@ -455,7 +455,7 @@ Verification:
 
 ### E20 - Module Marketplace Dashboard
 
-Status: in progress locally.
+Status: complete and pushed to `origin/main`.
 
 Delivered:
 
@@ -469,9 +469,36 @@ Delivered:
 Verification:
 
 - `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/module-marketplace`, `/api/module-marketplace/requests/:id/preview`, `/api/module-marketplace/intent/preview`, and `/api/command-centre`.
+- Browser verification for the Module Marketplace panel, marketplace request previews, command centre module metrics, and clean browser console.
+
+### E21 - Module Certification And Test Harness
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed Module Certification package with certification states, evidence types, test suites, certification profiles, harness runs, intent recipes, and preview-only governance metadata.
+- API gateway certification service that links marketplace requests, builder plans, manifest flags, harness evidence, and certification gates.
+- `/api/module-certification`, `/api/module-certification/profiles/:id/preview`, and `/api/module-certification/intent/preview` endpoints.
+- Global Command Centre Modules workspace now includes certification pass/approval posture and certification actions.
+- Web console Module Certification / Test Harness panel showing profiles, evidence gates, test suites, preview status, missing evidence, and next actions.
+- Tests for certification summary, dashboard enrichment, MQTT pass preview, LoRaWAN approval-required intent routing, and Command Centre compatibility.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/module-certification`, `/api/module-certification/profiles/:id/preview`, `/api/module-certification/intent/preview`, and `/api/command-centre`.
+- Browser verification for the Module Certification / Test Harness panel, Enablement Evidence Gate, MQTT certification, LoRaWAN certification, Certs metric, and clean browser console.
 
 ## Next
 
-### E21 - Module Certification And Test Harness
+### E22 - MQTT And ESPHome Adapter
 
 Status: next planned build slice.

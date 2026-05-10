@@ -597,9 +597,9 @@ Deliverables:
 
 Acceptance:
 
-- Module cannot be enabled without required tests.
-- Safety policies are tested.
-- Dashboard shows certification status.
+- Module cannot be enabled without required tests. Foundation complete through preview-only certification profiles, required evidence, pass/fail/approval states, and non-mutating enablement readiness.
+- Safety policies are tested. Foundation complete through security, approval, simulation, payload-budget, audit, Docker, API, and browser-smoke suite definitions.
+- Dashboard shows certification status. Complete in E21 foundation through the Module Certification / Test Harness web panel and Command Centre certification actions.
 
 ## E22 - MQTT And ESPHome Adapter
 

@@ -141,6 +141,13 @@ import {
   previewMarketplaceRequest,
   summarizeModuleMarketplace,
 } from "./moduleMarketplace.mjs";
+import {
+  buildModuleCertificationDashboard,
+  loadModuleCertification,
+  previewCertificationIntent,
+  previewCertificationProfile,
+  summarizeModuleCertification,
+} from "./moduleCertification.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -165,6 +172,7 @@ const sensingPresence = loadSensingPresence();
 const moduleManifest = loadModuleManifest();
 const moduleBuilder = loadModuleBuilder();
 const moduleMarketplace = loadModuleMarketplace();
+const moduleCertification = loadModuleCertification();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -194,6 +202,7 @@ function buildOverview() {
   const moduleManifestSummary = summarizeModuleManifest(moduleManifest, catalog);
   const moduleBuilderSummary = summarizeModuleBuilder(moduleBuilder, moduleManifest, catalog);
   const moduleMarketplaceSummary = summarizeModuleMarketplace(moduleMarketplace, catalog, moduleManifest, moduleBuilder);
+  const moduleCertificationSummary = summarizeModuleCertification(moduleCertification, moduleMarketplace, moduleBuilder, moduleManifest, catalog);
   return {
     ...summary,
     devices: deviceSummary,
@@ -231,6 +240,7 @@ function buildOverview() {
       moduleManifest: `${moduleManifestSummary.enabled} enabled flags / ${moduleManifestSummary.buildable} buildable`,
       moduleBuilder: `${moduleBuilderSummary.planCount} build plans / ${moduleBuilderSummary.readyToQueue} queue-ready`,
       moduleMarketplace: `${moduleMarketplaceSummary.installed} installed / ${moduleMarketplaceSummary.available} available`,
+      moduleCertification: `${moduleCertificationSummary.passed} passed / ${moduleCertificationSummary.approvalRequired} approval-required`,
     },
     links: defaultLinkInventory(),
   };
@@ -283,6 +293,7 @@ app.get("/api/command-centre", (_req, res) => {
     moduleManifest,
     moduleBuilder,
     moduleMarketplace,
+    moduleCertification,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -467,6 +478,70 @@ app.post(
       catalog,
       manifest: moduleManifest,
       builder: moduleBuilder,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/module-certification", (_req, res) => {
+  res.json(buildModuleCertificationDashboard({
+    certification: moduleCertification,
+    marketplace: moduleMarketplace,
+    builder: moduleBuilder,
+    manifest: moduleManifest,
+    catalog,
+  }));
+});
+
+app.get("/api/module-certification/profiles/:id/preview", (req, res) => {
+  const result = previewCertificationProfile({
+    certification: moduleCertification,
+    marketplace: moduleMarketplace,
+    builder: moduleBuilder,
+    manifest: moduleManifest,
+    catalog,
+    profileId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "module_certification_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/module-certification/profiles/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewCertificationProfile({
+      certification: moduleCertification,
+      marketplace: moduleMarketplace,
+      builder: moduleBuilder,
+      manifest: moduleManifest,
+      catalog,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "module_certification_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/module-certification/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewCertificationIntent({
+      certification: moduleCertification,
+      marketplace: moduleMarketplace,
+      builder: moduleBuilder,
+      manifest: moduleManifest,
+      catalog,
       intent: req.body?.intent || "",
       actor: req.auth,
     }));

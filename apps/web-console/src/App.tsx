@@ -55,6 +55,7 @@ import {
   fetchKra,
   fetchLighting,
   fetchModuleBuilder,
+  fetchModuleCertification,
   fetchModuleMarketplace,
   fetchModuleManifest,
   fetchNarrowbandRoutes,
@@ -71,6 +72,8 @@ import {
   previewModuleManifestIntent,
   previewMarketplaceIntent,
   previewMarketplaceRequest,
+  previewCertificationIntent,
+  previewCertificationProfile,
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
@@ -115,6 +118,9 @@ import type {
   ModuleBuildIntentPreview,
   ModuleBuildPreview,
   ModuleBuilderResponse,
+  ModuleCertificationIntentPreview,
+  ModuleCertificationPreview,
+  ModuleCertificationResponse,
   ModuleCatalog,
   ModuleDefinition,
   ModuleManifestIntentPreview,
@@ -303,6 +309,10 @@ function App() {
   const [marketplacePreview, setMarketplacePreview] = useState<ModuleMarketplacePreview | null>(null);
   const [marketplaceIntentPreview, setMarketplaceIntentPreview] = useState<ModuleMarketplaceIntentPreview | null>(null);
   const [marketplaceLoading, setMarketplaceLoading] = useState<"preview" | "intent" | null>(null);
+  const [moduleCertification, setModuleCertification] = useState<ModuleCertificationResponse | null>(null);
+  const [certificationPreview, setCertificationPreview] = useState<ModuleCertificationPreview | null>(null);
+  const [certificationIntentPreview, setCertificationIntentPreview] = useState<ModuleCertificationIntentPreview | null>(null);
+  const [certificationLoading, setCertificationLoading] = useState<"preview" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -340,6 +350,7 @@ function App() {
     void fetchModuleManifest().then(setModuleManifest);
     void fetchModuleBuilder().then(setModuleBuilder);
     void fetchModuleMarketplace().then(setModuleMarketplace);
+    void fetchModuleCertification().then(setModuleCertification);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -644,6 +655,26 @@ function App() {
     }
   }
 
+  async function previewCertification(profileId: string) {
+    setCertificationLoading("preview");
+    try {
+      setCertificationPreview(await previewCertificationProfile(profileId));
+    } finally {
+      setCertificationLoading(null);
+    }
+  }
+
+  async function previewCertificationFromIntent(intentText: string) {
+    setCertificationLoading("intent");
+    try {
+      const result = await previewCertificationIntent(intentText);
+      setCertificationIntentPreview(result);
+      setCertificationPreview(result.preview);
+    } finally {
+      setCertificationLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -747,6 +778,7 @@ function App() {
           <Metric label="Flags" value={moduleManifest?.summary.enabled ?? commandCentre?.moduleManifest?.summary.enabled ?? "-"} detail="enabled modules" tone="good" />
           <Metric label="Builds" value={moduleBuilder?.summary.readyToQueue ?? commandCentre?.moduleBuilder?.summary.readyToQueue ?? "-"} detail="queue-ready" tone="warn" />
           <Metric label="Market" value={moduleMarketplace?.summary.available ?? commandCentre?.moduleMarketplace?.summary.available ?? "-"} detail="available" tone="good" />
+          <Metric label="Certs" value={moduleCertification?.summary.passed ?? commandCentre?.moduleCertification?.summary.passed ?? "-"} detail="passed gates" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -844,6 +876,14 @@ function App() {
           loading={moduleBuildLoading}
           onPreview={previewBuildPlan}
           onIntentPreview={previewBuildFromIntent}
+        />
+        <ModuleCertificationPanel
+          certification={moduleCertification || commandCentre?.moduleCertification || commandCentre?.modules.certification || null}
+          preview={certificationPreview}
+          intentPreview={certificationIntentPreview}
+          loading={certificationLoading}
+          onPreview={previewCertification}
+          onIntentPreview={previewCertificationFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -2927,6 +2967,157 @@ function ModuleBuilderPanel({
               <span key={gate}>{gate.replace(/-/g, " ")}</span>
             ))}
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ModuleCertificationPanel({
+  certification,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onIntentPreview,
+}: {
+  certification: ModuleCertificationResponse | null;
+  preview: ModuleCertificationPreview | null;
+  intentPreview: ModuleCertificationIntentPreview | null;
+  loading: "preview" | "intent" | null;
+  onPreview: (profileId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const profiles = certification?.profiles || [];
+  const recipes = certification?.intentRecipes || [];
+  const activeProfileId = preview?.profile.id || profiles.find((profile) => profile.status !== "passed")?.id || profiles[0]?.id;
+  const activeProfile = profiles.find((profile) => profile.id === activeProfileId) || profiles[0];
+  const activeRecipe = recipes.find((recipe) => recipe.profileId === activeProfile?.id) || recipes[0];
+  const suites = preview?.testSuites || activeProfile?.testSuites || certification?.testSuites || [];
+  const gates = preview?.gates || activeProfile?.gates || [];
+  const evidence = preview?.evidence || activeProfile?.evidence || [];
+
+  return (
+    <section className="module-certification-panel" aria-label="Module certification and test harness">
+      <div className="section-header certification-header">
+        <div>
+          <p className="eyebrow">Module Certification / Test Harness</p>
+          <h2>Enablement Evidence Gate</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${certification?.summary.passed || 0} passed`} />
+          <StatusPill tone="warn" label={`${certification?.summary.approvalRequired || 0} approval`} />
+          <StatusPill tone={certification?.summary.failed ? "danger" : "good"} label={`${certification?.summary.failed || 0} failed`} />
+        </div>
+      </div>
+
+      <div className="certification-grid">
+        <div className="certification-panel">
+          <div className="section-header compact">
+            <h3>Certification Profiles</h3>
+            <ClipboardCheck size={18} />
+          </div>
+          <div className="certification-profile-list">
+            {profiles.map((profile) => (
+              <div className={`certification-profile-row ${profile.id === activeProfile?.id ? "active" : ""}`} key={profile.id}>
+                <div>
+                  <strong>{profile.name}</strong>
+                  <span>{profile.moduleId} / {profile.targetEnvironment}</span>
+                </div>
+                <button onClick={() => onPreview(profile.id)} disabled={Boolean(loading)}>
+                  <PlayCircle size={15} />
+                  <span>{loading === "preview" && profile.id === activeProfile?.id ? "Checking" : "Check"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="certification-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="certification-panel">
+          <div className="section-header compact">
+            <h3>Evidence Gates</h3>
+            <Shield size={18} />
+          </div>
+          <div className="certification-gate-list">
+            {gates.map((gate) => (
+              <div className="certification-gate-row" key={gate.id}>
+                <div>
+                  <strong>{gate.name}</strong>
+                  <span>{gate.evidenceType.replace(/_/g, " ")}</span>
+                </div>
+                <StatusPill tone={gate.status === "passed" ? "good" : gate.status === "missing" ? "danger" : "warn"} label={gate.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="certification-panel">
+          <div className="section-header compact">
+            <h3>Test Suites</h3>
+            <FlaskConical size={18} />
+          </div>
+          <div className="certification-suite-list">
+            {suites.map((suite) => (
+              <div className="certification-suite-row" key={suite.id}>
+                <div>
+                  <strong>{suite.name}</strong>
+                  <span>{suite.scope.replace(/_/g, " ")} / {suite.commands[0]}</span>
+                </div>
+                <StatusPill tone={suite.status === "passed" ? "good" : suite.status === "failed" ? "danger" : "warn"} label={(suite.status || "defined").replace(/_/g, " ")} />
+              </div>
+            ))}
+          </div>
+          {intentPreview?.match && (
+            <div className="certification-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.profileId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="certification-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.profile.name : "Certification Preview"}</h3>
+            <CheckCircle2 size={18} />
+          </div>
+          {preview ? (
+            <div className="certification-preview-card">
+              <div>
+                <span>Status</span>
+                <strong>{preview.status.replace(/_/g, " ")}</strong>
+              </div>
+              <div>
+                <span>Build plan</span>
+                <strong>{preview.buildPreview?.plan.id || preview.profile.buildPlanId}</strong>
+              </div>
+              <div>
+                <span>Evidence</span>
+                <strong>{preview.summary.attachedEvidence.length}/{preview.profile.requiredEvidence.length} attached</strong>
+              </div>
+              <div>
+                <span>Suites</span>
+                <strong>{preview.summary.passedSuites}/{preview.testSuites.length} passed</strong>
+              </div>
+              <div className="certification-next-actions">
+                {preview.nextActions.map((action) => <span key={action}>{action.replace(/_/g, " ")}</span>)}
+              </div>
+            </div>
+          ) : (
+            <div className="certification-evidence-list">
+              {evidence.slice(0, 5).map((item) => (
+                <div className="certification-evidence-row" key={item.id}>
+                  <strong>{item.type.replace(/_/g, " ")}</strong>
+                  <span>{item.summary}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>

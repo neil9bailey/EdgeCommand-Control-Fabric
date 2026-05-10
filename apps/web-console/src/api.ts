@@ -24,6 +24,9 @@ import type {
   ModuleBuildIntentPreview,
   ModuleBuildPreview,
   ModuleBuilderResponse,
+  ModuleCertificationIntentPreview,
+  ModuleCertificationPreview,
+  ModuleCertificationResponse,
   ModuleMarketplaceIntentPreview,
   ModuleMarketplacePreview,
   ModuleMarketplaceResponse,
@@ -224,6 +227,14 @@ export async function fetchModuleBuilder(): Promise<ModuleBuilderResponse | null
 export async function fetchModuleMarketplace(): Promise<ModuleMarketplaceResponse | null> {
   try {
     return await getJson<ModuleMarketplaceResponse>("/api/module-marketplace");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchModuleCertification(): Promise<ModuleCertificationResponse | null> {
+  try {
+    return await getJson<ModuleCertificationResponse>("/api/module-certification");
   } catch {
     return null;
   }
@@ -482,6 +493,26 @@ export async function previewMarketplaceIntent(intent: string): Promise<ModuleMa
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<ModuleMarketplaceIntentPreview>;
+}
+
+export async function previewCertificationProfile(profileId: string): Promise<ModuleCertificationPreview> {
+  const response = await fetch(`${API_BASE}/api/module-certification/profiles/${profileId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ModuleCertificationPreview>;
+}
+
+export async function previewCertificationIntent(intent: string): Promise<ModuleCertificationIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/module-certification/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ModuleCertificationIntentPreview>;
 }
 
 export async function recordApprovalDecision(

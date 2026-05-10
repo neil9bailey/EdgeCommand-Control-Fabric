@@ -1,0 +1,250 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "module-certification-service",
+    "name": "Module Certification And Test Harness",
+    "moduleId": "module-marketplace",
+    "mode": "deterministic-local",
+    "executionBoundary": "certification-preview-only",
+    "defaultProfileId": "cert-mqtt-esphome-foundation",
+    "defaultHarnessRunId": "harness-run-mqtt-20260510",
+    "rule": "A module cannot be enabled until required evidence, policy gates, verification suites, and approval records are attached; this foundation service previews certification only and never mutates runtime state."
+  },
+  "featureModule": {
+    "moduleId": "module-marketplace",
+    "state": "foundation",
+    "buildStrategy": "build-plan-to-certification-record",
+    "enabledBy": ["human_intent", "module_marketplace", "module_builder_agent", "certification_harness"],
+    "buildArtifacts": [
+      "packages/module-certification/module-certification.json",
+      "services/api-gateway/src/moduleCertification.mjs",
+      "apps/web-console ModuleCertificationPanel",
+      "api contracts and tests"
+    ]
+  },
+  "certificationStates": [
+    { "id": "draft", "name": "Draft", "canEnable": false, "requiresApproval": false },
+    { "id": "ready_for_certification", "name": "Ready For Certification", "canEnable": false, "requiresApproval": false },
+    { "id": "passed", "name": "Passed", "canEnable": true, "requiresApproval": false },
+    { "id": "failed", "name": "Failed", "canEnable": false, "requiresApproval": false },
+    { "id": "approval_required", "name": "Approval Required", "canEnable": false, "requiresApproval": true },
+    { "id": "blocked", "name": "Blocked", "canEnable": false, "requiresApproval": false }
+  ],
+  "evidenceTypes": [
+    "manifest_flag",
+    "build_plan",
+    "test_result",
+    "docker_health",
+    "browser_smoke",
+    "api_contract",
+    "security_review",
+    "approval_record",
+    "simulation_report",
+    "audit_event",
+    "payload_budget"
+  ],
+  "testSuites": [
+    {
+      "id": "suite-module-contract",
+      "name": "Module Contract",
+      "scope": "schema_api_manifest",
+      "requiredEvidence": ["manifest_flag", "build_plan", "api_contract"],
+      "commands": ["npm test"],
+      "risk": "medium"
+    },
+    {
+      "id": "suite-docker-local",
+      "name": "Docker Desktop Local Runtime",
+      "scope": "compose_health",
+      "requiredEvidence": ["docker_health"],
+      "commands": ["docker compose up --build -d", "npm run health"],
+      "risk": "medium"
+    },
+    {
+      "id": "suite-api-contract",
+      "name": "API Contract",
+      "scope": "gateway_routes",
+      "requiredEvidence": ["api_contract", "test_result"],
+      "commands": ["npm test"],
+      "risk": "medium"
+    },
+    {
+      "id": "suite-ui-smoke",
+      "name": "Web Console Smoke",
+      "scope": "operator_dashboard",
+      "requiredEvidence": ["browser_smoke"],
+      "commands": ["browser smoke verification"],
+      "risk": "low"
+    },
+    {
+      "id": "suite-security-policy",
+      "name": "Security And Policy",
+      "scope": "approval_kra_policy",
+      "requiredEvidence": ["security_review", "approval_record", "audit_event"],
+      "commands": ["npm test"],
+      "risk": "high"
+    },
+    {
+      "id": "suite-narrowband-simulation",
+      "name": "Narrowband Simulation",
+      "scope": "payload_latency_ack",
+      "requiredEvidence": ["simulation_report", "payload_budget"],
+      "commands": ["run narrowband simulation pack"],
+      "risk": "high"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "cert-mqtt-esphome-foundation",
+      "name": "MQTT And ESPHome Certification",
+      "moduleId": "mqtt-esphome",
+      "requestId": "request-mqtt-esphome",
+      "buildPlanId": "build-mqtt-esphome-local",
+      "targetEnvironment": "local-docker",
+      "status": "passed",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "requiredEvidence": ["manifest_flag", "build_plan", "test_result", "docker_health", "browser_smoke", "api_contract", "audit_event"],
+      "testSuiteIds": ["suite-module-contract", "suite-docker-local", "suite-api-contract", "suite-ui-smoke"],
+      "gates": [
+        { "id": "manifest-present", "name": "Manifest flag exists", "evidenceType": "manifest_flag", "status": "passed" },
+        { "id": "build-plan-ready", "name": "Build plan queue-ready", "evidenceType": "build_plan", "status": "passed" },
+        { "id": "local-tests", "name": "Local tests pass", "evidenceType": "test_result", "status": "passed" },
+        { "id": "docker-health", "name": "Docker health passes", "evidenceType": "docker_health", "status": "passed" },
+        { "id": "ui-smoke", "name": "Dashboard smoke pass", "evidenceType": "browser_smoke", "status": "passed" }
+      ],
+      "evidence": [
+        { "id": "evidence-mqtt-manifest", "type": "manifest_flag", "status": "attached", "summary": "MQTT/ESPHome manifest flag is discoverable and buildable." },
+        { "id": "evidence-mqtt-build", "type": "build_plan", "status": "attached", "summary": "Local Docker build plan is queue-ready." },
+        { "id": "evidence-mqtt-tests", "type": "test_result", "status": "attached", "summary": "Repository unit and contract tests passed for module plan." },
+        { "id": "evidence-mqtt-docker", "type": "docker_health", "status": "attached", "summary": "Docker Desktop stack and API health checks passed." },
+        { "id": "evidence-mqtt-ui", "type": "browser_smoke", "status": "attached", "summary": "Marketplace and builder dashboard smoke tests rendered cleanly." },
+        { "id": "evidence-mqtt-api", "type": "api_contract", "status": "attached", "summary": "Marketplace and builder preview APIs returned the expected contracts." },
+        { "id": "evidence-mqtt-audit", "type": "audit_event", "status": "attached", "summary": "Preview event is audit-bound and non-mutating." }
+      ],
+      "nextActions": ["prepare_enablement_record", "stage_adapter_scaffold", "keep_preview_boundary"]
+    },
+    {
+      "id": "cert-lorawan-adapter-governed",
+      "name": "LoRaWAN Adapter Certification",
+      "moduleId": "lorawan-adapter",
+      "requestId": "request-lorawan-adapter",
+      "buildPlanId": "build-lorawan-adapter-local",
+      "targetEnvironment": "local-docker",
+      "status": "approval_required",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "requiresApproval": true,
+      "requiredEvidence": ["manifest_flag", "build_plan", "test_result", "docker_health", "api_contract", "security_review", "approval_record", "simulation_report", "payload_budget", "audit_event"],
+      "testSuiteIds": ["suite-module-contract", "suite-docker-local", "suite-api-contract", "suite-security-policy", "suite-narrowband-simulation"],
+      "gates": [
+        { "id": "lorawan-manifest", "name": "Manifest flag exists", "evidenceType": "manifest_flag", "status": "passed" },
+        { "id": "lorawan-build", "name": "Build plan prepared", "evidenceType": "build_plan", "status": "approval_required" },
+        { "id": "lorawan-sim", "name": "Narrowband simulation attached", "evidenceType": "simulation_report", "status": "pending" },
+        { "id": "lorawan-approval", "name": "Human approval attached", "evidenceType": "approval_record", "status": "missing" },
+        { "id": "lorawan-payload", "name": "Payload budget proven", "evidenceType": "payload_budget", "status": "pending" }
+      ],
+      "evidence": [
+        { "id": "evidence-lorawan-manifest", "type": "manifest_flag", "status": "attached", "summary": "LoRaWAN manifest flag is approval-gated for emergency control." },
+        { "id": "evidence-lorawan-build", "type": "build_plan", "status": "attached", "summary": "Local adapter plan exists but is held by approval gates." },
+        { "id": "evidence-lorawan-policy", "type": "security_review", "status": "pending", "summary": "P0 downlink controls require security review and approval." }
+      ],
+      "nextActions": ["attach_human_approval", "run_narrowband_simulation_pack", "prove_payload_budget"]
+    },
+    {
+      "id": "cert-narrowband-control-plane-azure",
+      "name": "Narrowband SD-WAN Azure Certification",
+      "moduleId": "narrowband-control-plane",
+      "requestId": "request-narrowband-control-plane",
+      "buildPlanId": "build-narrowband-control-plane-azure",
+      "targetEnvironment": "azure-container-apps",
+      "status": "approval_required",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "requiresApproval": true,
+      "requiredEvidence": ["manifest_flag", "build_plan", "test_result", "api_contract", "security_review", "approval_record", "simulation_report", "payload_budget", "audit_event"],
+      "testSuiteIds": ["suite-module-contract", "suite-api-contract", "suite-security-policy", "suite-narrowband-simulation"],
+      "gates": [
+        { "id": "nb-plan", "name": "Azure plan prepared", "evidenceType": "build_plan", "status": "approval_required" },
+        { "id": "nb-simulation", "name": "World-first path simulation", "evidenceType": "simulation_report", "status": "pending" },
+        { "id": "nb-security", "name": "Emergency control review", "evidenceType": "security_review", "status": "pending" },
+        { "id": "nb-approval", "name": "Promotion approval attached", "evidenceType": "approval_record", "status": "missing" }
+      ],
+      "evidence": [
+        { "id": "evidence-nb-build", "type": "build_plan", "status": "attached", "summary": "Azure Container Apps fragment exists for promotion planning." },
+        { "id": "evidence-nb-audit", "type": "audit_event", "status": "attached", "summary": "Promotion preview remains audit-bound and approval-gated." }
+      ],
+      "nextActions": ["attach_promotion_approval", "run_world_first_narrowband_simulation", "prepare_azure_certification_record"]
+    }
+  ],
+  "harnessRuns": [
+    {
+      "id": "harness-run-mqtt-20260510",
+      "profileId": "cert-mqtt-esphome-foundation",
+      "moduleId": "mqtt-esphome",
+      "status": "passed",
+      "actor": "system-preview",
+      "suiteResults": [
+        { "suiteId": "suite-module-contract", "status": "passed", "durationMs": 720 },
+        { "suiteId": "suite-docker-local", "status": "passed", "durationMs": 2600 },
+        { "suiteId": "suite-api-contract", "status": "passed", "durationMs": 640 },
+        { "suiteId": "suite-ui-smoke", "status": "passed", "durationMs": 920 }
+      ],
+      "summary": "MQTT/ESPHome adapter certification evidence is complete for preview-only enablement planning."
+    },
+    {
+      "id": "harness-run-lorawan-20260510",
+      "profileId": "cert-lorawan-adapter-governed",
+      "moduleId": "lorawan-adapter",
+      "status": "approval_required",
+      "actor": "system-preview",
+      "suiteResults": [
+        { "suiteId": "suite-module-contract", "status": "passed", "durationMs": 810 },
+        { "suiteId": "suite-security-policy", "status": "approval_required", "durationMs": 0 },
+        { "suiteId": "suite-narrowband-simulation", "status": "pending", "durationMs": 0 }
+      ],
+      "summary": "LoRaWAN adapter is held until approval and narrowband simulation evidence are attached."
+    },
+    {
+      "id": "harness-run-narrowband-azure-20260510",
+      "profileId": "cert-narrowband-control-plane-azure",
+      "moduleId": "narrowband-control-plane",
+      "status": "approval_required",
+      "actor": "system-preview",
+      "suiteResults": [
+        { "suiteId": "suite-module-contract", "status": "passed", "durationMs": 790 },
+        { "suiteId": "suite-security-policy", "status": "pending", "durationMs": 0 },
+        { "suiteId": "suite-narrowband-simulation", "status": "pending", "durationMs": 0 }
+      ],
+      "summary": "Azure promotion is prepared but remains held for approval, simulation, and security review."
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-certify-mqtt",
+      "name": "Certify MQTT Adapter",
+      "keywords": ["certify", "mqtt", "esphome", "test", "adapter"],
+      "profileId": "cert-mqtt-esphome-foundation",
+      "confidence": 0.93,
+      "exampleIntent": "Certify the MQTT and ESPHome adapter for local Docker."
+    },
+    {
+      "id": "intent-certify-lorawan",
+      "name": "Certify LoRaWAN Adapter",
+      "keywords": ["certify", "lorawan", "narrowband", "downlink", "emergency"],
+      "profileId": "cert-lorawan-adapter-governed",
+      "confidence": 0.95,
+      "exampleIntent": "Certify LoRaWAN emergency downlink support."
+    },
+    {
+      "id": "intent-certify-narrowband-azure",
+      "name": "Certify Narrowband Azure Promotion",
+      "keywords": ["certify", "narrowband", "sd-wan", "azure", "promotion", "world first"],
+      "profileId": "cert-narrowband-control-plane-azure",
+      "confidence": 0.92,
+      "exampleIntent": "Certify the Narrowband SD-WAN control plane for Azure promotion."
+    }
+  ]
+}

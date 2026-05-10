@@ -55,6 +55,7 @@ import {
   fetchKra,
   fetchLighting,
   fetchModuleBuilder,
+  fetchModuleMarketplace,
   fetchModuleManifest,
   fetchNarrowbandRoutes,
   fetchOverview,
@@ -68,6 +69,8 @@ import {
   previewModuleBuildIntent,
   previewModuleBuildPlan,
   previewModuleManifestIntent,
+  previewMarketplaceIntent,
+  previewMarketplaceRequest,
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
@@ -116,6 +119,9 @@ import type {
   ModuleDefinition,
   ModuleManifestIntentPreview,
   ModuleManifestResponse,
+  ModuleMarketplaceIntentPreview,
+  ModuleMarketplacePreview,
+  ModuleMarketplaceResponse,
   NarrowbandRoutes,
   PlatformOverview,
   SimulationLabResponse,
@@ -293,6 +299,10 @@ function App() {
   const [moduleBuildPreview, setModuleBuildPreview] = useState<ModuleBuildPreview | null>(null);
   const [moduleBuildIntentPreview, setModuleBuildIntentPreview] = useState<ModuleBuildIntentPreview | null>(null);
   const [moduleBuildLoading, setModuleBuildLoading] = useState<"preview" | "intent" | null>(null);
+  const [moduleMarketplace, setModuleMarketplace] = useState<ModuleMarketplaceResponse | null>(null);
+  const [marketplacePreview, setMarketplacePreview] = useState<ModuleMarketplacePreview | null>(null);
+  const [marketplaceIntentPreview, setMarketplaceIntentPreview] = useState<ModuleMarketplaceIntentPreview | null>(null);
+  const [marketplaceLoading, setMarketplaceLoading] = useState<"preview" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -329,6 +339,7 @@ function App() {
     void fetchSensing().then(setSensing);
     void fetchModuleManifest().then(setModuleManifest);
     void fetchModuleBuilder().then(setModuleBuilder);
+    void fetchModuleMarketplace().then(setModuleMarketplace);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -613,6 +624,26 @@ function App() {
     }
   }
 
+  async function previewMarketplace(requestId: string) {
+    setMarketplaceLoading("preview");
+    try {
+      setMarketplacePreview(await previewMarketplaceRequest(requestId));
+    } finally {
+      setMarketplaceLoading(null);
+    }
+  }
+
+  async function previewMarketplaceFromIntent(intentText: string) {
+    setMarketplaceLoading("intent");
+    try {
+      const result = await previewMarketplaceIntent(intentText);
+      setMarketplaceIntentPreview(result);
+      setMarketplacePreview(result.preview);
+    } finally {
+      setMarketplaceLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -715,6 +746,7 @@ function App() {
           <Metric label="Sensing" value={sensing?.summary.occupiedZoneCount ?? commandCentre?.sensing.summary.occupiedZoneCount ?? "-"} detail="occupied zones" tone="good" />
           <Metric label="Flags" value={moduleManifest?.summary.enabled ?? commandCentre?.moduleManifest?.summary.enabled ?? "-"} detail="enabled modules" tone="good" />
           <Metric label="Builds" value={moduleBuilder?.summary.readyToQueue ?? commandCentre?.moduleBuilder?.summary.readyToQueue ?? "-"} detail="queue-ready" tone="warn" />
+          <Metric label="Market" value={moduleMarketplace?.summary.available ?? commandCentre?.moduleMarketplace?.summary.available ?? "-"} detail="available" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -796,6 +828,14 @@ function App() {
           loading={moduleLoading}
           onPreview={previewModule}
           onIntentPreview={previewModuleFromIntent}
+        />
+        <ModuleMarketplacePanel
+          marketplace={moduleMarketplace || commandCentre?.moduleMarketplace || commandCentre?.modules.marketplace || null}
+          preview={marketplacePreview}
+          intentPreview={marketplaceIntentPreview}
+          loading={marketplaceLoading}
+          onPreview={previewMarketplace}
+          onIntentPreview={previewMarketplaceFromIntent}
         />
         <ModuleBuilderPanel
           builder={moduleBuilder || commandCentre?.moduleBuilder || commandCentre?.modules.builder || null}
@@ -2615,6 +2655,147 @@ function ModuleManifestPanel({
               <span key={artifact}>{artifact.replace(/_/g, " ")}</span>
             ))}
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ModuleMarketplacePanel({
+  marketplace,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onIntentPreview,
+}: {
+  marketplace: ModuleMarketplaceResponse | null;
+  preview: ModuleMarketplacePreview | null;
+  intentPreview: ModuleMarketplaceIntentPreview | null;
+  loading: "preview" | "intent" | null;
+  onPreview: (requestId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const listings = marketplace?.listings || [];
+  const requests = marketplace?.requests || [];
+  const collections = marketplace?.curatedCollections || [];
+  const recipes = marketplace?.intentRecipes || [];
+  const activeRequestId = preview?.request.id || requests[0]?.id;
+  const activeRecipe = recipes.find((recipe) => recipe.requestId === activeRequestId) || recipes[0];
+  const visibleListings = listings
+    .filter((listing) => ["available", "approval_required", "needs_manifest", "installed"].includes(listing.status))
+    .slice(0, 8);
+
+  return (
+    <section className="module-marketplace-panel" aria-label="Module marketplace dashboard">
+      <div className="section-header marketplace-header">
+        <div>
+          <p className="eyebrow">Module Marketplace</p>
+          <h2>Available / Installed / Requested</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${marketplace?.summary.installed || 0} installed`} />
+          <StatusPill tone="warn" label={`${marketplace?.summary.available || 0} available`} />
+          <StatusPill tone="danger" label={`${marketplace?.summary.needsManifest || 0} manifest gap`} />
+        </div>
+      </div>
+
+      <div className="marketplace-grid">
+        <div className="marketplace-panel">
+          <div className="section-header compact">
+            <h3>Requests</h3>
+            <Puzzle size={18} />
+          </div>
+          <div className="marketplace-request-list">
+            {requests.map((request) => (
+              <div className={`marketplace-request-row ${request.id === activeRequestId ? "active" : ""}`} key={request.id}>
+                <div>
+                  <strong>{request.name}</strong>
+                  <span>{request.moduleId} / {request.listing?.status || request.status}</span>
+                </div>
+                <button onClick={() => onPreview(request.id)} disabled={Boolean(loading)}>
+                  <PlayCircle size={15} />
+                  <span>{loading === "preview" && request.id === activeRequestId ? "Previewing" : "Preview"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="marketplace-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="marketplace-panel">
+          <div className="section-header compact">
+            <h3>Listings</h3>
+            <Boxes size={18} />
+          </div>
+          <div className="marketplace-listing-list">
+            {visibleListings.map((listing) => (
+              <div className="marketplace-listing-row" key={listing.moduleId}>
+                <div>
+                  <strong>{listing.name}</strong>
+                  <span>{listing.category} / {listing.queueStatus || listing.readiness}</span>
+                </div>
+                <StatusPill tone={listing.status === "installed" ? "good" : listing.status === "approval_required" ? "danger" : listing.status === "needs_manifest" ? "warn" : "neutral"} label={listing.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="marketplace-panel">
+          <div className="section-header compact">
+            <h3>Collections</h3>
+            <Layers3 size={18} />
+          </div>
+          <div className="marketplace-collection-list">
+            {collections.map((collection) => (
+              <div className="marketplace-collection-row" key={collection.id}>
+                <strong>{collection.name}</strong>
+                <span>{collection.listings.length}/{collection.moduleIds.length} surfaced</span>
+              </div>
+            ))}
+          </div>
+          {intentPreview?.match && (
+            <div className="marketplace-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.requestId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="marketplace-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.request.name : "Request Preview"}</h3>
+            <ClipboardCheck size={18} />
+          </div>
+          {preview ? (
+            <div className="marketplace-preview-card">
+              <div>
+                <span>Status</span>
+                <strong>{preview.status.replace(/_/g, " ")}</strong>
+              </div>
+              <div>
+                <span>Build plan</span>
+                <strong>{preview.buildPreview?.plan.id || preview.listing?.buildPlanId || "manifest first"}</strong>
+              </div>
+              <div>
+                <span>Queue</span>
+                <strong>{preview.summary.queueReady ? "ready" : preview.summary.requiresApproval ? "approval" : "hold"}</strong>
+              </div>
+              <div className="marketplace-next-actions">
+                {preview.nextActions.map((action) => <span key={action}>{action.replace(/_/g, " ")}</span>)}
+              </div>
+            </div>
+          ) : (
+            <div className="event-empty">
+              <Activity size={18} />
+              <span>Preview a marketplace request to resolve flag, build, and approval state.</span>
+            </div>
+          )}
         </div>
       </div>
     </section>

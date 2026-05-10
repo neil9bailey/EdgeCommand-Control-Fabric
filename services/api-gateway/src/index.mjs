@@ -134,6 +134,13 @@ import {
   previewBuildPlan,
   summarizeModuleBuilder,
 } from "./moduleBuilder.mjs";
+import {
+  buildModuleMarketplaceDashboard,
+  loadModuleMarketplace,
+  previewMarketplaceIntent,
+  previewMarketplaceRequest,
+  summarizeModuleMarketplace,
+} from "./moduleMarketplace.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -157,6 +164,7 @@ const energyManagement = loadEnergyManagement();
 const sensingPresence = loadSensingPresence();
 const moduleManifest = loadModuleManifest();
 const moduleBuilder = loadModuleBuilder();
+const moduleMarketplace = loadModuleMarketplace();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -185,6 +193,7 @@ function buildOverview() {
   const sensingSummary = summarizeSensingPresence(sensingPresence, deviceRegistry);
   const moduleManifestSummary = summarizeModuleManifest(moduleManifest, catalog);
   const moduleBuilderSummary = summarizeModuleBuilder(moduleBuilder, moduleManifest, catalog);
+  const moduleMarketplaceSummary = summarizeModuleMarketplace(moduleMarketplace, catalog, moduleManifest, moduleBuilder);
   return {
     ...summary,
     devices: deviceSummary,
@@ -221,6 +230,7 @@ function buildOverview() {
       sensingPresence: `${sensingSummary.occupiedZoneCount} occupied zones / ${sensingSummary.averageCo2Ppm}ppm CO2`,
       moduleManifest: `${moduleManifestSummary.enabled} enabled flags / ${moduleManifestSummary.buildable} buildable`,
       moduleBuilder: `${moduleBuilderSummary.planCount} build plans / ${moduleBuilderSummary.readyToQueue} queue-ready`,
+      moduleMarketplace: `${moduleMarketplaceSummary.installed} installed / ${moduleMarketplaceSummary.available} available`,
     },
     links: defaultLinkInventory(),
   };
@@ -272,6 +282,7 @@ app.get("/api/command-centre", (_req, res) => {
     sensingPresence,
     moduleManifest,
     moduleBuilder,
+    moduleMarketplace,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -396,6 +407,66 @@ app.post(
       builder: moduleBuilder,
       manifest: moduleManifest,
       catalog,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/module-marketplace", (_req, res) => {
+  res.json(buildModuleMarketplaceDashboard({
+    marketplace: moduleMarketplace,
+    catalog,
+    manifest: moduleManifest,
+    builder: moduleBuilder,
+  }));
+});
+
+app.get("/api/module-marketplace/requests/:id/preview", (req, res) => {
+  const result = previewMarketplaceRequest({
+    marketplace: moduleMarketplace,
+    catalog,
+    manifest: moduleManifest,
+    builder: moduleBuilder,
+    requestId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "marketplace_request_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/module-marketplace/requests/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewMarketplaceRequest({
+      marketplace: moduleMarketplace,
+      catalog,
+      manifest: moduleManifest,
+      builder: moduleBuilder,
+      requestId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "marketplace_request_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/module-marketplace/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewMarketplaceIntent({
+      marketplace: moduleMarketplace,
+      catalog,
+      manifest: moduleManifest,
+      builder: moduleBuilder,
       intent: req.body?.intent || "",
       actor: req.auth,
     }));

@@ -574,8 +574,10 @@ Deliverables:
 
 Acceptance:
 
-- User can request a module from UI or natural language.
-- Module state changes are visible.
+- User can request a module from UI or natural language. Foundation complete through marketplace request preview and intent-to-request preview.
+- Module state changes are visible. Foundation complete through installed, available, requested, approval-required, queue-ready, and needs-manifest listing states.
+- Marketplace collections show module bundles for starter home, connectivity, and narrowband strategy. Complete in E20 foundation.
+- Request previews link manifest flags and build plans without mutating runtime state. Complete in E20 foundation.
 - Failed module builds show actionable errors.
 
 ## E21 - Module Certification And Test Harness

@@ -434,7 +434,7 @@ Verification:
 
 ### E19 - Module Builder And IaC Fragment System
 
-Status: in progress locally.
+Status: complete and pushed to `origin/main`.
 
 Delivered:
 
@@ -448,9 +448,30 @@ Delivered:
 Verification:
 
 - `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/module-builder`, `/api/module-builder/plans/:id/preview`, `/api/module-builder/intent/preview`, and `/api/command-centre`.
+- Browser verification for the Module Builder panel, MQTT build plan, LoRaWAN build plan, and clean browser console.
+
+### E20 - Module Marketplace Dashboard
+
+Status: in progress locally.
+
+Delivered:
+
+- File-backed Module Marketplace package with request states, curated collections, marketplace requests, intent recipes, and recent marketplace run seeds.
+- API gateway marketplace service that composes catalog modules, manifest flags, and build plans into installed, available, requested, approval-required, and needs-manifest listings.
+- `/api/module-marketplace`, `/api/module-marketplace/requests/:id/preview`, and `/api/module-marketplace/intent/preview` endpoints.
+- Global Command Centre Modules workspace now includes marketplace listing/request posture and preserves critical route/simulation/action visibility.
+- Web console Module Marketplace panel showing requests, listings, curated collections, request previews, queue readiness, build plan linkages, and approval requirements.
+- Tests for marketplace summary, collection/listing composition, MQTT request preview, LoRaWAN intent preview, and Command Centre action queue compatibility.
+
+Verification:
+
+- `npm test`
 
 ## Next
 
-### E20 - Module Marketplace Dashboard
+### E21 - Module Certification And Test Harness
 
 Status: next planned build slice.

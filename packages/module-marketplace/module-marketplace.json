@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "module-marketplace-service",
+    "name": "Module Marketplace Dashboard",
+    "moduleId": "module-marketplace",
+    "mode": "deterministic-local",
+    "executionBoundary": "request-preview-only",
+    "defaultRequestId": "request-mqtt-esphome",
+    "rule": "Marketplace requests select module flags and build plans for human review; they never enable, build, deploy, or mutate files without later approval and certification."
+  },
+  "featureModule": {
+    "moduleId": "module-marketplace",
+    "state": "foundation",
+    "buildStrategy": "catalog-plus-flags-plus-builder-dashboard",
+    "enabledBy": ["human_intent", "operator_dashboard", "module_builder_agent"],
+    "buildArtifacts": [
+      "packages/module-marketplace/module-marketplace.json",
+      "services/api-gateway/src/moduleMarketplace.mjs",
+      "apps/web-console ModuleMarketplacePanel",
+      "api contracts and tests"
+    ]
+  },
+  "requestStates": [
+    { "id": "available", "name": "Available", "canRequest": true, "requiresApproval": false },
+    { "id": "installed", "name": "Installed", "canRequest": false, "requiresApproval": false },
+    { "id": "requested", "name": "Requested", "canRequest": false, "requiresApproval": false },
+    { "id": "approval_required", "name": "Approval Required", "canRequest": false, "requiresApproval": true },
+    { "id": "needs_manifest", "name": "Needs Manifest", "canRequest": true, "requiresApproval": false }
+  ],
+  "curatedCollections": [
+    {
+      "id": "starter-home-on-steroids",
+      "name": "Starter Home On Steroids",
+      "moduleIds": ["lighting-scenes", "climate-hvac", "security-access", "water-management", "energy-solar", "occupancy-presence"]
+    },
+    {
+      "id": "connectivity-next",
+      "name": "Connectivity Next",
+      "moduleIds": ["mqtt-esphome", "lorawan-adapter", "matter-thread", "zigbee", "vendor-cloud-adapters"]
+    },
+    {
+      "id": "narrowband-world-first",
+      "name": "Narrowband World First",
+      "moduleIds": ["narrowband-control-plane", "lorawan-adapter", "lorawan-command-codec", "remote-command-queue", "store-forward-gateway"]
+    }
+  ],
+  "requests": [
+    {
+      "id": "request-mqtt-esphome",
+      "name": "Request MQTT And ESPHome Adapter",
+      "moduleId": "mqtt-esphome",
+      "intent": "Enable MQTT and ESPHome so I can add DIY sensors and relays.",
+      "status": "available",
+      "priority": "P2_CONTROL",
+      "requestedBy": "operator-local"
+    },
+    {
+      "id": "request-lorawan-adapter",
+      "name": "Request LoRaWAN Adapter",
+      "moduleId": "lorawan-adapter",
+      "intent": "Plan LoRaWAN adapter support for remote emergency downlinks.",
+      "status": "approval_required",
+      "priority": "P0_EMERGENCY",
+      "requestedBy": "operator-local"
+    },
+    {
+      "id": "request-narrowband-control-plane",
+      "name": "Promote Narrowband SD-WAN Control Plane",
+      "moduleId": "narrowband-control-plane",
+      "intent": "Prepare the Narrowband SD-WAN control plane for Azure promotion.",
+      "status": "requested",
+      "priority": "P0_EMERGENCY",
+      "requestedBy": "operator-local"
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-marketplace-mqtt",
+      "name": "Request MQTT Adapter",
+      "keywords": ["mqtt", "esphome", "sensor", "relay", "adapter"],
+      "requestId": "request-mqtt-esphome",
+      "confidence": 0.91,
+      "exampleIntent": "Add MQTT and ESPHome support for DIY sensors."
+    },
+    {
+      "id": "intent-marketplace-lorawan",
+      "name": "Request LoRaWAN Adapter",
+      "keywords": ["lorawan", "narrowband", "gateway", "remote", "downlink"],
+      "requestId": "request-lorawan-adapter",
+      "confidence": 0.94,
+      "exampleIntent": "Add LoRaWAN support for remote emergency control."
+    },
+    {
+      "id": "intent-marketplace-narrowband",
+      "name": "Promote Narrowband Control Plane",
+      "keywords": ["narrowband", "sd-wan", "azure", "container apps", "world first"],
+      "requestId": "request-narrowband-control-plane",
+      "confidence": 0.9,
+      "exampleIntent": "Show the next steps for the world-first Narrowband SD-WAN control plane."
+    }
+  ],
+  "recentMarketplaceRuns": [
+    {
+      "id": "marketplace-run-20260510-001",
+      "requestId": "request-mqtt-esphome",
+      "moduleId": "mqtt-esphome",
+      "status": "ready_to_queue",
+      "actor": "system-preview",
+      "summary": "Marketplace request resolved MQTT/ESPHome to a queue-ready local build package."
+    }
+  ]
+}

@@ -31,7 +31,8 @@ Current status:
 - E16 Energy, Solar, Battery, and EV foundation is complete.
 - E17 Occupancy, Presence, and Environmental Sensing foundation is complete.
 - E18 Module Manifest and Feature Flag Framework foundation is complete.
-- E19 Module Builder and IaC Fragment System foundation is in progress.
+- E19 Module Builder and IaC Fragment System foundation is complete.
+- E20 Module Marketplace Dashboard foundation is in progress.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -78,6 +79,7 @@ Local URLs:
 - Occupancy, presence, and sensing API: http://localhost:3101/api/sensing
 - Module manifest and feature flags API: http://localhost:3101/api/module-manifest
 - Module builder and IaC fragments API: http://localhost:3101/api/module-builder
+- Module marketplace API: http://localhost:3101/api/module-marketplace
 
 Docker Desktop target:
 

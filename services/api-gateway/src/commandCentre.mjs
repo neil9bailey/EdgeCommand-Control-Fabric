@@ -15,6 +15,7 @@ import { buildWaterDashboard, summarizeWaterManagement } from "./waterManagement
 import { summarizeMcpOrchestrator } from "./mcpOrchestrator.mjs";
 import { buildModuleBuilderDashboard, loadModuleBuilder, summarizeModuleBuilder } from "./moduleBuilder.mjs";
 import { buildModuleManifestDashboard, loadModuleManifest, summarizeModuleManifest } from "./moduleManifest.mjs";
+import { buildModuleMarketplaceDashboard, loadModuleMarketplace, summarizeModuleMarketplace } from "./moduleMarketplace.mjs";
 import {
   buildSimulationDashboard,
   summarizeSimulationLab,
@@ -91,7 +92,7 @@ export function buildApprovalQueue(automationEngine, deviceRegistry, simulationL
   });
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, waterSummary, energySummary, sensingSummary, moduleManifestSummary, moduleBuilderSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, waterSummary, energySummary, sensingSummary, moduleManifestSummary, moduleBuilderSummary, moduleMarketplaceSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -100,11 +101,11 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
     {
       id: "modules",
       label: "Modules",
-      headline: `${moduleManifestSummary.enabled} flags enabled`,
-      detail: `${moduleManifestSummary.buildable} buildable, ${moduleBuilderSummary.readyToQueue} queue-ready plan`,
+      headline: `${moduleMarketplaceSummary.installed} installed / ${moduleMarketplaceSummary.available} available`,
+      detail: `${moduleBuilderSummary.readyToQueue} queue-ready plan, ${moduleMarketplaceSummary.needsManifest} need manifest`,
       status: moduleManifestSummary.blocked > 0 ? "attention" : "ready",
       metrics: [
-        { label: "Flags", value: moduleManifestSummary.flagCount },
+        { label: "Listings", value: moduleMarketplaceSummary.listingCount },
         { label: "Plans", value: moduleBuilderSummary.planCount },
         { label: "Queue", value: moduleBuilderSummary.readyToQueue },
       ],
@@ -292,7 +293,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, waterDashboard, energyDashboard, sensingDashboard, moduleManifestDashboard, moduleBuilderDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
+function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, waterDashboard, energyDashboard, sensingDashboard, moduleManifestDashboard, moduleBuilderDashboard, moduleMarketplaceDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -416,6 +417,19 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
       evidence: [plan.flag?.id || plan.flagId, plan.readiness.approvalRequired ? "approval-required" : "queue-ready"],
     }));
 
+  const marketplaceActions = (moduleMarketplaceDashboard?.requests || [])
+    .slice(0, 3)
+    .map((request) => ({
+      id: `marketplace-${request.id}`,
+      priority: request.priority,
+      workspaceId: "modules",
+      title: request.name,
+      owner: "Module Marketplace",
+      status: request.listing?.status || request.status,
+      detail: `${request.moduleId} / ${request.listing?.queueStatus || request.listing?.readiness || request.status}`,
+      evidence: [request.requestedBy, request.listing?.requiresApproval ? "approval-required" : "request-ready"],
+    }));
+
   const deviceActions = devices
     .filter((device) => device.status !== "online")
     .map((device) => ({
@@ -498,12 +512,28 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
       };
     });
 
-  return [...approvalActions, ...moduleActions, ...buildActions, ...lightingActions, ...climateActions, ...securityActions, ...waterActions, ...energyActions, ...sensingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 40);
+  const primaryActions = [...approvalActions, ...marketplaceActions, ...moduleActions, ...buildActions, ...lightingActions, ...climateActions, ...securityActions, ...waterActions, ...energyActions, ...sensingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions];
+  const reservedActions = [
+    approvalActions[0],
+    lightingActions[0],
+    climateActions[0],
+    securityActions[0],
+    waterActions[0],
+    energyActions[0],
+    sensingActions[0],
+    mcpActions[0],
+    kraActions[0],
+    simulationActions[0],
+    routeActions[0],
+  ].filter(Boolean);
+  const byId = new Map([...reservedActions, ...primaryActions, ...routeActions, ...auditActions].map((action) => [action.id, action]));
+  return [...byId.values()].slice(0, 40);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, waterManagement, energyManagement, sensingPresence, moduleManifest, moduleBuilder, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, waterManagement, energyManagement, sensingPresence, moduleManifest, moduleBuilder, moduleMarketplace, authStatus }) {
   const resolvedModuleManifest = moduleManifest || loadModuleManifest();
   const resolvedModuleBuilder = moduleBuilder || loadModuleBuilder();
+  const resolvedModuleMarketplace = moduleMarketplace || loadModuleMarketplace();
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
@@ -515,6 +545,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
   const sensingSummary = summarizeSensingPresence(sensingPresence, deviceRegistry);
   const moduleManifestSummary = summarizeModuleManifest(resolvedModuleManifest, catalog);
   const moduleBuilderSummary = summarizeModuleBuilder(resolvedModuleBuilder, resolvedModuleManifest, catalog);
+  const moduleMarketplaceSummary = summarizeModuleMarketplace(resolvedModuleMarketplace, catalog, resolvedModuleManifest, resolvedModuleBuilder);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
@@ -577,6 +608,12 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     manifest: resolvedModuleManifest,
     catalog,
   });
+  const moduleMarketplaceDashboard = buildModuleMarketplaceDashboard({
+    marketplace: resolvedModuleMarketplace,
+    catalog,
+    manifest: resolvedModuleManifest,
+    builder: resolvedModuleBuilder,
+  });
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
   const auditEvents = filterEvents(eventLedger, { auditRequired: "true", limit: 8 });
@@ -593,6 +630,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     sensingSummary,
     moduleManifestSummary,
     moduleBuilderSummary,
+    moduleMarketplaceSummary,
     approvalSummary: approvalQueue.summary,
     mcpSummary,
     kraSummary,
@@ -649,6 +687,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       sensingDashboard,
       moduleManifestDashboard,
       moduleBuilderDashboard,
+      moduleMarketplaceDashboard,
       devices,
       routes: narrowbandRoutes.routes,
       auditEvents,
@@ -666,6 +705,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       foundations: catalog.modules.filter((module) => module.state === "foundation").map((module) => module.id),
       manifest: moduleManifestDashboard,
       builder: moduleBuilderDashboard,
+      marketplace: moduleMarketplaceDashboard,
     },
     devices,
     automations: {
@@ -684,6 +724,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     sensing: sensingDashboard,
     moduleManifest: moduleManifestDashboard,
     moduleBuilder: moduleBuilderDashboard,
+    moduleMarketplace: moduleMarketplaceDashboard,
     approvals: approvalQueue,
     agents: {
       orchestrator: mcpOrchestrator.orchestrator,

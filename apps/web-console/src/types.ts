@@ -2088,6 +2088,94 @@ export interface ModuleBuilderResponse {
   rule: string;
 }
 
+export interface ModuleMarketplaceSummary {
+  schemaVersion: string;
+  listingCount: number;
+  installed: number;
+  available: number;
+  requested: number;
+  approvalRequired: number;
+  needsManifest: number;
+  queueReady: number;
+  collectionCount: number;
+  requestCount: number;
+  byStatus: Record<string, number>;
+  byCategory: Record<string, number>;
+  byRisk: Record<string, number>;
+}
+
+export interface ModuleMarketplaceListing {
+  moduleId: string;
+  name: string;
+  category: string;
+  description: string;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  status: string;
+  flagState: string | null;
+  readiness: string;
+  buildPlanId: string | null;
+  queueStatus: string | null;
+  canRequest: boolean;
+  requiresApproval: boolean;
+  collectionIds: string[];
+  kpis: string[];
+}
+
+export interface ModuleMarketplaceRequest {
+  id: string;
+  name: string;
+  moduleId: string;
+  intent: string;
+  status: string;
+  priority: string;
+  requestedBy: string;
+  listing?: ModuleMarketplaceListing | null;
+}
+
+export interface ModuleMarketplacePreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ModuleMarketplaceResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  request: ModuleMarketplaceRequest;
+  listing: ModuleMarketplaceListing | null;
+  flagPreview: ModuleFlagPreview | null;
+  buildPreview: ModuleBuildPreview | null;
+  summary: { canRequest: boolean; requiresApproval: boolean; hasBuildPlan: boolean; queueReady: boolean };
+  nextActions: string[];
+  event: FabricEvent;
+}
+
+export interface ModuleMarketplaceIntentPreview {
+  intent: string;
+  match: null | { id: string; name: string; requestId: string; confidence: number; score: number };
+  preview: ModuleMarketplacePreview;
+}
+
+export interface ModuleMarketplaceResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultRequestId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  summary: ModuleMarketplaceSummary;
+  requestStates: Array<{ id: string; name: string; canRequest: boolean; requiresApproval: boolean }>;
+  curatedCollections: Array<{ id: string; name: string; moduleIds: string[]; listings: ModuleMarketplaceListing[] }>;
+  listings: ModuleMarketplaceListing[];
+  requests: ModuleMarketplaceRequest[];
+  intentRecipes: Array<{ id: string; name: string; keywords: string[]; requestId: string; confidence: number; exampleIntent: string }>;
+  recentMarketplaceRuns: Array<{ id: string; requestId: string; moduleId: string; status: string; actor: string; summary: string }>;
+  rule: string;
+}
+
 export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
@@ -2156,6 +2244,7 @@ export interface CommandCentreResponse {
     foundations: string[];
     manifest?: ModuleManifestResponse;
     builder?: ModuleBuilderResponse;
+    marketplace?: ModuleMarketplaceResponse;
   };
   devices: CommandCentreDevice[];
   automations: {
@@ -2174,6 +2263,7 @@ export interface CommandCentreResponse {
   sensing: SensingDashboardResponse;
   moduleManifest?: ModuleManifestResponse;
   moduleBuilder?: ModuleBuilderResponse;
+  moduleMarketplace?: ModuleMarketplaceResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

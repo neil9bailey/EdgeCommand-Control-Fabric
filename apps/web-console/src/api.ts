@@ -24,6 +24,9 @@ import type {
   ModuleBuildIntentPreview,
   ModuleBuildPreview,
   ModuleBuilderResponse,
+  ModuleMarketplaceIntentPreview,
+  ModuleMarketplacePreview,
+  ModuleMarketplaceResponse,
   McpResponse,
   ModuleManifestResponse,
   ModuleManifestIntentPreview,
@@ -213,6 +216,14 @@ export async function fetchModuleManifest(): Promise<ModuleManifestResponse | nu
 export async function fetchModuleBuilder(): Promise<ModuleBuilderResponse | null> {
   try {
     return await getJson<ModuleBuilderResponse>("/api/module-builder");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchModuleMarketplace(): Promise<ModuleMarketplaceResponse | null> {
+  try {
+    return await getJson<ModuleMarketplaceResponse>("/api/module-marketplace");
   } catch {
     return null;
   }
@@ -451,6 +462,26 @@ export async function previewModuleBuildIntent(intent: string): Promise<ModuleBu
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<ModuleBuildIntentPreview>;
+}
+
+export async function previewMarketplaceRequest(requestId: string): Promise<ModuleMarketplacePreview> {
+  const response = await fetch(`${API_BASE}/api/module-marketplace/requests/${requestId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ModuleMarketplacePreview>;
+}
+
+export async function previewMarketplaceIntent(intent: string): Promise<ModuleMarketplaceIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/module-marketplace/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ModuleMarketplaceIntentPreview>;
 }
 
 export async function recordApprovalDecision(

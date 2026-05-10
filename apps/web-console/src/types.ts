@@ -65,6 +65,7 @@ export interface PlatformOverview {
     securityAccess?: string;
     waterManagement?: string;
     energyManagement?: string;
+    sensingPresence?: string;
   };
   links: Array<{
     id: string;
@@ -1668,7 +1669,156 @@ export interface EnergyDashboardResponse {
   rule: string;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
+export interface SensingSummary {
+  schemaVersion: string;
+  zoneCount: number;
+  occupancySensorCount: number;
+  presenceSensorCount: number;
+  airQualitySensorCount: number;
+  occupiedZoneCount: number;
+  averageConfidence: number;
+  averageCo2Ppm: number;
+  privacyStrictZoneCount: number;
+  profileCount: number;
+  enabledProfileCount: number;
+  approvalProfileCount: number;
+  policyCount: number;
+  intentRecipeCount: number;
+  recentRunCount: number;
+  byPrivacyMode: Record<string, number>;
+}
+
+export interface SensingZone {
+  id: string;
+  name: string;
+  siteId: string;
+  zoneId: string;
+  occupancyDeviceId?: string;
+  presenceDeviceId?: string;
+  airQualityDeviceId?: string;
+  temperatureDeviceIds?: string[];
+  privacyMode: string;
+  risk: string;
+  trafficClass: string;
+  policies: string[];
+  devices?: Record<string, null | {
+    id: string;
+    name: string;
+    status: string;
+    adapter: string;
+    observedState: Record<string, string | number | boolean>;
+    desiredState?: Record<string, string | number | boolean>;
+  } | Array<{
+    id: string;
+    name: string;
+    status: string;
+    adapter: string;
+    observedState: Record<string, string | number | boolean>;
+  }>>;
+}
+
+export interface SensingProfile {
+  id: string;
+  name: string;
+  mode: string;
+  status: string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  policies: string[];
+  zoneTargets: Array<{ zoneId: string; action: string; minimumConfidence: number }>;
+  commandProfile: { encodedBytes: number; ackRequired: boolean; ttlSeconds: number };
+}
+
+export interface SensingPolicy {
+  id: string;
+  name: string;
+  risk: string;
+  scope: string[];
+  requiresApproval: boolean;
+  requiresSimulation: boolean;
+  requiresAudit: boolean;
+  message: string;
+}
+
+export interface SensingIntentRecipe {
+  id: string;
+  name: string;
+  keywords: string[];
+  profileId: string;
+  confidence: number;
+  exampleIntent: string;
+}
+
+export interface SensingCommand {
+  id: string;
+  profileId: string;
+  zoneId: string;
+  zoneName: string;
+  deviceId: string | null;
+  deviceName: string;
+  capability: string;
+  action: string;
+  observedState: Record<string, string | number | boolean | null>;
+  trafficClass: string;
+  selectedPath: string;
+  encodedBytes: number;
+  ackRequired: boolean;
+  status: string;
+  canExecute: boolean;
+  requiresApproval: boolean;
+  policyDecision: string;
+  policyReasons: string[];
+}
+
+export interface SensingPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: SensingDashboardResponse["service"];
+  profile: { id: string; name: string; mode: string; status: string; trafficClass: string; requiresApproval: boolean };
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  summary: { commandCount: number; readyCount: number; approvalCount: number; blockedCount: number; encodedBytes: number };
+  policy: {
+    result: string;
+    canApply: boolean;
+    requiresApproval: boolean;
+    policies: Array<{ id: string; name: string; risk: string; message: string }>;
+    criteria: Array<{ id: string; label: string; passed: boolean }>;
+  };
+  commands: SensingCommand[];
+  nextActions: string[];
+  event: FabricEvent;
+}
+
+export interface SensingIntentPreview {
+  intent: string;
+  match: { id: string; name: string; profileId: string; confidence: number; score: number };
+  preview: SensingPreview;
+}
+
+export interface SensingDashboardResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultProfileId: string;
+    defaultZoneId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  summary: SensingSummary;
+  zones: SensingZone[];
+  profiles: SensingProfile[];
+  policies: SensingPolicy[];
+  intentRecipes: SensingIntentRecipe[];
+  recentSensingRuns: Array<{ id: string; profileId: string; status: string; actor: string; commandCount: number; summary: string }>;
+  rule: string;
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -1749,6 +1899,7 @@ export interface CommandCentreResponse {
   security: SecurityDashboardResponse;
   water: WaterDashboardResponse;
   energy: EnergyDashboardResponse;
+  sensing: SensingDashboardResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

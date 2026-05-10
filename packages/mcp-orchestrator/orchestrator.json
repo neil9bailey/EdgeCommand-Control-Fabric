@@ -22,6 +22,8 @@
     { "id": "water:valve:propose", "name": "Propose Water Valve Command", "risk": "high" },
     { "id": "energy:profile:preview", "name": "Preview Energy Profile", "risk": "medium" },
     { "id": "energy:load:propose", "name": "Propose Energy Load Command", "risk": "high" },
+    { "id": "sensing:context:preview", "name": "Preview Sensing Context", "risk": "medium" },
+    { "id": "sensing:privacy:propose", "name": "Propose Sensing Privacy Action", "risk": "high" },
     { "id": "policy:evaluate", "name": "Evaluate Safety Policy", "risk": "medium" },
     { "id": "simulation:run", "name": "Run Simulation", "risk": "medium" },
     { "id": "connectivity:route:evaluate", "name": "Evaluate Connectivity Route", "risk": "medium" },
@@ -36,7 +38,7 @@
       "name": "Automation Intent Partner",
       "rule": "propose-only",
       "status": "enabled",
-      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "security.profile.preview", "security.command.propose", "water.profile.preview", "water.valve.propose", "energy.profile.preview", "energy.load.propose", "module.plan"]
+      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "security.profile.preview", "security.command.propose", "water.profile.preview", "water.valve.propose", "energy.profile.preview", "energy.load.propose", "sensing.context.preview", "sensing.privacy.propose", "module.plan"]
     },
     {
       "id": "kra-agent",
@@ -262,6 +264,36 @@
       "requiresApproval": true,
       "auditRequired": true,
       "inputHints": ["assetId", "action", "reason", "desiredState", "ttlSeconds"]
+    },
+    {
+      "id": "sensing.context.preview",
+      "name": "Sensing Context Preview",
+      "agentId": "aip-agent",
+      "moduleId": "occupancy-presence",
+      "description": "Preview occupancy, presence, air quality, temperature, humidity, and privacy evidence for automation context.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY",
+      "scopes": ["sensing:context:preview"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["profileId", "intent", "zoneId"]
+    },
+    {
+      "id": "sensing.privacy.propose",
+      "name": "Sensing Privacy Proposal",
+      "agentId": "aip-agent",
+      "moduleId": "occupancy-presence",
+      "description": "Prepare a privacy-affecting sensing proposal; invasive tracking or detailed presence exposure remains approval-gated.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY",
+      "scopes": ["sensing:privacy:propose"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": true,
+      "auditRequired": true,
+      "inputHints": ["zoneId", "action", "reason", "privacyMode"]
     },
     {
       "id": "policy.evaluate",

@@ -32,6 +32,9 @@ test("registry supports capability and site filters", () => {
   );
   assert.ok(energyAssets.length >= 4);
 
+  const occupancySensors = filterDevices(registry, { capability: "occupancy" });
+  assert.equal(occupancySensors.length, 3);
+
   const remoteDevices = filterDevices(registry, { siteId: "remote-cottage" });
   assert.equal(remoteDevices.length, 5);
   assert.ok(remoteDevices.every((device) => device.siteId === "remote-cottage"));
@@ -42,9 +45,11 @@ test("registry finds hero scenario devices", () => {
   const gateway = findDevice(registry, "dev-cottage-gateway-01");
   const valve = findDevice(registry, "dev-cottage-valve-01");
   const battery = findDevice(registry, "dev-home-battery-01");
+  const occupancy = findDevice(registry, "dev-occupancy-living-01");
 
   assert.equal(gateway.observedState.lorawan, "ready");
   assert.equal(valve.narrowbandEligible, true);
   assert.equal(valve.desiredState.position, "open");
   assert.equal(battery.observedState.reservePercent, 35);
+  assert.equal(occupancy.observedState.occupied, true);
 });

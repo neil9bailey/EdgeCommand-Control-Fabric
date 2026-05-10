@@ -58,6 +58,7 @@ import {
   fetchOverview,
   fetchSimulationLab,
   fetchSecurity,
+  fetchSensing,
   fetchWater,
   previewLightingIntent,
   previewLightingScene,
@@ -69,6 +70,8 @@ import {
   previewSecurityIntent,
   previewSecurityProfile,
   previewSecurityUnlock,
+  previewSensingIntent,
+  previewSensingProfile,
   previewWaterIntent,
   previewWaterProfile,
   proposeIntent,
@@ -108,6 +111,9 @@ import type {
   SecurityDashboardResponse,
   SecurityIntentPreview,
   SecurityPreview,
+  SensingDashboardResponse,
+  SensingIntentPreview,
+  SensingPreview,
   WaterDashboardResponse,
   WaterIntentPreview,
   WaterPreview,
@@ -157,6 +163,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   security: LockKeyhole,
   water: Droplets,
   energy: Zap,
+  sensing: UserRound,
   agents: GitBranch,
   approvals: ClipboardCheck,
   risk: Shield,
@@ -262,6 +269,10 @@ function App() {
   const [energyPreview, setEnergyPreview] = useState<EnergyPreview | null>(null);
   const [energyIntentPreview, setEnergyIntentPreview] = useState<EnergyIntentPreview | null>(null);
   const [energyLoading, setEnergyLoading] = useState<"preview" | "apply" | "intent" | null>(null);
+  const [sensing, setSensing] = useState<SensingDashboardResponse | null>(null);
+  const [sensingPreview, setSensingPreview] = useState<SensingPreview | null>(null);
+  const [sensingIntentPreview, setSensingIntentPreview] = useState<SensingIntentPreview | null>(null);
+  const [sensingLoading, setSensingLoading] = useState<"preview" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -295,6 +306,7 @@ function App() {
     void fetchSecurity().then(setSecurity);
     void fetchWater().then(setWater);
     void fetchEnergy().then(setEnergy);
+    void fetchSensing().then(setSensing);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -519,6 +531,26 @@ function App() {
     }
   }
 
+  async function previewSensing(profileId: string) {
+    setSensingLoading("preview");
+    try {
+      setSensingPreview(await previewSensingProfile(profileId));
+    } finally {
+      setSensingLoading(null);
+    }
+  }
+
+  async function previewSensingFromIntent(intentText: string) {
+    setSensingLoading("intent");
+    try {
+      const result = await previewSensingIntent(intentText);
+      setSensingIntentPreview(result);
+      setSensingPreview(result.preview);
+    } finally {
+      setSensingLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -618,6 +650,7 @@ function App() {
           <Metric label="Security" value={security?.summary.enabledProfileCount || commandCentre?.security.summary.enabledProfileCount || "-"} detail="guarded profiles" tone="danger" />
           <Metric label="Water" value={water?.summary.enabledProfileCount || commandCentre?.water.summary.enabledProfileCount || "-"} detail="P0 profiles" tone="danger" />
           <Metric label="Energy" value={energy?.summary.totalSolarWatts || commandCentre?.energy.summary.totalSolarWatts || "-"} detail="solar watts" tone="good" />
+          <Metric label="Sensing" value={sensing?.summary.occupiedZoneCount ?? commandCentre?.sensing.summary.occupiedZoneCount ?? "-"} detail="occupied zones" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -683,6 +716,14 @@ function App() {
           onPreview={previewEnergy}
           onApply={applyEnergy}
           onIntentPreview={previewEnergyFromIntent}
+        />
+        <SensingPresencePanel
+          sensing={sensing || commandCentre?.sensing || null}
+          preview={sensingPreview}
+          intentPreview={sensingIntentPreview}
+          loading={sensingLoading}
+          onPreview={previewSensing}
+          onIntentPreview={previewSensingFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -2185,6 +2226,157 @@ function EnergyManagementPanel({
             ) : (
               policies.slice(0, 4).map((policy) => (
                 <div className="energy-policy-row" key={policy.id}>
+                  <div>
+                    <strong>{policy.name}</strong>
+                    <span>{policy.message}</span>
+                  </div>
+                  <StatusPill tone={policy.risk === "high" ? "danger" : "warn"} label={policy.risk} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SensingPresencePanel({
+  sensing,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onIntentPreview,
+}: {
+  sensing: SensingDashboardResponse | null;
+  preview: SensingPreview | null;
+  intentPreview: SensingIntentPreview | null;
+  loading: "preview" | "intent" | null;
+  onPreview: (profileId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const profiles = sensing?.profiles || [];
+  const zones = sensing?.zones || [];
+  const policies = sensing?.policies || [];
+  const recipes = sensing?.intentRecipes || [];
+  const activeProfileId = preview?.profile.id || sensing?.service.defaultProfileId || profiles[0]?.id;
+  const activeProfile = profiles.find((profile) => profile.id === activeProfileId) || profiles[0];
+  const activeRecipe = recipes.find((recipe) => recipe.profileId === activeProfile?.id) || recipes[0];
+
+  return (
+    <section className="sensing-presence-panel" aria-label="Occupancy presence and environmental sensing">
+      <div className="section-header sensing-header">
+        <div>
+          <p className="eyebrow">Occupancy / Presence / Environment</p>
+          <h2>Privacy-Aware Context Surface</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${sensing?.summary.occupiedZoneCount || 0}/${sensing?.summary.zoneCount || 0} occupied`} />
+          <StatusPill tone="warn" label={`${sensing?.summary.averageCo2Ppm || 0}ppm CO2`} />
+          <StatusPill tone={sensing?.summary.privacyStrictZoneCount ? "danger" : "good"} label={`${sensing?.summary.privacyStrictZoneCount || 0} strict`} />
+        </div>
+      </div>
+
+      <div className="sensing-grid">
+        <div className="sensing-panel profile-picker-panel">
+          <div className="section-header compact">
+            <h3>Profiles</h3>
+            <UserRound size={18} />
+          </div>
+          <div className="sensing-profile-list">
+            {profiles.map((profile) => (
+              <div className={`sensing-profile-row ${profile.id === activeProfile?.id ? "active" : ""}`} key={profile.id}>
+                <div>
+                  <strong>{profile.name}</strong>
+                  <span>{profile.mode} / {profile.zoneTargets.length} target(s) / {profile.trafficClass}</span>
+                </div>
+                <button onClick={() => onPreview(profile.id)} disabled={Boolean(loading)}>
+                  <PlayCircle size={15} />
+                  <span>{loading === "preview" && profile.id === activeProfile?.id ? "Previewing" : "Preview"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="sensing-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="sensing-panel">
+          <div className="section-header compact">
+            <h3>Room Context</h3>
+            <Home size={18} />
+          </div>
+          <div className="sensing-zone-list">
+            {zones.map((zone) => {
+              const occupancy = zone.devices?.occupancy as { observedState?: Record<string, string | number | boolean> } | null | undefined;
+              const air = zone.devices?.airQuality as { observedState?: Record<string, string | number | boolean> } | null | undefined;
+              return (
+                <div className="sensing-zone-row" key={zone.id}>
+                  <div>
+                    <strong>{zone.name}</strong>
+                    <span>{String(occupancy?.observedState?.occupied ?? false)} / {occupancy?.observedState?.confidence ?? "-"} confidence / {air?.observedState?.co2Ppm ?? "-"}ppm CO2</span>
+                  </div>
+                  <StatusPill tone={zone.privacyMode === "strict" ? "danger" : "good"} label={zone.privacyMode.replace(/_/g, " ")} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="sensing-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.profile.name : "Context Plan"}</h3>
+            <Settings2 size={18} />
+          </div>
+          <div className="sensing-command-list">
+            {(preview?.commands || []).slice(0, 5).map((command) => (
+              <div className="sensing-command-row" key={command.id}>
+                <div>
+                  <strong>{command.zoneName}</strong>
+                  <span>{command.action} / {command.observedState.confidence ?? "-"} confidence / {command.observedState.privacyMode}</span>
+                </div>
+                <StatusPill tone={command.policyDecision === "approval_required" ? "warn" : command.canExecute ? "good" : "danger"} label={command.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+            {!preview && (
+              <div className="event-empty">
+                <Activity size={18} />
+                <span>Preview a sensing profile to generate privacy-aware context evidence.</span>
+              </div>
+            )}
+          </div>
+          {intentPreview && (
+            <div className="sensing-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.profileId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="sensing-panel">
+          <div className="section-header compact">
+            <h3>Privacy Policy</h3>
+            <Shield size={18} />
+          </div>
+          <div className="sensing-policy-list">
+            {preview ? (
+              preview.policy.criteria.slice(0, 5).map((item) => (
+                <div className="sensing-policy-row" key={item.id}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{item.id.replace(/_/g, " ")}</span>
+                  </div>
+                  <StatusPill tone={item.passed ? "good" : "danger"} label={item.passed ? "pass" : "hold"} />
+                </div>
+              ))
+            ) : (
+              policies.slice(0, 5).map((policy) => (
+                <div className="sensing-policy-row" key={policy.id}>
                   <div>
                     <strong>{policy.name}</strong>
                     <span>{policy.message}</span>

@@ -371,7 +371,7 @@ Verification:
 
 ### E16 - Energy, Solar, Battery, And EV
 
-Status: complete locally and ready to push to `origin/main`.
+Status: complete and pushed to `origin/main`.
 
 Delivered:
 
@@ -388,8 +388,27 @@ Verification:
 
 - `npm test`
 
+### E17 - Occupancy, Presence, And Environmental Sensing
+
+Status: complete locally and ready to push to `origin/main`.
+
+Delivered:
+
+- File-backed Sensing And Presence package with presence zones, occupancy sensors, shared presence aggregator, air quality binding, privacy modes, policies, profiles, intent recipes, feature-module metadata, and recent run seeds.
+- Expanded device registry with presence capability, three occupancy sensors, and a home presence aggregator.
+- Promoted Occupancy And Presence, Air Quality And Ventilation, and Occupancy Learning catalogue surfaces to foundation modules.
+- API gateway sensing service for dashboard data, privacy-aware context preview, privacy hold guard, environmental evidence, and intent-to-sensing preview.
+- `/api/sensing`, `/api/sensing/profiles/:id/preview`, and `/api/sensing/intent/preview` endpoints.
+- MCP orchestrator sensing context preview and high-risk privacy proposal tools, permission gates, deterministic tool execution, and AIP sensing context proposals.
+- Global Command Centre Sensing workspace and Sensing Presence dashboard panel in the web console.
+- Tests for sensing package loading, dashboard enrichment, room-aware comfort preview, privacy hold guard, air-quality intent matching, MCP sensing tools, AIP sensing proposals, device registry occupancy assets, and command-centre integration.
+
+Verification:
+
+- `npm test`
+
 ## Next
 
-### E17 - Occupancy, Presence, And Environmental Sensing
+### E18 - Module Manifest And Feature Flag Framework
 
 Status: next planned build slice.

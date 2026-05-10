@@ -1705,6 +1705,151 @@ h3 {
   font-size: 11px;
 }
 
+.sensing-presence-panel {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(246, 250, 255, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.sensing-header {
+  background:
+    linear-gradient(90deg, rgba(45, 111, 143, 0.14), rgba(31, 122, 92, 0.1)),
+    #f8fbff;
+}
+
+.sensing-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.95fr 1.1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.sensing-panel {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(252, 254, 255, 0.98);
+}
+
+.sensing-profile-list,
+.sensing-zone-list,
+.sensing-command-list,
+.sensing-policy-list {
+  display: grid;
+  gap: 8px;
+}
+
+.sensing-profile-row,
+.sensing-zone-row,
+.sensing-command-row,
+.sensing-policy-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.sensing-profile-row.active {
+  box-shadow: inset 4px 0 0 var(--blue);
+}
+
+.sensing-profile-row strong,
+.sensing-profile-row span,
+.sensing-zone-row strong,
+.sensing-zone-row span,
+.sensing-command-row strong,
+.sensing-command-row span,
+.sensing-policy-row strong,
+.sensing-policy-row span {
+  display: block;
+  min-width: 0;
+}
+
+.sensing-profile-row strong,
+.sensing-zone-row strong,
+.sensing-command-row strong,
+.sensing-policy-row strong {
+  font-size: 12px;
+}
+
+.sensing-profile-row span,
+.sensing-zone-row span,
+.sensing-command-row span,
+.sensing-policy-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.sensing-profile-row button,
+.sensing-intent-button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff8ec;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.sensing-profile-row button:disabled,
+.sensing-intent-button:disabled {
+  opacity: 0.62;
+  cursor: progress;
+}
+
+.sensing-intent-button {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--green);
+}
+
+.sensing-intent-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sensing-intent-result {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #a9cfda;
+  border-radius: 8px;
+  background: var(--blue-soft);
+  color: #204c61;
+}
+
+.sensing-intent-result strong,
+.sensing-intent-result span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sensing-intent-result strong {
+  font-size: 12px;
+}
+
+.sensing-intent-result span {
+  font-size: 11px;
+}
+
 .approval-workflow-panel {
   margin-bottom: 18px;
   overflow: hidden;
@@ -2832,6 +2977,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .sensing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .approval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2887,6 +3036,7 @@ h3 {
     .security-grid,
     .water-grid,
     .energy-grid,
+    .sensing-grid,
     .approval-grid,
     .simulation-grid,
     .kra-grid,

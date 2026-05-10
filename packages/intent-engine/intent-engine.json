@@ -190,6 +190,37 @@
       ]
     },
     {
+      "id": "sensing-context",
+      "name": "Sensing Context",
+      "intentClass": "context_plan",
+      "keywords": ["occupancy", "presence", "occupied", "air", "co2", "voc", "pm25", "ventilation", "environment", "privacy", "tracking"],
+      "siteHints": ["home", "hall", "living", "bedroom"],
+      "targetModules": ["occupancy-presence", "air-quality", "occupancy-learning", "safety-policy"],
+      "targetCapabilities": ["occupancy", "presence", "air_quality", "temperature", "humidity"],
+      "proposalTemplates": [
+        {
+          "type": "context_preview",
+          "title": "Privacy-aware sensing context proposal",
+          "status": "needs_review",
+          "risk": "medium",
+          "requiredGates": ["privacy_policy", "confidence_threshold", "audit_record"],
+          "requiredTools": ["device.search", "sensing.context.preview", "policy.evaluate", "audit.record"],
+          "impact": "Use summarized occupancy, presence, and environmental evidence to improve automation proposals without exposing raw tracking.",
+          "rollbackPath": "Presence context remains disabled or summary-only until reviewed."
+        },
+        {
+          "type": "privacy_boundary",
+          "title": "Sensing privacy boundary proposal",
+          "status": "approval_required",
+          "risk": "high",
+          "requiredGates": ["human_approval", "privacy_mode", "audit_record"],
+          "requiredTools": ["sensing.privacy.propose", "policy.evaluate", "audit.record"],
+          "impact": "Prepare a privacy-affecting sensing proposal only; no detailed tracking is exposed.",
+          "rollbackPath": "Strict privacy mode remains authoritative."
+        }
+      ]
+    },
+    {
       "id": "security-access",
       "name": "Security Access Governance",
       "intentClass": "security_plan",

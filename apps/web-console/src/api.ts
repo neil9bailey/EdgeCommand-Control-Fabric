@@ -29,6 +29,9 @@ import type {
   SecurityDashboardResponse,
   SecurityIntentPreview,
   SecurityPreview,
+  SensingDashboardResponse,
+  SensingIntentPreview,
+  SensingPreview,
   WaterDashboardResponse,
   WaterIntentPreview,
   WaterPreview,
@@ -180,6 +183,14 @@ export async function fetchWater(): Promise<WaterDashboardResponse | null> {
 export async function fetchEnergy(): Promise<EnergyDashboardResponse | null> {
   try {
     return await getJson<EnergyDashboardResponse>("/api/energy");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchSensing(): Promise<SensingDashboardResponse | null> {
+  try {
+    return await getJson<SensingDashboardResponse>("/api/sensing");
   } catch {
     return null;
   }
@@ -358,6 +369,26 @@ export async function previewEnergyIntent(intent: string): Promise<EnergyIntentP
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<EnergyIntentPreview>;
+}
+
+export async function previewSensingProfile(profileId: string): Promise<SensingPreview> {
+  const response = await fetch(`${API_BASE}/api/sensing/profiles/${profileId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<SensingPreview>;
+}
+
+export async function previewSensingIntent(intent: string): Promise<SensingIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/sensing/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<SensingIntentPreview>;
 }
 
 export async function recordApprovalDecision(

@@ -24,7 +24,7 @@ test("intent engine loads deterministic AIP frames and seed sessions", () => {
   assert.equal(engine.engine.tenant, "vendorlogic.io");
   assert.equal(engine.engine.rule, "propose-only");
   assert.equal(summary.schemaVersion, "0.1.0");
-  assert.equal(summary.frameCount, 7);
+  assert.equal(summary.frameCount, 8);
   assert.equal(summary.seedSessionCount, 5);
   assert.equal(summary.proposeOnly, true);
   assert.ok(summary.highRiskFrames >= 4);
@@ -126,6 +126,24 @@ test("AIP proposes security access plans through MCP without direct unlock mutat
   assert.ok(session.aip.proposals.some((proposal) => proposal.type === "secure_profile_preview"));
   assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "security.profile.preview" && tool.status === "ready"));
   assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "security.command.propose" && tool.status === "requires_permission"));
+  assert.ok(session.aip.proposals.every((proposal) => proposal.canExecute === false));
+});
+
+test("AIP proposes sensing context without exposing raw tracking", () => {
+  const session = createIntentSession({
+    engine: loadIntentEngine(),
+    catalog: loadCatalog(),
+    mcpOrchestrator: loadMcpOrchestrator(),
+    intent: "Use occupied rooms, CO2, and presence to recommend ventilation, but keep bedroom tracking private.",
+    actor: operator,
+  });
+
+  assert.equal(session.intent.class, "context_plan");
+  assert.ok(session.intent.extractedSignals.targetModules.includes("occupancy-presence"));
+  assert.ok(session.aip.proposals.some((proposal) => proposal.type === "context_preview"));
+  assert.ok(session.aip.proposals.some((proposal) => proposal.type === "privacy_boundary"));
+  assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "sensing.context.preview" && tool.status === "ready"));
+  assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "sensing.privacy.propose" && tool.status === "requires_permission"));
   assert.ok(session.aip.proposals.every((proposal) => proposal.canExecute === false));
 });
 

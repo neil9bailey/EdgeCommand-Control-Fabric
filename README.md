@@ -29,7 +29,8 @@ Current status:
 - E14 Security and Access foundation is complete.
 - E15 Water Management foundation is complete.
 - E16 Energy, Solar, Battery, and EV foundation is complete.
-- E17 Occupancy, Presence, and Environmental Sensing is the next active build slice.
+- E17 Occupancy, Presence, and Environmental Sensing foundation is complete.
+- E18 Module Manifest and Feature Flag Framework is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -73,6 +74,7 @@ Local URLs:
 - Security and access API: http://localhost:3101/api/security
 - Water management API: http://localhost:3101/api/water
 - Energy and solar API: http://localhost:3101/api/energy
+- Occupancy, presence, and sensing API: http://localhost:3101/api/sensing
 
 Docker Desktop target:
 

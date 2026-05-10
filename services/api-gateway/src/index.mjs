@@ -113,6 +113,13 @@ import {
   previewEnergyProfile,
   summarizeEnergyManagement,
 } from "./energyManagement.mjs";
+import {
+  buildSensingDashboard,
+  loadSensingPresence,
+  previewSensingIntent,
+  previewSensingProfile,
+  summarizeSensingPresence,
+} from "./sensingPresence.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -133,6 +140,7 @@ const climateHvac = loadClimateHvac();
 const securityAccess = loadSecurityAccess();
 const waterManagement = loadWaterManagement();
 const energyManagement = loadEnergyManagement();
+const sensingPresence = loadSensingPresence();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -158,6 +166,7 @@ function buildOverview() {
   const securitySummary = summarizeSecurityAccess(securityAccess, deviceRegistry);
   const waterSummary = summarizeWaterManagement(waterManagement, deviceRegistry);
   const energySummary = summarizeEnergyManagement(energyManagement, deviceRegistry);
+  const sensingSummary = summarizeSensingPresence(sensingPresence, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -191,6 +200,7 @@ function buildOverview() {
       securityAccess: `${securitySummary.enabledProfileCount} guarded profiles / ${securitySummary.accessPointCount} access points`,
       waterManagement: `${waterSummary.enabledProfileCount} water profiles / ${waterSummary.onlineValveCount} online valves`,
       energyManagement: `${energySummary.enabledProfileCount} energy profiles / ${energySummary.totalSolarWatts}W solar`,
+      sensingPresence: `${sensingSummary.occupiedZoneCount} occupied zones / ${sensingSummary.averageCo2Ppm}ppm CO2`,
     },
     links: defaultLinkInventory(),
   };
@@ -239,6 +249,7 @@ app.get("/api/command-centre", (_req, res) => {
     securityAccess,
     waterManagement,
     energyManagement,
+    sensingPresence,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -796,6 +807,58 @@ app.post(
       energy: energyManagement,
       deviceRegistry,
       automationEngine,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/sensing", (_req, res) => {
+  res.json(buildSensingDashboard({
+    sensing: sensingPresence,
+    deviceRegistry,
+  }));
+});
+
+app.get("/api/sensing/profiles/:id/preview", (req, res) => {
+  const result = previewSensingProfile({
+    sensing: sensingPresence,
+    deviceRegistry,
+    profileId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.AgentApprover"] },
+  });
+  if (result.error === "sensing_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/sensing/profiles/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewSensingProfile({
+      sensing: sensingPresence,
+      deviceRegistry,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "sensing_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/sensing/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewSensingIntent({
+      sensing: sensingPresence,
+      deviceRegistry,
       intent: req.body?.intent || "",
       actor: req.auth,
     }));

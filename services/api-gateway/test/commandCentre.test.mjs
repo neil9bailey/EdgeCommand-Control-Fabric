@@ -13,6 +13,7 @@ import { loadKraEngine } from "../src/kraEngine.mjs";
 import { loadLightingScenes } from "../src/lightingScenes.mjs";
 import { loadMcpOrchestrator } from "../src/mcpOrchestrator.mjs";
 import { loadSecurityAccess } from "../src/securityAccess.mjs";
+import { loadSensingPresence } from "../src/sensingPresence.mjs";
 import { loadWaterManagement } from "../src/waterManagement.mjs";
 import { loadSimulationLab } from "../src/simulationLab.mjs";
 
@@ -32,6 +33,7 @@ function commandCentreFixture() {
     securityAccess: loadSecurityAccess(),
     waterManagement: loadWaterManagement(),
     energyManagement: loadEnergyManagement(),
+    sensingPresence: loadSensingPresence(),
     authStatus: publicAuthStatus(authConfig, {
       provider: "environment",
       keyVaultEnabled: false,
@@ -55,6 +57,7 @@ test("command centre builds all operational workspaces", () => {
     "security",
     "water",
     "energy",
+    "sensing",
     "approvals",
     "agents",
     "risk",
@@ -77,6 +80,7 @@ test("command centre action queue includes safety approval and route attention",
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "security"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "water"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "energy"));
+  assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "sensing"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "approvals"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "agents"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "risk"));
@@ -97,7 +101,9 @@ test("command centre action queue includes safety approval and route attention",
   assert.equal(commandCentre.water.summary.valveCount, 2);
   assert.equal(commandCentre.energy.summary.enabledProfileCount, 4);
   assert.equal(commandCentre.energy.summary.totalSolarWatts, 1860);
-  assert.equal(commandCentre.agents.summary.toolCount, 20);
+  assert.equal(commandCentre.sensing.summary.enabledProfileCount, 4);
+  assert.equal(commandCentre.sensing.summary.occupiedZoneCount, 1);
+  assert.equal(commandCentre.agents.summary.toolCount, 22);
   assert.equal(commandCentre.risk.summary.rulePackCount, 6);
   assert.equal(commandCentre.simulations.summary.scenarioCount, 3);
 });

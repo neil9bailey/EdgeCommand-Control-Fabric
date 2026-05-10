@@ -510,9 +510,10 @@ Deliverables:
 
 Acceptance:
 
-- Automations can use occupancy conditions.
-- Environmental telemetry appears in dashboard.
-- Privacy policy is visible for presence signals.
+- Automations can use occupancy conditions. Complete in E17 foundation.
+- Environmental telemetry appears in dashboard. Complete in E17 foundation.
+- Privacy policy is visible for presence signals. Complete in E17 foundation.
+- Room-aware comfort, away-presence context, air-quality response, strict privacy hold, MCP sensing tools, API endpoints, and the web console Sensing workspace are complete in E17 foundation.
 
 ## E18 - Module Manifest And Feature Flag Framework
 

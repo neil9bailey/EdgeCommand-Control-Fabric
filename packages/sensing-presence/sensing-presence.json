@@ -1,0 +1,199 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "sensing-presence-service",
+    "name": "Occupancy, Presence, And Environmental Sensing",
+    "moduleId": "occupancy-presence",
+    "mode": "deterministic-local",
+    "executionBoundary": "simulated-sensing-context-plan-only",
+    "defaultProfileId": "profile-room-aware-comfort",
+    "defaultZoneId": "presence-zone-living",
+    "rule": "Presence and environmental signals may enrich automation proposals; privacy mode, confidence thresholds, and human review prevent invasive tracking or direct execution."
+  },
+  "featureModule": {
+    "moduleId": "occupancy-presence",
+    "state": "foundation",
+    "buildStrategy": "feature-manifest-plus-service-plus-dashboard",
+    "enabledBy": ["human_intent", "module_marketplace", "operator_dashboard", "automation_engine"],
+    "buildArtifacts": [
+      "packages/sensing-presence/sensing-presence.json",
+      "services/api-gateway/src/sensingPresence.mjs",
+      "apps/web-console SensingPresencePanel",
+      "api contracts and tests"
+    ]
+  },
+  "policies": [
+    {
+      "id": "presence-data-minimization",
+      "name": "Presence Data Minimization",
+      "risk": "medium",
+      "scope": ["occupancy", "presence", "confidence"],
+      "requiresApproval": false,
+      "requiresSimulation": false,
+      "requiresAudit": true,
+      "message": "Presence signals are summarized by room and confidence only; raw tracking history is not exposed."
+    },
+    {
+      "id": "privacy-mode-respected",
+      "name": "Privacy Mode Respected",
+      "risk": "high",
+      "scope": ["presence", "camera", "occupancy"],
+      "requiresApproval": true,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "Privacy mode blocks invasive presence actions and keeps automation proposal-only."
+    },
+    {
+      "id": "environmental-comfort-guard",
+      "name": "Environmental Comfort Guard",
+      "risk": "medium",
+      "scope": ["air_quality", "temperature", "humidity"],
+      "requiresApproval": false,
+      "requiresSimulation": false,
+      "requiresAudit": true,
+      "message": "Environmental actions must cite CO2, PM2.5, VOC, temperature, or humidity evidence before recommending climate or ventilation changes."
+    }
+  ],
+  "zones": [
+    {
+      "id": "presence-zone-living",
+      "name": "Living Presence Zone",
+      "siteId": "home-hq",
+      "zoneId": "living-room",
+      "occupancyDeviceId": "dev-occupancy-living-01",
+      "presenceDeviceId": "dev-presence-home-01",
+      "airQualityDeviceId": "dev-air-quality-living-01",
+      "temperatureDeviceIds": ["dev-thermostat-living-01"],
+      "privacyMode": "summary_only",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY",
+      "policies": ["presence-data-minimization", "environmental-comfort-guard"]
+    },
+    {
+      "id": "presence-zone-hall",
+      "name": "Hall Presence Zone",
+      "siteId": "home-hq",
+      "zoneId": "hall",
+      "occupancyDeviceId": "dev-occupancy-hall-01",
+      "presenceDeviceId": "dev-presence-home-01",
+      "airQualityDeviceId": "dev-air-quality-living-01",
+      "temperatureDeviceIds": ["dev-thermostat-hall-01"],
+      "privacyMode": "summary_only",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY",
+      "policies": ["presence-data-minimization", "privacy-mode-respected"]
+    },
+    {
+      "id": "presence-zone-bedroom",
+      "name": "Bedroom Sleep Presence Zone",
+      "siteId": "home-hq",
+      "zoneId": "bedroom",
+      "occupancyDeviceId": "dev-occupancy-bedroom-01",
+      "presenceDeviceId": "dev-presence-home-01",
+      "temperatureDeviceIds": ["dev-thermostat-bedroom-01"],
+      "privacyMode": "strict",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY",
+      "policies": ["presence-data-minimization", "privacy-mode-respected"]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "profile-room-aware-comfort",
+      "name": "Room Aware Comfort",
+      "mode": "comfort_context",
+      "status": "enabled",
+      "trafficClass": "P3_TELEMETRY",
+      "requiresApproval": false,
+      "policies": ["presence-data-minimization", "environmental-comfort-guard"],
+      "zoneTargets": [
+        { "zoneId": "presence-zone-living", "action": "recommend_comfort_context", "minimumConfidence": 0.7 }
+      ],
+      "commandProfile": { "encodedBytes": 36, "ackRequired": false, "ttlSeconds": 600 }
+    },
+    {
+      "id": "profile-away-presence-simulation",
+      "name": "Away Presence Simulation",
+      "mode": "away_context",
+      "status": "enabled",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["presence-data-minimization"],
+      "zoneTargets": [
+        { "zoneId": "presence-zone-hall", "action": "recommend_away_lighting", "minimumConfidence": 0.65 }
+      ],
+      "commandProfile": { "encodedBytes": 40, "ackRequired": false, "ttlSeconds": 600 }
+    },
+    {
+      "id": "profile-air-quality-response",
+      "name": "Air Quality Response",
+      "mode": "environmental_response",
+      "status": "enabled",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["environmental-comfort-guard", "presence-data-minimization"],
+      "zoneTargets": [
+        { "zoneId": "presence-zone-living", "action": "recommend_ventilation", "minimumConfidence": 0.6 }
+      ],
+      "commandProfile": { "encodedBytes": 44, "ackRequired": false, "ttlSeconds": 600 }
+    },
+    {
+      "id": "profile-privacy-hold",
+      "name": "Privacy Hold",
+      "mode": "privacy",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": true,
+      "policies": ["privacy-mode-respected", "presence-data-minimization"],
+      "zoneTargets": [
+        { "zoneId": "presence-zone-bedroom", "action": "hold_presence_detail", "minimumConfidence": 1 }
+      ],
+      "commandProfile": { "encodedBytes": 34, "ackRequired": false, "ttlSeconds": 300 }
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-room-aware-comfort",
+      "name": "Room aware comfort",
+      "keywords": ["occupied", "occupancy", "presence", "comfort", "room"],
+      "profileId": "profile-room-aware-comfort",
+      "confidence": 0.9,
+      "exampleIntent": "Use occupied rooms and air quality to recommend comfort changes."
+    },
+    {
+      "id": "intent-away-presence",
+      "name": "Away presence simulation",
+      "keywords": ["away", "presence", "holiday", "simulate", "lighting"],
+      "profileId": "profile-away-presence-simulation",
+      "confidence": 0.87,
+      "exampleIntent": "Use presence context to suggest away lighting without exposing raw tracking."
+    },
+    {
+      "id": "intent-air-quality",
+      "name": "Air quality response",
+      "keywords": ["air", "co2", "voc", "pm25", "ventilation", "environment"],
+      "profileId": "profile-air-quality-response",
+      "confidence": 0.88,
+      "exampleIntent": "If CO2 or VOC rises, recommend ventilation using room presence evidence."
+    },
+    {
+      "id": "intent-privacy-hold",
+      "name": "Privacy hold",
+      "keywords": ["privacy", "bedroom", "tracking", "hold", "private"],
+      "profileId": "profile-privacy-hold",
+      "confidence": 0.9,
+      "exampleIntent": "Keep bedroom presence private and block detailed tracking."
+    }
+  ],
+  "recentSensingRuns": [
+    {
+      "id": "sensing-run-20260510-001",
+      "profileId": "profile-room-aware-comfort",
+      "status": "ready",
+      "actor": "system-preview",
+      "commandCount": 1,
+      "summary": "Room aware comfort context prepared using living room occupancy, CO2, temperature, and privacy evidence."
+    }
+  ]
+}

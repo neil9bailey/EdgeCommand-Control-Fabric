@@ -54,6 +54,7 @@ import {
   fetchEvents,
   fetchKra,
   fetchLighting,
+  fetchModuleManifest,
   fetchNarrowbandRoutes,
   fetchOverview,
   fetchSimulationLab,
@@ -62,6 +63,8 @@ import {
   fetchWater,
   previewLightingIntent,
   previewLightingScene,
+  previewModuleFlag,
+  previewModuleManifestIntent,
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
@@ -102,8 +105,11 @@ import type {
   LightingDashboardResponse,
   LightingIntentPreview,
   LightingScenePreview,
+  ModuleFlagPreview,
   ModuleCatalog,
   ModuleDefinition,
+  ModuleManifestIntentPreview,
+  ModuleManifestResponse,
   NarrowbandRoutes,
   PlatformOverview,
   SimulationLabResponse,
@@ -273,6 +279,10 @@ function App() {
   const [sensingPreview, setSensingPreview] = useState<SensingPreview | null>(null);
   const [sensingIntentPreview, setSensingIntentPreview] = useState<SensingIntentPreview | null>(null);
   const [sensingLoading, setSensingLoading] = useState<"preview" | "intent" | null>(null);
+  const [moduleManifest, setModuleManifest] = useState<ModuleManifestResponse | null>(null);
+  const [moduleFlagPreview, setModuleFlagPreview] = useState<ModuleFlagPreview | null>(null);
+  const [moduleIntentPreview, setModuleIntentPreview] = useState<ModuleManifestIntentPreview | null>(null);
+  const [moduleLoading, setModuleLoading] = useState<"preview" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -307,6 +317,7 @@ function App() {
     void fetchWater().then(setWater);
     void fetchEnergy().then(setEnergy);
     void fetchSensing().then(setSensing);
+    void fetchModuleManifest().then(setModuleManifest);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -551,6 +562,26 @@ function App() {
     }
   }
 
+  async function previewModule(moduleId: string) {
+    setModuleLoading("preview");
+    try {
+      setModuleFlagPreview(await previewModuleFlag(moduleId));
+    } finally {
+      setModuleLoading(null);
+    }
+  }
+
+  async function previewModuleFromIntent(intentText: string) {
+    setModuleLoading("intent");
+    try {
+      const result = await previewModuleManifestIntent(intentText);
+      setModuleIntentPreview(result);
+      setModuleFlagPreview(result.preview);
+    } finally {
+      setModuleLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -651,6 +682,7 @@ function App() {
           <Metric label="Water" value={water?.summary.enabledProfileCount || commandCentre?.water.summary.enabledProfileCount || "-"} detail="P0 profiles" tone="danger" />
           <Metric label="Energy" value={energy?.summary.totalSolarWatts || commandCentre?.energy.summary.totalSolarWatts || "-"} detail="solar watts" tone="good" />
           <Metric label="Sensing" value={sensing?.summary.occupiedZoneCount ?? commandCentre?.sensing.summary.occupiedZoneCount ?? "-"} detail="occupied zones" tone="good" />
+          <Metric label="Flags" value={moduleManifest?.summary.enabled ?? commandCentre?.moduleManifest?.summary.enabled ?? "-"} detail="enabled modules" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -724,6 +756,14 @@ function App() {
           loading={sensingLoading}
           onPreview={previewSensing}
           onIntentPreview={previewSensingFromIntent}
+        />
+        <ModuleManifestPanel
+          manifest={moduleManifest || commandCentre?.moduleManifest || commandCentre?.modules.manifest || null}
+          preview={moduleFlagPreview}
+          intentPreview={moduleIntentPreview}
+          loading={moduleLoading}
+          onPreview={previewModule}
+          onIntentPreview={previewModuleFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -2385,6 +2425,155 @@ function SensingPresencePanel({
                 </div>
               ))
             )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ModuleManifestPanel({
+  manifest,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onIntentPreview,
+}: {
+  manifest: ModuleManifestResponse | null;
+  preview: ModuleFlagPreview | null;
+  intentPreview: ModuleManifestIntentPreview | null;
+  loading: "preview" | "intent" | null;
+  onPreview: (moduleId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const flags = manifest?.flags || [];
+  const lanes = manifest?.buildLanes || [];
+  const recipes = manifest?.intentRecipes || [];
+  const activeFlagId = preview?.flag.id || flags.find((flag) => flag.state !== "enabled")?.id || flags[0]?.id;
+  const activeFlag = flags.find((flag) => flag.id === activeFlagId) || flags[0];
+  const activeRecipe = recipes.find((recipe) => recipe.moduleId === activeFlag?.moduleId) || recipes[0];
+  const activeLane = preview?.lane || lanes[0] || null;
+
+  return (
+    <section className="module-manifest-panel" aria-label="Module manifest and feature flags">
+      <div className="section-header manifest-header">
+        <div>
+          <p className="eyebrow">Module Manifest / Feature Flags</p>
+          <h2>Human-Triggered Build Control</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${manifest?.summary.enabled || 0} enabled`} />
+          <StatusPill tone="warn" label={`${manifest?.summary.buildable || 0} buildable`} />
+          <StatusPill tone={manifest?.summary.approvalRequired ? "danger" : "good"} label={`${manifest?.summary.approvalRequired || 0} approval`} />
+        </div>
+      </div>
+
+      <div className="manifest-grid">
+        <div className="manifest-panel">
+          <div className="section-header compact">
+            <h3>Feature Flags</h3>
+            <Puzzle size={18} />
+          </div>
+          <div className="manifest-flag-list">
+            {flags.map((flag) => (
+              <div className={`manifest-flag-row ${flag.id === activeFlag?.id ? "active" : ""}`} key={flag.id}>
+                <div>
+                  <strong>{flag.moduleName}</strong>
+                  <span>{flag.state} / {flag.readiness.status.replace(/_/g, " ")} / {flag.environment}</span>
+                </div>
+                <button onClick={() => onPreview(flag.moduleId)} disabled={Boolean(loading)}>
+                  <PlayCircle size={15} />
+                  <span>{loading === "preview" && flag.id === activeFlag?.id ? "Planning" : "Plan"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="manifest-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="manifest-panel">
+          <div className="section-header compact">
+            <h3>Readiness</h3>
+            <CheckCircle2 size={18} />
+          </div>
+          <div className="manifest-readiness">
+            <div>
+              <span>Catalog coverage</span>
+              <strong>{manifest?.summary.catalogCoverage.percent || 0}%</strong>
+            </div>
+            <div>
+              <span>Build lane</span>
+              <strong>{activeLane?.name || "No lane"}</strong>
+            </div>
+            <div>
+              <span>Runtime surface</span>
+              <strong>{activeFlag?.readiness.runtimeSurface ? "available" : "held"}</strong>
+            </div>
+            <div>
+              <span>Certification</span>
+              <strong>{activeFlag?.activation.requiresCertification ? "required" : "optional"}</strong>
+            </div>
+          </div>
+          <div className="manifest-state-grid">
+            {(manifest?.flagStates || []).map((state) => (
+              <div key={state.id}>
+                <strong>{state.name}</strong>
+                <span>{state.allowsBuild ? "build" : "hold"} / {state.requiresApproval ? "approval" : "standard"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="manifest-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.flag.moduleName : "Build Plan"}</h3>
+            <Settings2 size={18} />
+          </div>
+          <div className="manifest-stage-list">
+            {(preview?.stages || activeLane?.stages.map((stage) => ({ id: stage, label: stage.replace(/-/g, " "), status: "ready" })) || []).map((stage) => (
+              <div className="manifest-stage-row" key={stage.id}>
+                <div>
+                  <strong>{stage.label}</strong>
+                  <span>{stage.id.replace(/-/g, " ")}</span>
+                </div>
+                <StatusPill tone={stage.status === "blocked" ? "danger" : stage.status === "approval_required" ? "warn" : "good"} label={stage.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+          </div>
+          {intentPreview?.match && (
+            <div className="manifest-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.moduleId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="manifest-panel">
+          <div className="section-header compact">
+            <h3>Dependencies</h3>
+            <GitBranch size={18} />
+          </div>
+          <div className="manifest-dependency-list">
+            {(preview?.flag.dependencyStatuses || activeFlag?.dependencyStatuses || []).map((dependency) => (
+              <div className="manifest-dependency-row" key={dependency.moduleId}>
+                <div>
+                  <strong>{dependency.name}</strong>
+                  <span>{dependency.moduleId} / {dependency.state}</span>
+                </div>
+                <StatusPill tone={dependency.ready ? "good" : "danger"} label={dependency.ready ? "ready" : "hold"} />
+              </div>
+            ))}
+          </div>
+          <div className="manifest-artifacts">
+            {(preview?.flag.artifacts || activeFlag?.artifacts || []).slice(0, 8).map((artifact) => (
+              <span key={artifact}>{artifact.replace(/_/g, " ")}</span>
+            ))}
           </div>
         </div>
       </div>

@@ -1,0 +1,219 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "module-manifest-service",
+    "name": "Module Manifest And Feature Flags",
+    "moduleId": "module-marketplace",
+    "mode": "deterministic-local",
+    "executionBoundary": "plan-and-preview-only",
+    "defaultEnvironment": "local-docker",
+    "rule": "Feature modules can be requested and planned by human intent, but enablement requires manifest evidence, dependency checks, tests, audit, and policy approval before deployment mutation."
+  },
+  "featureModule": {
+    "moduleId": "module-marketplace",
+    "state": "foundation",
+    "buildStrategy": "catalog-plus-manifest-plus-feature-flags",
+    "enabledBy": ["human_intent", "operator_dashboard", "mcp_module_builder_agent"],
+    "buildArtifacts": [
+      "packages/module-manifest/module-manifest.json",
+      "services/api-gateway/src/moduleManifest.mjs",
+      "apps/web-console ModuleManifestPanel",
+      "api contracts and tests"
+    ]
+  },
+  "flagStates": [
+    { "id": "enabled", "name": "Enabled", "allowsRuntimeSurface": true, "allowsBuild": false, "requiresApproval": false },
+    { "id": "discoverable", "name": "Discoverable", "allowsRuntimeSurface": false, "allowsBuild": true, "requiresApproval": false },
+    { "id": "preview", "name": "Preview", "allowsRuntimeSurface": true, "allowsBuild": true, "requiresApproval": false },
+    { "id": "approval_required", "name": "Approval Required", "allowsRuntimeSurface": false, "allowsBuild": true, "requiresApproval": true },
+    { "id": "blocked", "name": "Blocked", "allowsRuntimeSurface": false, "allowsBuild": false, "requiresApproval": true }
+  ],
+  "artifactKinds": [
+    "package_manifest",
+    "api_service",
+    "api_route",
+    "web_dashboard",
+    "mcp_tool",
+    "intent_frame",
+    "policy_pack",
+    "simulation_pack",
+    "iac_fragment",
+    "test_pack",
+    "documentation"
+  ],
+  "flags": [
+    {
+      "id": "flag-lighting-scenes",
+      "moduleId": "lighting-scenes",
+      "state": "enabled",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "low",
+      "dependencies": ["device-registry", "automation-engine", "audit-ledger"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "intent_frame", "test_pack", "documentation"],
+      "activation": { "strategy": "already-built", "requiresApproval": false, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["lighting package", "dashboard panel", "preview/apply endpoints", "MCP scene tools"]
+    },
+    {
+      "id": "flag-climate-hvac",
+      "moduleId": "climate-hvac",
+      "state": "enabled",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "medium",
+      "dependencies": ["device-registry", "automation-engine", "audit-ledger"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "intent_frame", "policy_pack", "test_pack", "documentation"],
+      "activation": { "strategy": "already-built", "requiresApproval": false, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["climate package", "safe setpoint guard", "comfort dashboard", "MCP climate tools"]
+    },
+    {
+      "id": "flag-security-access",
+      "moduleId": "security-access",
+      "state": "enabled",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "high",
+      "dependencies": ["device-registry", "safety-policy", "automation-engine", "audit-ledger", "simulation-lab"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "intent_frame", "policy_pack", "simulation_pack", "test_pack", "documentation"],
+      "activation": { "strategy": "approval-governed-runtime", "requiresApproval": true, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["security package", "unlock approval guard", "Command Centre workspace", "MCP security tools"]
+    },
+    {
+      "id": "flag-water-management",
+      "moduleId": "water-management",
+      "state": "enabled",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "high",
+      "dependencies": ["device-registry", "safety-policy", "automation-engine", "audit-ledger", "simulation-lab", "narrowband-control-plane"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "intent_frame", "policy_pack", "simulation_pack", "test_pack", "documentation"],
+      "activation": { "strategy": "approval-governed-runtime", "requiresApproval": true, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["water package", "LoRaWAN shutoff preview", "safe reopen guard", "simulation attachment"]
+    },
+    {
+      "id": "flag-energy-solar",
+      "moduleId": "energy-solar",
+      "state": "enabled",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "medium",
+      "dependencies": ["device-registry", "automation-engine", "audit-ledger"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "intent_frame", "policy_pack", "test_pack", "documentation"],
+      "activation": { "strategy": "already-built", "requiresApproval": false, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["energy package", "tariff profiles", "battery reserve guard", "EV solar surplus plan"]
+    },
+    {
+      "id": "flag-occupancy-presence",
+      "moduleId": "occupancy-presence",
+      "state": "enabled",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "medium",
+      "dependencies": ["device-registry", "automation-engine", "audit-ledger"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "intent_frame", "policy_pack", "test_pack", "documentation"],
+      "activation": { "strategy": "privacy-governed-runtime", "requiresApproval": false, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["sensing package", "privacy modes", "context preview", "air quality binding"]
+    },
+    {
+      "id": "flag-mqtt-esphome",
+      "moduleId": "mqtt-esphome",
+      "state": "discoverable",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "medium",
+      "dependencies": ["device-registry", "event-bus-telemetry", "module-marketplace"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "test_pack", "iac_fragment", "documentation"],
+      "activation": { "strategy": "build-on-request", "requiresApproval": false, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["catalog entry", "module plan MCP tool"]
+    },
+    {
+      "id": "flag-lorawan-adapter",
+      "moduleId": "lorawan-adapter",
+      "state": "approval_required",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "high",
+      "dependencies": ["narrowband-control-plane", "audit-ledger", "safety-policy", "simulation-lab"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "policy_pack", "simulation_pack", "iac_fragment", "test_pack", "documentation"],
+      "activation": { "strategy": "approval-before-build", "requiresApproval": true, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["narrowband route model", "payload policy", "P0 command boundary"]
+    },
+    {
+      "id": "flag-narrowband-control-plane",
+      "moduleId": "narrowband-control-plane",
+      "state": "preview",
+      "environment": "local-docker",
+      "version": "0.1.0",
+      "owner": "module-builder-agent",
+      "risk": "high",
+      "dependencies": ["audit-ledger", "safety-policy", "simulation-lab", "mcp-orchestrator"],
+      "artifacts": ["package_manifest", "api_service", "api_route", "web_dashboard", "mcp_tool", "policy_pack", "simulation_pack", "iac_fragment", "test_pack", "documentation"],
+      "activation": { "strategy": "hero-preview", "requiresApproval": true, "requiresCertification": true, "requiresTests": true },
+      "evidence": ["semantic route seeds", "LoRaWAN path preview", "payload guard"]
+    }
+  ],
+  "buildLanes": [
+    {
+      "id": "lane-foundation-module",
+      "name": "Foundation Feature Module",
+      "stages": ["manifest", "service", "routes", "dashboard", "tests", "docker", "browser", "commit", "push"],
+      "targetEnvironment": "local-docker"
+    },
+    {
+      "id": "lane-connectivity-adapter",
+      "name": "Connectivity Adapter Module",
+      "stages": ["manifest", "adapter-contract", "simulator", "policy", "tests", "docker", "approval", "push"],
+      "targetEnvironment": "local-docker"
+    },
+    {
+      "id": "lane-azure-promotion",
+      "name": "Azure Promotion",
+      "stages": ["bicep-fragment", "container-image", "key-vault-binding", "entra-role-map", "aca-revision", "smoke-test"],
+      "targetEnvironment": "azure-container-apps"
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-enable-mqtt",
+      "name": "Enable MQTT And ESPHome",
+      "keywords": ["mqtt", "esphome", "adapter", "sensor", "relay"],
+      "moduleId": "mqtt-esphome",
+      "confidence": 0.9,
+      "exampleIntent": "Enable the MQTT and ESPHome adapter so I can add DIY sensors."
+    },
+    {
+      "id": "intent-enable-lorawan",
+      "name": "Enable LoRaWAN Adapter",
+      "keywords": ["lorawan", "narrowband", "remote", "gateway", "downlink"],
+      "moduleId": "lorawan-adapter",
+      "confidence": 0.92,
+      "exampleIntent": "Plan the LoRaWAN adapter for remote emergency command downlinks."
+    },
+    {
+      "id": "intent-enable-module-marketplace",
+      "name": "Enable Feature Marketplace",
+      "keywords": ["module", "feature", "marketplace", "flag", "manifest", "build"],
+      "moduleId": "module-marketplace",
+      "confidence": 0.88,
+      "exampleIntent": "Show me which modules can be built or enabled next."
+    }
+  ],
+  "recentManifestRuns": [
+    {
+      "id": "manifest-run-20260510-001",
+      "moduleId": "occupancy-presence",
+      "status": "enabled",
+      "actor": "system-preview",
+      "summary": "Sensing and presence module registered as enabled after API, dashboard, MCP, intent, docs, and tests were added."
+    }
+  ]
+}

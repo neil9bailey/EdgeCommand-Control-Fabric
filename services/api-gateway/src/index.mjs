@@ -120,6 +120,13 @@ import {
   previewSensingProfile,
   summarizeSensingPresence,
 } from "./sensingPresence.mjs";
+import {
+  buildModuleManifestDashboard,
+  loadModuleManifest,
+  previewModuleFlag,
+  previewModuleIntent,
+  summarizeModuleManifest,
+} from "./moduleManifest.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -141,6 +148,7 @@ const securityAccess = loadSecurityAccess();
 const waterManagement = loadWaterManagement();
 const energyManagement = loadEnergyManagement();
 const sensingPresence = loadSensingPresence();
+const moduleManifest = loadModuleManifest();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -167,6 +175,7 @@ function buildOverview() {
   const waterSummary = summarizeWaterManagement(waterManagement, deviceRegistry);
   const energySummary = summarizeEnergyManagement(energyManagement, deviceRegistry);
   const sensingSummary = summarizeSensingPresence(sensingPresence, deviceRegistry);
+  const moduleManifestSummary = summarizeModuleManifest(moduleManifest, catalog);
   return {
     ...summary,
     devices: deviceSummary,
@@ -201,6 +210,7 @@ function buildOverview() {
       waterManagement: `${waterSummary.enabledProfileCount} water profiles / ${waterSummary.onlineValveCount} online valves`,
       energyManagement: `${energySummary.enabledProfileCount} energy profiles / ${energySummary.totalSolarWatts}W solar`,
       sensingPresence: `${sensingSummary.occupiedZoneCount} occupied zones / ${sensingSummary.averageCo2Ppm}ppm CO2`,
+      moduleManifest: `${moduleManifestSummary.enabled} enabled flags / ${moduleManifestSummary.buildable} buildable`,
     },
     links: defaultLinkInventory(),
   };
@@ -250,6 +260,7 @@ app.get("/api/command-centre", (_req, res) => {
     waterManagement,
     energyManagement,
     sensingPresence,
+    moduleManifest,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -271,6 +282,58 @@ app.get("/api/modules/:id", (req, res) => {
   }
   res.json({ module: mod });
 });
+
+app.get("/api/module-manifest", (_req, res) => {
+  res.json(buildModuleManifestDashboard({
+    manifest: moduleManifest,
+    catalog,
+  }));
+});
+
+app.get("/api/module-manifest/flags/:id/preview", (req, res) => {
+  const result = previewModuleFlag({
+    manifest: moduleManifest,
+    catalog,
+    moduleId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "module_flag_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/module-manifest/flags/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewModuleFlag({
+      manifest: moduleManifest,
+      catalog,
+      moduleId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "module_flag_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/module-manifest/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewModuleIntent({
+      manifest: moduleManifest,
+      catalog,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
 
 app.get("/api/sites", (_req, res) => {
   res.json({

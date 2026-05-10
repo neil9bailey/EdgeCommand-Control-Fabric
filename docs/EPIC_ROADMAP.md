@@ -531,9 +531,10 @@ Deliverables:
 
 Acceptance:
 
-- A disabled module is hidden and inactive.
-- Enabling a module registers routes, services, policies, and dashboards.
-- Dependencies are checked before enablement.
+- A disabled module is hidden and inactive. Foundation complete through manifest states, runtime-surface flags, and readiness status.
+- Enabling a module registers routes, services, policies, and dashboards. Foundation complete as manifest evidence and preview-only activation plans; mutation moves to E19/E21.
+- Dependencies are checked before enablement. Complete in E18 foundation via resolved dependency statuses and blocked/buildable/approval-required readiness.
+- Human intent can select a module flag and produce a governed build preview. Complete in E18 foundation for MQTT/ESPHome, LoRaWAN, and marketplace requests.
 
 ## E19 - Module Builder And IaC Fragment System
 

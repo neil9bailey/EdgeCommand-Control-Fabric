@@ -20,7 +20,10 @@ import type {
   LightingDashboardResponse,
   LightingIntentPreview,
   LightingScenePreview,
+  ModuleFlagPreview,
   McpResponse,
+  ModuleManifestResponse,
+  ModuleManifestIntentPreview,
   ModuleCatalog,
   NarrowbandRoutes,
   PlatformOverview,
@@ -191,6 +194,14 @@ export async function fetchEnergy(): Promise<EnergyDashboardResponse | null> {
 export async function fetchSensing(): Promise<SensingDashboardResponse | null> {
   try {
     return await getJson<SensingDashboardResponse>("/api/sensing");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchModuleManifest(): Promise<ModuleManifestResponse | null> {
+  try {
+    return await getJson<ModuleManifestResponse>("/api/module-manifest");
   } catch {
     return null;
   }
@@ -389,6 +400,26 @@ export async function previewSensingIntent(intent: string): Promise<SensingInten
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<SensingIntentPreview>;
+}
+
+export async function previewModuleFlag(moduleId: string): Promise<ModuleFlagPreview> {
+  const response = await fetch(`${API_BASE}/api/module-manifest/flags/${moduleId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ModuleFlagPreview>;
+}
+
+export async function previewModuleManifestIntent(intent: string): Promise<ModuleManifestIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/module-manifest/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ModuleManifestIntentPreview>;
 }
 
 export async function recordApprovalDecision(

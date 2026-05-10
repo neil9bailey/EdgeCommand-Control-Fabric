@@ -13,6 +13,7 @@ import { buildLightingDashboard, summarizeLightingScenes } from "./lightingScene
 import { buildSecurityDashboard, summarizeSecurityAccess } from "./securityAccess.mjs";
 import { buildWaterDashboard, summarizeWaterManagement } from "./waterManagement.mjs";
 import { summarizeMcpOrchestrator } from "./mcpOrchestrator.mjs";
+import { buildModuleManifestDashboard, summarizeModuleManifest } from "./moduleManifest.mjs";
 import {
   buildSimulationDashboard,
   summarizeSimulationLab,
@@ -89,23 +90,22 @@ export function buildApprovalQueue(automationEngine, deviceRegistry, simulationL
   });
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, waterSummary, energySummary, sensingSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, waterSummary, energySummary, sensingSummary, moduleManifestSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
-  const foundationModules = (catalog.modules || []).filter((module) => ["foundation", "hero"].includes(module.state)).length;
 
   return [
     {
       id: "modules",
       label: "Modules",
-      headline: `${foundationModules} foundations online`,
-      detail: `${catalog.modules.length} manifest-backed product surfaces`,
-      status: "ready",
+      headline: `${moduleManifestSummary.enabled} flags enabled`,
+      detail: `${moduleManifestSummary.buildable} buildable, ${moduleManifestSummary.catalogCoverage.percent}% catalogue coverage`,
+      status: moduleManifestSummary.blocked > 0 ? "attention" : "ready",
       metrics: [
-        { label: "Total", value: catalog.modules.length },
-        { label: "High Risk", value: catalog.modules.filter((module) => module.risk === "high").length },
-        { label: "Narrowband", value: catalog.modules.filter((module) => module.narrowbandSuitability).length },
+        { label: "Flags", value: moduleManifestSummary.flagCount },
+        { label: "Approval", value: moduleManifestSummary.approvalRequired },
+        { label: "Covered", value: `${moduleManifestSummary.catalogCoverage.percent}%` },
       ],
     },
     {
@@ -291,7 +291,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, waterDashboard, energyDashboard, sensingDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
+function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, waterDashboard, energyDashboard, sensingDashboard, moduleManifestDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -387,6 +387,20 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
       evidence: [...profile.policies, profile.requiresApproval ? "privacy-review" : "summary-only"],
     }));
 
+  const moduleActions = (moduleManifestDashboard?.flags || [])
+    .filter((flag) => ["discoverable", "approval_required", "preview"].includes(flag.state) || flag.readiness.status !== "ready")
+    .slice(0, 4)
+    .map((flag) => ({
+      id: `module-${flag.id}`,
+      priority: flag.trafficClass,
+      workspaceId: "modules",
+      title: `${flag.moduleName} ${flag.readiness.status.replace(/_/g, " ")}`,
+      owner: "Module Marketplace",
+      status: flag.readiness.status,
+      detail: `${flag.state} flag / ${flag.artifacts.length} artifact(s) / ${flag.dependencyStatuses.length} dependency(ies)`,
+      evidence: [...flag.evidence.slice(0, 2), flag.readiness.requiresApproval ? "approval-required" : "manifest-ready"],
+    }));
+
   const deviceActions = devices
     .filter((device) => device.status !== "online")
     .map((device) => ({
@@ -469,10 +483,10 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
       };
     });
 
-  return [...approvalActions, ...lightingActions, ...climateActions, ...securityActions, ...waterActions, ...energyActions, ...sensingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 32);
+  return [...approvalActions, ...moduleActions, ...lightingActions, ...climateActions, ...securityActions, ...waterActions, ...energyActions, ...sensingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 40);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, waterManagement, energyManagement, sensingPresence, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, waterManagement, energyManagement, sensingPresence, moduleManifest, authStatus }) {
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
@@ -482,6 +496,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
   const waterSummary = summarizeWaterManagement(waterManagement, deviceRegistry);
   const energySummary = summarizeEnergyManagement(energyManagement, deviceRegistry);
   const sensingSummary = summarizeSensingPresence(sensingPresence, deviceRegistry);
+  const moduleManifestSummary = summarizeModuleManifest(moduleManifest, catalog);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
@@ -535,6 +550,10 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     sensing: sensingPresence,
     deviceRegistry,
   });
+  const moduleManifestDashboard = buildModuleManifestDashboard({
+    manifest: moduleManifest,
+    catalog,
+  });
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
   const auditEvents = filterEvents(eventLedger, { auditRequired: "true", limit: 8 });
@@ -549,6 +568,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     waterSummary,
     energySummary,
     sensingSummary,
+    moduleManifestSummary,
     approvalSummary: approvalQueue.summary,
     mcpSummary,
     kraSummary,
@@ -603,6 +623,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       waterDashboard,
       energyDashboard,
       sensingDashboard,
+      moduleManifestDashboard,
       devices,
       routes: narrowbandRoutes.routes,
       auditEvents,
@@ -618,6 +639,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       hero: catalog.modules.filter((module) => module.state === "hero").map((module) => module.id),
       next: catalog.modules.filter((module) => module.state === "next").map((module) => module.id),
       foundations: catalog.modules.filter((module) => module.state === "foundation").map((module) => module.id),
+      manifest: moduleManifestDashboard,
     },
     devices,
     automations: {
@@ -634,6 +656,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     water: waterDashboard,
     energy: energyDashboard,
     sensing: sensingDashboard,
+    moduleManifest: moduleManifestDashboard,
     approvals: approvalQueue,
     agents: {
       orchestrator: mcpOrchestrator.orchestrator,

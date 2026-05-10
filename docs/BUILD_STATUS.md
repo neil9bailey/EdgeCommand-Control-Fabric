@@ -390,7 +390,7 @@ Verification:
 
 ### E17 - Occupancy, Presence, And Environmental Sensing
 
-Status: complete locally and ready to push to `origin/main`.
+Status: complete and pushed to `origin/main`.
 
 Delivered:
 
@@ -406,9 +406,30 @@ Delivered:
 Verification:
 
 - `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/sensing`, `/api/sensing/profiles/:id/preview`, and `/api/command-centre`.
+- Browser verification for the Sensing workspace, Privacy-Aware Context Surface, room-aware comfort profile, air-quality response, and clean browser console.
+
+### E18 - Module Manifest And Feature Flag Framework
+
+Status: in progress locally.
+
+Delivered:
+
+- File-backed Module Manifest package with flag states, artifact kinds, feature flags, build lanes, intent recipes, dependency evidence, and recent manifest run seeds.
+- API gateway module manifest service for dashboard data, catalog coverage, dependency readiness, artifact readiness, flag preview, and intent-to-module preview.
+- `/api/module-manifest`, `/api/module-manifest/flags/:id/preview`, and `/api/module-manifest/intent/preview` endpoints.
+- Global Command Centre Modules workspace now uses manifest summary data: enabled flags, buildable flags, approval-required flags, and catalog coverage.
+- Web console Module Manifest / Feature Flags panel showing enabled/buildable/approval-gated flags, readiness, build lanes, stages, dependencies, artifacts, and human-intent preview.
+- Tests for manifest summary, dashboard readiness, MQTT build plan preview, LoRaWAN approval-gated preview, and command-centre action queue compatibility.
+
+Verification:
+
+- `npm test`
 
 ## Next
 
-### E18 - Module Manifest And Feature Flag Framework
+### E19 - Module Builder And IaC Fragment System
 
 Status: next planned build slice.

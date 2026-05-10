@@ -66,6 +66,7 @@ export interface PlatformOverview {
     waterManagement?: string;
     energyManagement?: string;
     sensingPresence?: string;
+    moduleManifest?: string;
   };
   links: Array<{
     id: string;
@@ -1818,6 +1819,136 @@ export interface SensingDashboardResponse {
   rule: string;
 }
 
+export interface ModuleManifestSummary {
+  schemaVersion: string;
+  flagCount: number;
+  enabled: number;
+  buildable: number;
+  approvalRequired: number;
+  blocked: number;
+  artifactKindCount: number;
+  buildLaneCount: number;
+  intentRecipeCount: number;
+  catalogCoverage: { covered: number; total: number; percent: number };
+  byState: Record<string, number>;
+  byReadiness: Record<string, number>;
+  byRisk: Record<string, number>;
+}
+
+export interface ModuleFlagState {
+  id: string;
+  name: string;
+  allowsRuntimeSurface: boolean;
+  allowsBuild: boolean;
+  requiresApproval: boolean;
+}
+
+export interface ModuleFlagDependency {
+  moduleId: string;
+  name: string;
+  present: boolean;
+  state: string;
+  ready: boolean;
+}
+
+export interface ModuleFeatureFlag {
+  id: string;
+  moduleId: string;
+  moduleName: string;
+  category: string;
+  catalogState: string;
+  state: string;
+  environment: string;
+  version: string;
+  owner: string;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  narrowbandSuitability: string | null;
+  description: string;
+  dependencies: string[];
+  dependencyStatuses: ModuleFlagDependency[];
+  missingDependencies: ModuleFlagDependency[];
+  artifacts: string[];
+  missingArtifacts: string[];
+  activation: { strategy: string; requiresApproval: boolean; requiresCertification: boolean; requiresTests: boolean };
+  evidence: string[];
+  stateDefinition: ModuleFlagState | null;
+  readiness: {
+    canBuild: boolean;
+    canEnable: boolean;
+    requiresApproval: boolean;
+    runtimeSurface: boolean;
+    status: string;
+  };
+}
+
+export interface ModuleBuildLane {
+  id: string;
+  name: string;
+  stages: string[];
+  targetEnvironment: string;
+}
+
+export interface ModuleManifestIntentRecipe {
+  id: string;
+  name: string;
+  keywords: string[];
+  moduleId: string;
+  confidence: number;
+  exampleIntent: string;
+}
+
+export interface ModuleFlagPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ModuleManifestResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  flag: ModuleFeatureFlag;
+  lane: ModuleBuildLane | null;
+  stages: Array<{ id: string; label: string; status: string }>;
+  summary: {
+    dependencyCount: number;
+    missingDependencyCount: number;
+    artifactCount: number;
+    missingArtifactCount: number;
+    canBuild: boolean;
+    canEnable: boolean;
+    requiresApproval: boolean;
+  };
+  nextActions: string[];
+  event: FabricEvent;
+}
+
+export interface ModuleManifestIntentPreview {
+  intent: string;
+  match: null | { id: string; name: string; moduleId: string; confidence: number; score: number };
+  preview: ModuleFlagPreview;
+}
+
+export interface ModuleManifestResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultEnvironment: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  summary: ModuleManifestSummary;
+  flagStates: ModuleFlagState[];
+  artifactKinds: string[];
+  flags: ModuleFeatureFlag[];
+  buildLanes: ModuleBuildLane[];
+  intentRecipes: ModuleManifestIntentRecipe[];
+  uncoveredCatalogModules: Array<{ moduleId: string; name: string; category: string; state: string; risk: string; recommendedFlagState: string }>;
+  recentManifestRuns: Array<{ id: string; moduleId: string; status: string; actor: string; summary: string }>;
+  rule: string;
+}
+
 export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
@@ -1884,6 +2015,7 @@ export interface CommandCentreResponse {
     hero: string[];
     next: string[];
     foundations: string[];
+    manifest?: ModuleManifestResponse;
   };
   devices: CommandCentreDevice[];
   automations: {
@@ -1900,6 +2032,7 @@ export interface CommandCentreResponse {
   water: WaterDashboardResponse;
   energy: EnergyDashboardResponse;
   sensing: SensingDashboardResponse;
+  moduleManifest?: ModuleManifestResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

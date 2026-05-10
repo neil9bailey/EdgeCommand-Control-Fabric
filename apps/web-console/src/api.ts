@@ -1,5 +1,6 @@
 import fallbackCatalog from "../../../packages/module-catalog/catalog.json";
 import type {
+  AuthStatus,
   DeviceRegistryResponse,
   EventLedgerResponse,
   IntentProposalResponse,
@@ -34,6 +35,14 @@ export async function fetchCatalog(): Promise<ModuleCatalog> {
 export async function fetchOverview(): Promise<PlatformOverview | null> {
   try {
     return await getJson<PlatformOverview>("/api/platform/overview");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchAuthStatus(): Promise<AuthStatus | null> {
+  try {
+    return await getJson<AuthStatus>("/auth/status");
   } catch {
     return null;
   }

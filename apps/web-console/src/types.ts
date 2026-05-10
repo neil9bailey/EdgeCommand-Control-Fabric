@@ -37,6 +37,7 @@ export interface PlatformOverview {
   narrowband: number;
   devices?: DeviceRegistrySummary;
   events?: EventLedgerSummary;
+  identity?: AuthStatus;
   runtime: {
     service: string;
     mode: string;
@@ -145,6 +146,35 @@ export interface EventLedgerResponse {
   events: FabricEvent[];
   summary: EventLedgerSummary;
   filters: Record<string, string>;
+}
+
+export interface AuthStatus {
+  mode: string;
+  normalizedMode: string;
+  entraEnabled: boolean;
+  jwtValidation: string;
+  tenant: string;
+  audience: string;
+  issuerPinning: string;
+  jwks: string;
+  roleClaim: string;
+  groupRoleMapEntries: number;
+  principalRoleMapEntries: number;
+  roles: string[];
+  secretProvider?: {
+    provider: string;
+    keyVaultEnabled: boolean;
+    keyVaultRequired: boolean;
+    mappedEnvironmentNames?: string[];
+    lastLoad?: {
+      provider: string;
+      keyVaultEnabled: boolean;
+      loaded: string[];
+      skipped: string[];
+      missing: string[];
+      failed: Array<{ envName: string; reason: string }>;
+    } | null;
+  };
 }
 
 export interface IntentProposalResponse {

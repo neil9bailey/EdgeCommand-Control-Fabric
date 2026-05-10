@@ -30,6 +30,32 @@ Verification:
 - Docker Compose health.
 - Browser render verification.
 
+### E02 - Identity And Entra-Ready Auth
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- Entra-ready JWT auth middleware for API gateway.
+- `AUTH_MODE=development`, `entra`, `entra_jwt_rs256`, and integration-test-only `entra_jwt_hs256` modes.
+- JWT validation for audience, issuer, tenant, expiry, and JWKS-backed RS256 signatures.
+- EdgeCommand role model with DIIaC-style role aliases, group mapping, and principal mapping.
+- `/auth/status` and `/auth/me` identity endpoints.
+- Shared Azure Key Vault loader for Entra, LLM, and external API secrets.
+- Docker Compose and Azure IaC parameters for shared Key Vault configuration.
+- Identity and secrets documentation.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm test`
+- `npm run build`
+- `az bicep build --file infra/azure/main.bicep`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/auth/status`, `/auth/me`, and identity-aware `/api/intent/propose`.
+- Browser render verification for the dashboard identity posture.
+
 ### E03 - Device Registry And Capability Model
 
 Status: complete and pushed to `origin/main`.

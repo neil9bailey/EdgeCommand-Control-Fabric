@@ -13,15 +13,28 @@ import {
   summarizeEventLedger,
   summarizeTelemetry,
 } from "./eventLedger.mjs";
+import {
+  EDGE_ROLES,
+  buildAuthConfig,
+  createAuthMiddleware,
+  publicAuthStatus,
+  requireRoles,
+} from "./auth.mjs";
+import { getSecretProviderStatus, loadExternalSecrets } from "./secrets.mjs";
 
+const secretLoadSummary = await loadExternalSecrets();
+const authConfig = buildAuthConfig();
+const secretProviderStatus = getSecretProviderStatus(process.env, secretLoadSummary);
 const app = express();
 const port = Number(process.env.API_GATEWAY_PORT || process.env.PORT || 3101);
 const catalog = loadCatalog();
 const deviceRegistry = loadDeviceRegistry();
 const eventLedger = loadEventLedger();
+const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
 app.use(express.json({ limit: "256kb" }));
+app.use(createAuthMiddleware({ config: authConfig, publicPaths, secretProvider: secretProviderStatus }));
 
 function now() {
   return new Date().toISOString();
@@ -42,6 +55,7 @@ function buildOverview() {
       dockerDesktopTarget: true,
       azureTarget: "Azure Container Apps",
     },
+    identity: publicAuthStatus(authConfig, secretProviderStatus),
     commandCentre: {
       readiness: "foundation",
       activeSite: "Home HQ + Remote Cottage",
@@ -138,22 +152,21 @@ app.get("/health", (_req, res) => {
     service: "api-gateway",
     time: now(),
     modules: catalog.modules.length,
+    auth: {
+      mode: authConfig.rawMode,
+      entraEnabled: authConfig.enabled,
+      keyVaultEnabled: secretProviderStatus.keyVaultEnabled,
+    },
   });
 });
 
 app.get("/auth/status", (_req, res) => {
+  res.json(publicAuthStatus(authConfig, secretProviderStatus));
+});
+
+app.get("/auth/me", requireRoles(EDGE_ROLES), (req, res) => {
   res.json({
-    mode: process.env.AUTH_MODE || "development",
-    tenant: process.env.ENTRA_TENANT_ID || catalog.product.tenant,
-    jwt_validation: process.env.AUTH_MODE === "entra" ? "required" : "not_required_in_local_dev",
-    roles: [
-      "Automation.Admin",
-      "Automation.Operator",
-      "Automation.Viewer",
-      "Automation.Installer",
-      "Automation.Security",
-      "Automation.AgentApprover",
-    ],
+    principal: req.auth,
   });
 });
 
@@ -306,9 +319,20 @@ app.get("/api/narrowband/routes", (_req, res) => {
   });
 });
 
-app.post("/api/intent/propose", (req, res) => {
-  res.json(proposeFromIntent(req.body?.intent || ""));
-});
+app.post(
+  "/api/intent/propose",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json({
+      ...proposeFromIntent(req.body?.intent || ""),
+      actor: {
+        subject: req.auth?.subject,
+        name: req.auth?.name,
+        roles: req.auth?.roles || [],
+      },
+    });
+  },
+);
 
 app.listen(port, () => {
   console.log(`api-gateway listening on http://localhost:${port}`);

@@ -15,7 +15,6 @@ import {
   Gauge,
   GitBranch,
   Home,
-  KeyRound,
   Layers3,
   Lightbulb,
   LockKeyhole,
@@ -35,8 +34,9 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { fetchCatalog, fetchDevices, fetchEvents, fetchNarrowbandRoutes, fetchOverview, proposeIntent } from "./api";
+import { fetchAuthStatus, fetchCatalog, fetchDevices, fetchEvents, fetchNarrowbandRoutes, fetchOverview, proposeIntent } from "./api";
 import type {
+  AuthStatus,
   DeviceDefinition,
   DeviceRegistryResponse,
   EventLedgerResponse,
@@ -132,6 +132,7 @@ function App() {
   const [routes, setRoutes] = useState<NarrowbandRoutes | null>(null);
   const [deviceRegistry, setDeviceRegistry] = useState<DeviceRegistryResponse | null>(null);
   const [eventLedger, setEventLedger] = useState<EventLedgerResponse | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [activeCategory, setActiveCategory] = useState("Home Automation");
   const [activeModuleId, setActiveModuleId] = useState("water-management");
   const [query, setQuery] = useState("");
@@ -142,6 +143,7 @@ function App() {
   useEffect(() => {
     void fetchCatalog().then(setCatalog);
     void fetchOverview().then(setOverview);
+    void fetchAuthStatus().then(setAuthStatus);
     void fetchNarrowbandRoutes().then(setRoutes);
     void fetchDevices().then(setDeviceRegistry);
     void fetchEvents().then(setEventLedger);
@@ -230,7 +232,8 @@ function App() {
           </div>
           <div className="topbar-actions">
             <StatusPill tone="good" label={overview ? "API online" : "offline mock"} />
-            <StatusPill tone="warn" label="Entra ready" />
+            <StatusPill tone={authStatus?.entraEnabled ? "good" : "warn"} label={authStatus?.entraEnabled ? "Entra enforced" : "dev auth"} />
+            <StatusPill tone={authStatus?.secretProvider?.keyVaultEnabled ? "good" : "muted"} label={authStatus?.secretProvider?.keyVaultEnabled ? "Key Vault" : "env secrets"} />
             <StatusPill tone="danger" label="P0 path simulated" />
           </div>
         </header>
@@ -243,7 +246,11 @@ function App() {
           <Metric label="High Risk" value={overview?.highRisk || "-"} detail="policy gated" tone="danger" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
           <Metric label="Approvals" value={eventLedger?.summary.pendingApprovals || overview?.commandCentre.pendingApprovals || 4} detail="agent proposals" tone="warn" />
-          <Metric label="Mode" value="mock" detail={overview?.commandCentre.agentMode || "AIP/KRA deterministic"} />
+          <Metric
+            label="Identity"
+            value={authStatus?.entraEnabled ? "Entra" : "Dev"}
+            detail={authStatus?.secretProvider?.keyVaultEnabled ? "Key Vault backed" : "local env"}
+          />
         </section>
 
         <EventAuditStrip eventLedger={eventLedger} fallbackSummary={overview?.events || null} />

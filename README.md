@@ -7,12 +7,14 @@ Start here:
 - [Product Blueprint](docs/PRODUCT_BLUEPRINT.md)
 - [Product And Module Design Canvas](docs/DESIGN_CANVAS.md)
 - [Epic Roadmap](docs/EPIC_ROADMAP.md)
+- [Identity And Secrets](docs/IDENTITY_AND_SECRETS.md)
 - [Build Status](docs/BUILD_STATUS.md)
 
 Current status:
 
 - Planning artifacts created.
 - E01 scaffold complete with a Docker-first workspace, API gateway, shared module catalogue, and React mock console.
+- E02 identity, Entra JWT, and shared Key Vault secret loading foundation is complete.
 - E03 device registry foundation is complete.
 - E04 event ledger, telemetry summary, command stream, and audit foundation is complete.
 - E05 automation engine and safety policy is the next active build slice.
@@ -23,6 +25,7 @@ Core direction:
 - Docker-first local microservices.
 - Azure Container Apps target architecture.
 - Entra ID / AD integration through JWT-based APIs.
+- Shared Azure Key Vault for Entra, LLM, and vendor API secrets.
 - MCP-style agents for human-intent automation.
 - AIP proposes actions; KRA critiques and grounds them.
 - Feature modules can be requested, planned, built, tested, enabled, and monitored.
@@ -55,3 +58,5 @@ docker compose up --build
 ```
 
 Note: Docker Desktop must be running before the compose stack can start.
+
+Local auth defaults to development mode. To test Entra and Key Vault-backed configuration, copy `.env.example`, set `AUTH_MODE=entra_jwt_rs256`, configure `AZURE_KEY_VAULT_URL` or the Entra env vars directly, then restart the stack.

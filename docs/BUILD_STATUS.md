@@ -249,8 +249,32 @@ Verification:
 - API verification for `/api/simulations`, `/api/simulations/scenarios/:id/run`, `/api/approvals`, and `/api/command-centre`.
 - Browser verification for the Simulations workspace, Simulation Lab panel, remote-cottage outage run, LoRaWAN route proof, approval attachment evidence, and clean browser console.
 
+### E11 - Human Approval And Policy Workflow
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed Approval Workflow package with lifecycle states, decision types, policy rules, emergency exception metadata, export profiles, and seed decisions.
+- API gateway approval workflow service for approval dashboard records, role-gated decisions, signed command queue readiness, rejection blocking, and audit exports.
+- `/api/approvals`, `/api/approvals/:id`, `/api/approvals/:id/decisions`, and `/api/approvals/audit/export` endpoints.
+- Approval records now include human decision metadata, proposal context, KRA critique, policy result, simulation evidence, lifecycle, and command queue state.
+- Global Command Centre Approvals workspace and Human Approval / Policy Workflow dashboard panel in the web console.
+- Tests for workflow loading, pending high-risk approvals, KRA/simulation evidence, approval-to-command-queue flow, rejection blocking, role denial, audit export contents, and command-centre approval integration.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/approvals`, `/api/approvals/:id/decisions`, `/api/approvals/audit/export`, and `/api/command-centre`.
+- Browser verification for the Approvals workspace, approval workflow panel, policy criteria, KRA/simulation evidence, approval decision recording, signed command queue transition, and clean browser console.
+
 ## Next
 
-### E11 - Human Approval And Policy Workflow
+### E12 - Lighting And Scenes
 
 Status: next planned build slice.

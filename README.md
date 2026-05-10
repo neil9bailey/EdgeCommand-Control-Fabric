@@ -23,7 +23,8 @@ Current status:
 - E08 Automation Intent Partner foundation is complete.
 - E09 Knowledge and Risk Agent foundation is complete.
 - E10 Simulation Lab foundation is complete.
-- E11 Human Approval and Policy Workflow is the next active build slice.
+- E11 Human Approval and Policy Workflow foundation is complete.
+- E12 Lighting and Scenes is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -61,6 +62,7 @@ Local URLs:
 - Intent engine API: http://localhost:3101/api/intent
 - KRA engine API: http://localhost:3101/api/kra
 - Simulation lab API: http://localhost:3101/api/simulations
+- Approval workflow API: http://localhost:3101/api/approvals
 
 Docker Desktop target:
 

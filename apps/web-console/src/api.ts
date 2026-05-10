@@ -1,6 +1,7 @@
 import fallbackCatalog from "../../../packages/module-catalog/catalog.json";
 import type {
   AuthStatus,
+  ApprovalDecisionResponse,
   ApprovalQueueResponse,
   AutomationEvaluation,
   AutomationResponse,
@@ -127,6 +128,20 @@ export async function fetchApprovals(): Promise<ApprovalQueueResponse | null> {
   } catch {
     return null;
   }
+}
+
+export async function recordApprovalDecision(
+  approvalId: string,
+  decision: "approve" | "reject" | "request_changes",
+  note = "",
+): Promise<ApprovalDecisionResponse> {
+  const response = await fetch(`${API_BASE}/api/approvals/${approvalId}/decisions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ decision, note }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ApprovalDecisionResponse>;
 }
 
 export async function runAutomationScenario(scenarioId: string): Promise<AutomationEvaluation> {

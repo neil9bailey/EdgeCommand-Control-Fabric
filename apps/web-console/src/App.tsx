@@ -50,12 +50,14 @@ import {
   fetchOverview,
   fetchSimulationLab,
   proposeIntent,
+  recordApprovalDecision,
   recordIntentDecision,
   runAutomationScenario,
   runSimulationScenario,
 } from "./api";
 import type {
   AuthStatus,
+  ApprovalDecisionResponse,
   ApprovalQueueResponse,
   AutomationEvaluation,
   AutomationResponse,
@@ -114,6 +116,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   devices: Gauge,
   automations: Settings2,
   agents: GitBranch,
+  approvals: ClipboardCheck,
   risk: Shield,
   simulations: FlaskConical,
   connectivity: RadioTower,
@@ -198,6 +201,8 @@ function App() {
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [automations, setAutomations] = useState<AutomationResponse | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
+  const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
+  const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
   const [kra, setKra] = useState<KraDashboardResponse | null>(null);
   const [simulationLab, setSimulationLab] = useState<SimulationLabResponse | null>(null);
   const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null);
@@ -281,6 +286,25 @@ function App() {
       setAutomationEvaluation(await runAutomationScenario(scenarioId));
     } finally {
       setAutomationLoading(false);
+    }
+  }
+
+  async function decideApproval(decision: "approve" | "reject" | "request_changes") {
+    const approval = approvals?.approvals[0];
+    if (!approval) return;
+    setApprovalDecisionLoading(decision);
+    try {
+      setApprovalDecision(await recordApprovalDecision(
+        approval.id,
+        decision,
+        decision === "approve"
+          ? "Simulation, KRA, policy, and command queue evidence reviewed."
+          : decision === "reject"
+            ? "Rejected from operator approval workflow."
+            : "Requesting policy or route changes before approval.",
+      ));
+    } finally {
+      setApprovalDecisionLoading(null);
     }
   }
 
@@ -384,6 +408,12 @@ function App() {
           evaluation={automationEvaluation}
           loading={automationLoading}
           onRunScenario={runScenario}
+        />
+        <ApprovalWorkflowPanel
+          approvals={approvals || commandCentre?.approvals || null}
+          decision={approvalDecision}
+          loading={approvalDecisionLoading}
+          onDecision={decideApproval}
         />
         <SimulationLabPanel
           simulation={simulationLab || commandCentre?.simulations || null}
@@ -622,6 +652,57 @@ function CommandCentreWorkspaceView({
             <span>{approval.selectedPath}</span>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (activeWorkspace === "approvals") {
+    return (
+      <div className="ops-workspace approval-workspace">
+        <div className="state-rack approval-state-rack">
+          <div>
+            <span>Pending</span>
+            <strong>{commandCentre.approvals.summary.pending}</strong>
+          </div>
+          <div>
+            <span>Ready</span>
+            <strong>{commandCentre.approvals.summary.readyForApproval || 0}</strong>
+          </div>
+          <div>
+            <span>Simulation</span>
+            <strong>{commandCentre.approvals.summary.simulationAttached || 0}</strong>
+          </div>
+          <div>
+            <span>Policy Rules</span>
+            <strong>{commandCentre.approvals.policyRules?.length || 0}</strong>
+          </div>
+        </div>
+        <div className="ops-table approval-ops-table">
+          <div className="ops-row ops-head">
+            <span>Approval</span>
+            <span>Policy</span>
+            <span>KRA</span>
+            <span>Simulation</span>
+            <span>Queue</span>
+          </div>
+          {commandCentre.approvals.approvals.map((approval) => (
+            <div className="ops-row attention-row" key={approval.id}>
+              <strong>{approval.deviceName}</strong>
+              <StatusPill tone={approval.policy?.readyForApproval ? "good" : "warn"} label={approval.policy?.result.replace(/_/g, " ") || approval.status} />
+              <StatusPill tone={approval.critique?.status === "conflict" ? "danger" : "warn"} label={approval.critique?.status.replace(/_/g, " ") || "review"} />
+              <StatusPill tone={approval.simulation?.attached ? "good" : "danger"} label={approval.simulation?.attached ? "attached" : "missing"} />
+              <span>{approval.commandQueue?.status.replace(/_/g, " ") || "held"}</span>
+            </div>
+          ))}
+        </div>
+        <div className="agent-session-strip">
+          {(commandCentre.approvals.policyRules || []).slice(0, 4).map((rule) => (
+            <div key={rule.id}>
+              <strong>{rule.name}</strong>
+              <span>{rule.category.replace(/_/g, " ")} / {rule.risk}</span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -992,6 +1073,151 @@ function AutomationOpsPanel({
               </div>
             )}
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ApprovalWorkflowPanel({
+  approvals,
+  decision,
+  loading,
+  onDecision,
+}: {
+  approvals: ApprovalQueueResponse | null;
+  decision: ApprovalDecisionResponse | null;
+  loading: "approve" | "reject" | "request_changes" | null;
+  onDecision: (decision: "approve" | "reject" | "request_changes") => void;
+}) {
+  const records = approvals?.approvals || [];
+  const record = decision?.approval || records[0];
+  const policyRules = approvals?.policyRules || [];
+  const criteria = record?.policy?.criteria || [];
+
+  return (
+    <section className="approval-workflow-panel" aria-label="Human approval and policy workflow">
+      <div className="section-header approval-header">
+        <div>
+          <p className="eyebrow">Human Approval / Policy Workflow</p>
+          <h2>Decision Gate And Command Queue</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="warn" label={`${approvals?.summary.pending || 0} pending`} />
+          <StatusPill tone="good" label={`${approvals?.summary.readyForApproval || 0} ready`} />
+          <StatusPill tone={decision?.state === "rejected" ? "danger" : decision?.state === "approved" ? "good" : "neutral"} label={decision?.state.replace(/_/g, " ") || "awaiting human"} />
+        </div>
+      </div>
+
+      <div className="approval-grid">
+        <div className="approval-panel approval-record-panel">
+          <div className="section-header compact">
+            <h3>{record?.deviceName || "Approval Record"}</h3>
+            <ClipboardCheck size={18} />
+          </div>
+          {record ? (
+            <div className="approval-record-card">
+              <div className="approval-record-top">
+                <div>
+                  <strong>{record.proposal?.title || record.commandId}</strong>
+                  <span>{record.selectedPath} / {record.trafficClass}</span>
+                </div>
+                <StatusPill tone={intentStatusTone(record.status)} label={record.status.replace(/_/g, " ")} />
+              </div>
+              <div className="approval-facts">
+                <div><span>Policy</span><strong>{record.policy?.result.replace(/_/g, " ") || "review"}</strong></div>
+                <div><span>KRA</span><strong>{record.critique?.status || "review"}</strong></div>
+                <div><span>Simulation</span><strong>{record.simulation?.attached ? "attached" : "missing"}</strong></div>
+                <div><span>Queue</span><strong>{record.commandQueue?.status.replace(/_/g, " ") || "held"}</strong></div>
+              </div>
+              <div className="decision-bar approval-decision-bar">
+                <button className="decision-button accept" onClick={() => onDecision("approve")} disabled={Boolean(loading) || !record}>
+                  <CheckCircle2 size={16} />
+                  <span>{loading === "approve" ? "Recording" : "Approve"}</span>
+                </button>
+                <button className="decision-button modify" onClick={() => onDecision("request_changes")} disabled={Boolean(loading) || !record}>
+                  <Settings2 size={16} />
+                  <span>{loading === "request_changes" ? "Recording" : "Changes"}</span>
+                </button>
+                <button className="decision-button reject" onClick={() => onDecision("reject")} disabled={Boolean(loading) || !record}>
+                  <XCircle size={16} />
+                  <span>{loading === "reject" ? "Recording" : "Reject"}</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="event-empty">
+              <CheckCircle2 size={18} />
+              <span>No approval records are waiting.</span>
+            </div>
+          )}
+        </div>
+
+        <div className="approval-panel">
+          <div className="section-header compact">
+            <h3>Policy Criteria</h3>
+            <Shield size={18} />
+          </div>
+          <div className="approval-criteria-list">
+            {criteria.map((item) => (
+              <div className="approval-criteria-row" key={item.id}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <span>{item.id.replace(/_/g, " ")}</span>
+                </div>
+                <StatusPill tone={item.passed ? "good" : "danger"} label={item.passed ? "pass" : "hold"} />
+              </div>
+            ))}
+            {policyRules.slice(0, 2).map((rule) => (
+              <div className="approval-criteria-row policy" key={rule.id}>
+                <div>
+                  <strong>{rule.name}</strong>
+                  <span>{rule.message}</span>
+                </div>
+                <StatusPill tone={rule.risk === "critical" ? "danger" : "warn"} label={rule.risk} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="approval-panel">
+          <div className="section-header compact">
+            <h3>Evidence Chain</h3>
+            <Layers3 size={18} />
+          </div>
+          <div className="approval-evidence-list">
+            {(record?.simulation?.evidence || []).slice(0, 4).map((item) => (
+              <div className="approval-evidence-row" key={item}>
+                <strong>{item}</strong>
+                <span>simulation proof</span>
+              </div>
+            ))}
+            {(record?.critique?.evidencePointers || []).slice(0, 4).map((item) => (
+              <div className="approval-evidence-row" key={item.id}>
+                <strong>{item.label}</strong>
+                <span>{item.sourceId} / {item.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="approval-panel">
+          <div className="section-header compact">
+            <h3>{decision ? "Recorded Decision" : "Command Queue"}</h3>
+            <PlayCircle size={18} />
+          </div>
+          {decision ? (
+            <div className="decision-result approval-result">
+              <strong>{decision.policyResult.replace(/_/g, " ")}</strong>
+              <span>{decision.actor.name} / {formatTime(decision.decidedAt)} / {decision.commandQueue.status.replace(/_/g, " ")}</span>
+            </div>
+          ) : (
+            <div className="approval-command-card">
+              <strong>{record?.commandQueue?.queueId || "queue waiting"}</strong>
+              <span>{record?.commandQueue?.executionBoundary.replace(/_/g, " ") || "separate signed command path"}</span>
+              <StatusPill tone={record?.commandQueue?.canExecute ? "good" : "warn"} label={record?.commandQueue?.status.replace(/_/g, " ") || "held"} />
+            </div>
+          )}
         </div>
       </div>
     </section>

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { loadApprovalWorkflow } from "../src/approvalWorkflow.mjs";
 import { buildAuthConfig, publicAuthStatus } from "../src/auth.mjs";
 import { loadAutomationEngine } from "../src/automationEngine.mjs";
 import { loadCatalog } from "../src/catalog.mjs";
@@ -20,6 +21,7 @@ function commandCentreFixture() {
     mcpOrchestrator: loadMcpOrchestrator(),
     kraEngine: loadKraEngine(),
     simulationLab: loadSimulationLab(),
+    approvalWorkflow: loadApprovalWorkflow(),
     authStatus: publicAuthStatus(authConfig, {
       provider: "environment",
       keyVaultEnabled: false,
@@ -38,6 +40,7 @@ test("command centre builds all operational workspaces", () => {
     "modules",
     "devices",
     "automations",
+    "approvals",
     "agents",
     "risk",
     "simulations",
@@ -54,6 +57,7 @@ test("command centre action queue includes safety approval and route attention",
   const commandCentre = commandCentreFixture();
 
   assert.ok(commandCentre.actionQueue.some((action) => action.id.startsWith("approval-")));
+  assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "approvals"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "agents"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "risk"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "simulations"));
@@ -61,6 +65,8 @@ test("command centre action queue includes safety approval and route attention",
   assert.ok(commandCentre.connectivity.routes.some((route) => route.selectedPath === "lorawan"));
   assert.ok(commandCentre.automations.approvals.every((approval) => approval.status === "pending_approval"));
   assert.ok(commandCentre.automations.approvals.every((approval) => approval.simulation.attached));
+  assert.equal(commandCentre.approvals.summary.readyForApproval, 1);
+  assert.equal(commandCentre.approvals.policyRules.length, 5);
   assert.equal(commandCentre.agents.summary.toolCount, 10);
   assert.equal(commandCentre.risk.summary.rulePackCount, 6);
   assert.equal(commandCentre.simulations.summary.scenarioCount, 3);

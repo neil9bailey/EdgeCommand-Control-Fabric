@@ -28,7 +28,14 @@ import {
   summarizeAutomationEngine,
 } from "./automationEngine.mjs";
 import {
-  buildApprovalQueue,
+  buildApprovalDashboard,
+  decideApproval,
+  exportApprovalAudit,
+  findApprovalRecord,
+  loadApprovalWorkflow,
+  summarizeApprovalWorkflow,
+} from "./approvalWorkflow.mjs";
+import {
   buildCommandCentre,
   defaultLinkInventory,
   defaultNarrowbandRoutes,
@@ -76,6 +83,7 @@ const mcpOrchestrator = loadMcpOrchestrator();
 const intentEngine = loadIntentEngine();
 const kraEngine = loadKraEngine();
 const simulationLab = loadSimulationLab();
+const approvalWorkflow = loadApprovalWorkflow();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -95,6 +103,7 @@ function buildOverview() {
   const intentSummary = summarizeIntentEngine(intentEngine);
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
+  const approvalSummary = summarizeApprovalWorkflow(approvalWorkflow);
   return {
     ...summary,
     devices: deviceSummary,
@@ -122,6 +131,7 @@ function buildOverview() {
       intentEngine: `${intentSummary.frameCount} intent frames / propose-only`,
       riskAgent: `${kraSummary.rulePackCount} KRA rule packs / ${kraSummary.sourceCount} sources`,
       simulationLab: `${simulationSummary.scenarioCount} labs / ${simulationSummary.variantCount} variants`,
+      approvalWorkflow: `${approvalSummary.policyRuleCount} policies / ${approvalSummary.decisionCount} decisions`,
     },
     links: defaultLinkInventory(),
   };
@@ -164,6 +174,7 @@ app.get("/api/command-centre", (_req, res) => {
     mcpOrchestrator,
     kraEngine,
     simulationLab,
+    approvalWorkflow,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -533,9 +544,58 @@ app.post(
   },
 );
 
+function approvalWorkflowContext(actor = null) {
+  return {
+    workflow: approvalWorkflow,
+    automationEngine,
+    deviceRegistry,
+    simulationLab,
+    kraEngine,
+    catalog,
+    eventLedger,
+    mcpOrchestrator,
+    actor: actor || { subject: "system-preview", name: "System Preview", roles: ["Automation.AgentApprover"] },
+  };
+}
+
 app.get("/api/approvals", (_req, res) => {
-  res.json(buildApprovalQueue(automationEngine, deviceRegistry, simulationLab));
+  res.json(buildApprovalDashboard(approvalWorkflowContext()));
 });
+
+app.get("/api/approvals/audit/export", (_req, res) => {
+  res.json(exportApprovalAudit(approvalWorkflowContext()));
+});
+
+app.get("/api/approvals/:id", (req, res) => {
+  const approval = findApprovalRecord(approvalWorkflowContext(), req.params.id);
+  if (!approval) {
+    res.status(404).json({ error: "approval_not_found", id: req.params.id });
+    return;
+  }
+  res.json({ approval });
+});
+
+app.post(
+  "/api/approvals/:id/decisions",
+  requireRoles(["Automation.Admin", "Automation.Security", "Automation.AgentApprover", "Automation.Operator"]),
+  (req, res) => {
+    const result = decideApproval({
+      ...approvalWorkflowContext(req.auth),
+      approvalId: req.params.id,
+      decision: req.body?.decision || "request_changes",
+      note: req.body?.note || "",
+    });
+    if (result.error === "approval_not_found" || result.error === "approval_decision_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    if (result.error === "approval_decision_forbidden" || result.error === "approval_missing_evidence") {
+      res.status(403).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
 
 app.get("/api/narrowband/routes", (_req, res) => {
   res.json(defaultNarrowbandRoutes());

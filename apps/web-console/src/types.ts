@@ -283,35 +283,144 @@ export interface AutomationResponse {
 }
 
 export interface ApprovalQueueResponse {
-  approvals: Array<{
+  workflow?: {
     id: string;
-    commandId: string;
-    ruleId: string;
-    deviceId: string | null;
-    deviceName: string;
-    moduleId: string;
-    trafficClass: string;
-    selectedPath: string;
-    status: string;
-    requiredRoles: string[];
-    reasons: string[];
-    simulation?: {
-      required: boolean;
-      attached: boolean;
-      reportId: string | null;
-      scenarioId: string | null;
-      variantId: string | null;
-      status: string;
-      safetyVerdict: string;
-      evidence: string[];
-    };
-  }>;
+    name: string;
+    mode: string;
+    tenant: string;
+    executionBoundary: string;
+    defaultState: string;
+    rule: string;
+  };
+  approvals: ApprovalRecord[];
   summary: {
+    schemaVersion?: string;
+    stateCount?: number;
+    decisionCount?: number;
+    policyRuleCount?: number;
+    emergencyExceptionCount?: number;
+    auditExportProfileCount?: number;
+    seedDecisionCount?: number;
     pending: number;
     total: number;
     sourceScenario: string;
     simulationAttached?: number;
+    readyForApproval?: number;
+    byDecision?: Record<string, number>;
   };
+  policyRules?: ApprovalPolicyRule[];
+  decisions?: ApprovalDecisionDefinition[];
+  emergencyExceptions?: Array<{
+    id: string;
+    name: string;
+    trafficClass: string;
+    status: string;
+    allowedModules: string[];
+    requires: string[];
+    expiresSeconds: number;
+  }>;
+  auditExportProfiles?: Array<{ id: string; name: string; format: string; fields: string[] }>;
+  recentDecisions?: Array<{ id: string; approvalId: string; decision: string; actor: string; summary: string }>;
+}
+
+export interface ApprovalPolicyRule {
+  id: string;
+  name: string;
+  risk: "high" | "critical" | string;
+  category: string;
+  requires: string[];
+  message: string;
+}
+
+export interface ApprovalDecisionDefinition {
+  id: "approve" | "reject" | "request_changes" | string;
+  label: string;
+  resultState: string;
+  requiresRoles: string[];
+  commandQueueStatus: string;
+}
+
+export interface ApprovalRecord {
+  id: string;
+  commandId: string;
+  ruleId: string;
+  deviceId: string | null;
+  deviceName: string;
+  moduleId: string;
+  trafficClass: string;
+  selectedPath: string;
+  status: string;
+  requiredRoles: string[];
+  reasons: string[];
+  proposal?: IntentProposal;
+  critique?: {
+    evaluationId: string;
+    status: string;
+    verdict: string;
+    findingCount: number;
+    blockerCount: number;
+    findings: KraFinding[];
+    evidencePointers: KraEvidencePointer[];
+    nextActions: string[];
+  };
+  policy?: {
+    result: string;
+    readyForApproval: boolean;
+    requiredRoles: string[];
+    rules: Array<{ id: string; name: string; risk: string; category: string; message: string }>;
+    criteria: Array<{ id: string; label: string; passed: boolean }>;
+    emergencyException: null | {
+      id: string;
+      status: string;
+      expiresSeconds: number;
+      requires: string[];
+    };
+  };
+  simulation?: {
+    required: boolean;
+    attached: boolean;
+    reportId: string | null;
+    scenarioId: string | null;
+    variantId: string | null;
+    status: string;
+    safetyVerdict: string;
+    evidence: string[];
+  };
+  lifecycle?: Array<{ state: string; status: string; detail: string }>;
+  commandQueue?: {
+    queueId: string;
+    commandId: string;
+    status: string;
+    commandStatus: string;
+    canExecute: boolean;
+    executionBoundary: string;
+    selectedPath: string;
+    trafficClass: string;
+    encodedBytes: number;
+    ackRequired: boolean;
+    signingRequired: boolean;
+  };
+  decision?: null | ApprovalDecisionResponse;
+}
+
+export interface ApprovalDecisionResponse {
+  decisionId: string;
+  approvalId: string;
+  commandId: string;
+  decision: string;
+  state: string;
+  note: string;
+  decidedAt: string;
+  actor: {
+    subject: string;
+    name: string;
+    roles: string[];
+  };
+  policyResult: string;
+  approval: ApprovalRecord;
+  commandQueue: NonNullable<ApprovalRecord["commandQueue"]>;
+  nextActions: string[];
+  event: FabricEvent;
 }
 
 export interface McpSummary {
@@ -568,7 +677,7 @@ export interface SimulationLabResponse {
   rule: string;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -644,6 +753,7 @@ export interface CommandCentreResponse {
     approvals: ApprovalQueueResponse["approvals"];
     summary: AutomationSummary;
   };
+  approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];
     tools: McpTool[];

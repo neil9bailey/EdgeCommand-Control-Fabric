@@ -1,0 +1,129 @@
+{
+  "schemaVersion": "0.1.0",
+  "workflow": {
+    "id": "human-approval-workflow",
+    "name": "Human Approval And Policy Workflow",
+    "mode": "deterministic-local",
+    "tenant": "vendorlogic.io",
+    "executionBoundary": "approval-records-and-command-queue-only",
+    "defaultState": "pending_approval",
+    "rule": "High-risk proposals pause for human approval; approved records enter a separate signed command queue; rejected records cannot execute."
+  },
+  "states": [
+    "pending_approval",
+    "approved",
+    "rejected",
+    "changes_requested",
+    "queued_for_execution",
+    "executed",
+    "expired"
+  ],
+  "decisions": [
+    {
+      "id": "approve",
+      "label": "Approve",
+      "resultState": "approved",
+      "requiresRoles": ["Automation.Admin", "Automation.Security", "Automation.AgentApprover"],
+      "commandQueueStatus": "queued_for_execution"
+    },
+    {
+      "id": "reject",
+      "label": "Reject",
+      "resultState": "rejected",
+      "requiresRoles": ["Automation.Admin", "Automation.Security", "Automation.AgentApprover"],
+      "commandQueueStatus": "blocked_rejected"
+    },
+    {
+      "id": "request_changes",
+      "label": "Request Changes",
+      "resultState": "changes_requested",
+      "requiresRoles": ["Automation.Admin", "Automation.Operator", "Automation.Security", "Automation.AgentApprover"],
+      "commandQueueStatus": "blocked_changes_requested"
+    }
+  ],
+  "policyRules": [
+    {
+      "id": "physical-actuation-human-approval",
+      "name": "Physical Actuation Human Approval",
+      "risk": "high",
+      "category": "physical_safety",
+      "requires": ["human_actor", "approver_role", "decision_note"],
+      "message": "Physical actuation requires a named human approver before any command can enter the execution queue."
+    },
+    {
+      "id": "simulation-evidence-required",
+      "name": "Simulation Evidence Required",
+      "risk": "high",
+      "category": "simulation",
+      "requires": ["simulation_report", "route_proof", "approval_attachment"],
+      "message": "High-risk approval records need a successful simulation report attached before approval."
+    },
+    {
+      "id": "kra-critique-required",
+      "name": "KRA Critique Required",
+      "risk": "high",
+      "category": "risk",
+      "requires": ["kra_evaluation", "no_blocking_conflict", "grounding_pointers"],
+      "message": "KRA critique and grounding evidence must be present before approval."
+    },
+    {
+      "id": "signed-command-queue",
+      "name": "Signed Command Queue Boundary",
+      "risk": "critical",
+      "category": "command_boundary",
+      "requires": ["separate_command_path", "signed_command", "audit_record"],
+      "message": "Approval records do not execute directly; approved items enter the signed command queue."
+    },
+    {
+      "id": "rejection-blocks-execution",
+      "name": "Rejection Blocks Execution",
+      "risk": "critical",
+      "category": "command_boundary",
+      "requires": ["blocked_command", "audit_record"],
+      "message": "Rejected approvals must keep their command queue entry blocked."
+    }
+  ],
+  "emergencyExceptions": [
+    {
+      "id": "water-p0-simulated-approval",
+      "name": "Water P0 Simulated Approval",
+      "trafficClass": "P0_EMERGENCY",
+      "status": "defined_not_auto_execute",
+      "allowedModules": ["water-management"],
+      "requires": ["simulation_passed", "human_approval", "signed_command", "audit_record"],
+      "expiresSeconds": 300
+    },
+    {
+      "id": "security-access-no-auto-unlock",
+      "name": "Security Access No Auto Unlock",
+      "trafficClass": "P1_SECURITY",
+      "status": "manual_approval_only",
+      "allowedModules": ["security-access"],
+      "requires": ["human_approval", "identity_recheck", "audit_record"],
+      "expiresSeconds": 120
+    }
+  ],
+  "auditExportProfiles": [
+    {
+      "id": "approval-json",
+      "name": "Approval JSON Evidence Export",
+      "format": "json",
+      "fields": ["approvalId", "decision", "actor", "decidedAt", "proposal", "critique", "policy", "simulation", "commandQueue"]
+    },
+    {
+      "id": "approval-summary",
+      "name": "Operator Approval Summary",
+      "format": "summary",
+      "fields": ["approvalId", "deviceName", "status", "trafficClass", "selectedPath", "policyResult"]
+    }
+  ],
+  "seedDecisions": [
+    {
+      "id": "approval-seed-water-review",
+      "approvalId": "approval-rule-cottage-leak-lorawan-valve-cmd-1",
+      "decision": "pending_approval",
+      "actor": "system-preview",
+      "summary": "Remote cottage LoRaWAN valve close is waiting for human approval with simulation evidence attached."
+    }
+  ]
+}

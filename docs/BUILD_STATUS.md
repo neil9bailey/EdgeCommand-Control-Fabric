@@ -153,4 +153,30 @@ Verification:
 
 ### E07 - MCP Orchestrator
 
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed MCP orchestrator package with agents, permission scopes, registered tools, seed sessions, and tool-call audit records.
+- API gateway MCP service for summaries, tool lookup/filtering, session planning, guarded tool execution, and audit listing.
+- Role/scope permission model for Admin, Operator, AgentApprover, Security, and Viewer roles.
+- Explicit permission gate for high-risk tools including device command proposals, automation rule compilation, narrowband command encoding, and module enablement.
+- Deterministic local tool execution simulation with audit event generation.
+- Global Command Centre Agents workspace showing tools, agents, permission gates, sessions, and MCP actions.
+- Tests for MCP tool registration, filtering, session planning, unregistered-tool denial, high-risk permission gating, approved execution, audit records, and command-centre integration.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/mcp`, `/api/mcp/sessions/plan`, `/api/mcp/tools/:id/execute`, `/api/mcp/audit`, and `/api/command-centre`.
+- Browser DOM verification for the Agents workspace.
+
+## Next
+
+### E08 - Automation Intent Partner
+
 Status: next planned build slice.

@@ -1,6 +1,7 @@
 import { summarizeAutomationEngine, evaluateAutomation, findScenario } from "./automationEngine.mjs";
 import { summarizeDeviceRegistry } from "./deviceRegistry.mjs";
 import { filterEvents, summarizeEventLedger } from "./eventLedger.mjs";
+import { summarizeMcpOrchestrator } from "./mcpOrchestrator.mjs";
 
 function titleFromId(value) {
   return String(value || "")
@@ -103,7 +104,7 @@ export function buildApprovalQueue(automationEngine, deviceRegistry) {
   };
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, approvalSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, approvalSummary, mcpSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -147,6 +148,18 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
       ],
     },
     {
+      id: "agents",
+      label: "Agents",
+      headline: `${mcpSummary.enabledTools} tools registered`,
+      detail: `${mcpSummary.agentCount} agents, ${mcpSummary.approvalRequiredTools} explicit permission gates`,
+      status: mcpSummary.approvalRequiredTools > 0 ? "attention" : "ready",
+      metrics: [
+        { label: "Tools", value: mcpSummary.toolCount },
+        { label: "High Risk", value: mcpSummary.highRiskTools },
+        { label: "Sessions", value: mcpSummary.activeSessions },
+      ],
+    },
+    {
       id: "connectivity",
       label: "Connectivity",
       headline: `${links.length} paths scored`,
@@ -185,7 +198,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, devices, routes, auditEvents }) {
+function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestrator }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -236,13 +249,31 @@ function buildActionQueue({ approvals, devices, routes, auditEvents }) {
       evidence: [event.stream, event.actor.displayName],
     }));
 
-  return [...approvalActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 10);
+  const toolsById = new Map((mcpOrchestrator?.tools || []).map((tool) => [tool.id, tool]));
+  const mcpActions = (mcpOrchestrator?.toolCalls || [])
+    .filter((call) => call.status === "requires_permission")
+    .map((call) => {
+      const tool = toolsById.get(call.toolId);
+      return {
+        id: `mcp-${call.id}`,
+        priority: tool?.trafficClass || "P2_CONTROL",
+        workspaceId: "agents",
+        title: `${tool?.name || call.toolId} permission`,
+        owner: tool?.agentId || "mcp-orchestrator",
+        status: call.status,
+        detail: call.summary,
+        evidence: [call.decision, tool?.moduleId || "mcp-orchestrator"],
+      };
+    });
+
+  return [...approvalActions, ...mcpActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 10);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, authStatus }) {
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
+  const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const approvalQueue = buildApprovalQueue(automationEngine, deviceRegistry);
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
@@ -253,6 +284,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     eventSummary,
     automationSummary,
     approvalSummary: approvalQueue.summary,
+    mcpSummary,
     links,
     routes: narrowbandRoutes.routes,
     authStatus,
@@ -300,6 +332,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       devices,
       routes: narrowbandRoutes.routes,
       auditEvents,
+      mcpOrchestrator,
     }),
     modules: {
       byState: catalog.modules.reduce((acc, module) => {
@@ -318,6 +351,14 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       scenarios: automationEngine.scenarios || [],
       approvals: approvalQueue.approvals,
       summary: automationSummary,
+    },
+    agents: {
+      orchestrator: mcpOrchestrator.orchestrator,
+      tools: mcpOrchestrator.tools || [],
+      agents: mcpOrchestrator.agents || [],
+      sessions: mcpOrchestrator.sessions || [],
+      audit: mcpOrchestrator.toolCalls || [],
+      summary: mcpSummary,
     },
     connectivity: {
       links,

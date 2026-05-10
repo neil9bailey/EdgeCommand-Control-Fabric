@@ -19,7 +19,8 @@ Current status:
 - E04 event ledger, telemetry summary, command stream, and audit foundation is complete.
 - E05 automation engine and safety policy foundation is complete.
 - E06 web console and global command centre hardening is complete.
-- E07 MCP orchestrator is the next active build slice.
+- E07 MCP orchestrator foundation is complete.
+- E08 Automation Intent Partner is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -53,6 +54,7 @@ Local URLs:
 - API gateway: http://localhost:3101
 - API health: http://localhost:3101/health
 - Command centre API: http://localhost:3101/api/command-centre
+- MCP orchestrator API: http://localhost:3101/api/mcp
 
 Docker Desktop target:
 

@@ -102,6 +102,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   modules: Boxes,
   devices: Gauge,
   automations: Settings2,
+  agents: GitBranch,
   connectivity: RadioTower,
   identity: Shield,
   audit: Activity,
@@ -551,6 +552,57 @@ function CommandCentreWorkspaceView({
             <span>{approval.selectedPath}</span>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (activeWorkspace === "agents") {
+    return (
+      <div className="ops-workspace">
+        <div className="state-rack agent-state-rack">
+          <div>
+            <span>Agents</span>
+            <strong>{commandCentre.agents.summary.agentCount}</strong>
+          </div>
+          <div>
+            <span>Tools</span>
+            <strong>{commandCentre.agents.summary.toolCount}</strong>
+          </div>
+          <div>
+            <span>Permission Gates</span>
+            <strong>{commandCentre.agents.summary.approvalRequiredTools}</strong>
+          </div>
+          <div>
+            <span>Audit Calls</span>
+            <strong>{commandCentre.agents.summary.auditEventCount}</strong>
+          </div>
+        </div>
+        <div className="ops-table agent-ops-table">
+          <div className="ops-row ops-head">
+            <span>Tool</span>
+            <span>Agent</span>
+            <span>Risk</span>
+            <span>Gate</span>
+            <span>Status</span>
+          </div>
+          {commandCentre.agents.tools.slice(0, 8).map((tool) => (
+            <div className="ops-row" key={tool.id}>
+              <strong>{tool.name}</strong>
+              <span>{titleFromId(tool.agentId)}</span>
+              <StatusPill tone={riskTone(tool.risk)} label={tool.risk} />
+              <StatusPill tone={tool.requiresApproval ? "warn" : "good"} label={tool.requiresApproval ? "permission" : "direct"} />
+              <span>{tool.status}</span>
+            </div>
+          ))}
+        </div>
+        <div className="agent-session-strip">
+          {commandCentre.agents.sessions.map((session) => (
+            <div key={session.id}>
+              <strong>{session.name}</strong>
+              <span>{session.requestedTools.length} tools / {session.status.replace(/_/g, " ")}</span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

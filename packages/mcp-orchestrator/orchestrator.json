@@ -1,0 +1,270 @@
+{
+  "schemaVersion": "0.1.0",
+  "orchestrator": {
+    "id": "edgecommand-mcp-orchestrator",
+    "name": "EdgeCommand MCP Orchestrator",
+    "mode": "permissioned-local",
+    "defaultDecision": "deny-unregistered",
+    "auditStream": "agent",
+    "tenant": "vendorlogic.io"
+  },
+  "permissionScopes": [
+    { "id": "device:read", "name": "Read Device Registry", "risk": "low" },
+    { "id": "device:command:propose", "name": "Propose Device Command", "risk": "high" },
+    { "id": "automation:rule:compile", "name": "Compile Automation Rule", "risk": "high" },
+    { "id": "policy:evaluate", "name": "Evaluate Safety Policy", "risk": "medium" },
+    { "id": "simulation:run", "name": "Run Simulation", "risk": "medium" },
+    { "id": "connectivity:route:evaluate", "name": "Evaluate Connectivity Route", "risk": "medium" },
+    { "id": "narrowband:command:encode", "name": "Encode Narrowband Command", "risk": "high" },
+    { "id": "module:plan", "name": "Plan Module Enablement", "risk": "medium" },
+    { "id": "module:enable", "name": "Enable Module", "risk": "high" },
+    { "id": "audit:record", "name": "Record Audit Evidence", "risk": "medium" }
+  ],
+  "agents": [
+    {
+      "id": "aip-agent",
+      "name": "Automation Intent Partner",
+      "rule": "propose-only",
+      "status": "enabled",
+      "tools": ["device.search", "automation.rule.compile", "module.plan"]
+    },
+    {
+      "id": "kra-agent",
+      "name": "Knowledge And Risk Agent",
+      "rule": "critique-only",
+      "status": "enabled",
+      "tools": ["policy.evaluate", "audit.record"]
+    },
+    {
+      "id": "simulation-agent",
+      "name": "Simulation Agent",
+      "rule": "simulate-before-actuation",
+      "status": "enabled",
+      "tools": ["simulation.run"]
+    },
+    {
+      "id": "narrowband-agent",
+      "name": "Narrowband Routing Agent",
+      "rule": "semantic-routing-only",
+      "status": "enabled",
+      "tools": ["connectivity.route.evaluate", "narrowband.command.encode"]
+    },
+    {
+      "id": "module-builder-agent",
+      "name": "Module Builder Agent",
+      "rule": "plan-before-build",
+      "status": "enabled",
+      "tools": ["module.plan", "module.enable"]
+    }
+  ],
+  "tools": [
+    {
+      "id": "device.search",
+      "name": "Device Search",
+      "agentId": "aip-agent",
+      "moduleId": "device-registry",
+      "description": "Search normalized devices, sites, zones, capabilities, trust tiers, and adapter hints.",
+      "status": "enabled",
+      "risk": "low",
+      "trafficClass": "P3_TELEMETRY",
+      "scopes": ["device:read"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.Viewer", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["query", "capability", "siteId", "status"]
+    },
+    {
+      "id": "device.command.propose",
+      "name": "Device Command Proposal",
+      "agentId": "aip-agent",
+      "moduleId": "device-registry",
+      "description": "Prepare a governed device command proposal without direct actuation.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY",
+      "scopes": ["device:command:propose"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": true,
+      "auditRequired": true,
+      "inputHints": ["deviceId", "capability", "desiredState", "reason"]
+    },
+    {
+      "id": "automation.rule.compile",
+      "name": "Automation Rule Compiler",
+      "agentId": "aip-agent",
+      "moduleId": "automation-engine",
+      "description": "Compile human intent into rule, trigger, condition, action, and policy references.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["automation:rule:compile"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover"],
+      "requiresApproval": true,
+      "auditRequired": true,
+      "inputHints": ["intent", "targetModule", "simulationProfile"]
+    },
+    {
+      "id": "policy.evaluate",
+      "name": "Safety Policy Evaluation",
+      "agentId": "kra-agent",
+      "moduleId": "safety-policy",
+      "description": "Evaluate proposed actions against safety, privacy, identity, and traffic policy.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["policy:evaluate"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["proposal", "policyIds", "actor"]
+    },
+    {
+      "id": "simulation.run",
+      "name": "Simulation Runner",
+      "agentId": "simulation-agent",
+      "moduleId": "simulation-lab",
+      "description": "Run deterministic safety and connectivity scenarios before physical execution.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY",
+      "scopes": ["simulation:run"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["scenarioId", "failureMode", "variant"]
+    },
+    {
+      "id": "connectivity.route.evaluate",
+      "name": "Connectivity Route Evaluation",
+      "agentId": "narrowband-agent",
+      "moduleId": "narrowband-control-plane",
+      "description": "Evaluate semantic SD-WAN path fit for traffic class, payload, TTL, and ack needs.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P1_SECURITY",
+      "scopes": ["connectivity:route:evaluate"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["trafficClass", "payloadBytes", "siteId", "requiresAck"]
+    },
+    {
+      "id": "narrowband.command.encode",
+      "name": "Narrowband Command Encoder",
+      "agentId": "narrowband-agent",
+      "moduleId": "lorawan-command-codec",
+      "description": "Encode compact signed semantic commands for LoRaWAN-class payload budgets.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "scopes": ["narrowband:command:encode"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": true,
+      "auditRequired": true,
+      "inputHints": ["command", "targetDevice", "ttlSeconds", "ackRequired"]
+    },
+    {
+      "id": "module.plan",
+      "name": "Module Enablement Planner",
+      "agentId": "module-builder-agent",
+      "moduleId": "module-marketplace",
+      "description": "Plan module services, dashboards, policies, tests, and IaC fragments before enablement.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["module:plan"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["moduleId", "targetEnvironment", "requestedCapability"]
+    },
+    {
+      "id": "module.enable",
+      "name": "Module Enablement",
+      "agentId": "module-builder-agent",
+      "moduleId": "module-marketplace",
+      "description": "Enable a certified module after dependency checks, policy checks, tests, and human approval.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["module:enable"],
+      "allowedRoles": ["Automation.Admin", "Automation.AgentApprover"],
+      "requiresApproval": true,
+      "auditRequired": true,
+      "inputHints": ["moduleId", "certificationId", "approvalId"]
+    },
+    {
+      "id": "audit.record",
+      "name": "Audit Evidence Recorder",
+      "agentId": "kra-agent",
+      "moduleId": "audit-ledger",
+      "description": "Record explainable intent, proposal, critique, policy, tool call, and command evidence.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY",
+      "scopes": ["audit:record"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["source", "summary", "evidence"]
+    }
+  ],
+  "sessions": [
+    {
+      "id": "mcp-session-leak-response",
+      "name": "Leak Response Intent Planning",
+      "status": "needs_permission",
+      "actor": "operator-local",
+      "intent": "If a remote cottage leak is detected, close the valve, prove LoRaWAN fallback, and record the decision.",
+      "requestedTools": [
+        "device.search",
+        "automation.rule.compile",
+        "policy.evaluate",
+        "simulation.run",
+        "connectivity.route.evaluate",
+        "narrowband.command.encode",
+        "audit.record"
+      ]
+    },
+    {
+      "id": "mcp-session-module-request",
+      "name": "MQTT Adapter Module Planning",
+      "status": "planned",
+      "actor": "operator-local",
+      "intent": "Plan the MQTT and ESPHome adapter module for local Docker enablement.",
+      "requestedTools": ["module.plan", "policy.evaluate", "audit.record"]
+    }
+  ],
+  "toolCalls": [
+    {
+      "id": "toolcall-20260510-001",
+      "sessionId": "mcp-session-leak-response",
+      "toolId": "device.search",
+      "timestamp": "2026-05-10T05:04:31Z",
+      "actor": "operator-local",
+      "status": "completed",
+      "decision": "allowed",
+      "summary": "Resolved leak sensor, water valve, remote gateway, and LoRaWAN eligible devices."
+    },
+    {
+      "id": "toolcall-20260510-002",
+      "sessionId": "mcp-session-leak-response",
+      "toolId": "narrowband.command.encode",
+      "timestamp": "2026-05-10T05:04:37Z",
+      "actor": "operator-local",
+      "status": "requires_permission",
+      "decision": "explicit_permission_required",
+      "summary": "High-risk P0 command encoding paused until human permission is attached."
+    },
+    {
+      "id": "toolcall-20260510-003",
+      "sessionId": "mcp-session-module-request",
+      "toolId": "module.plan",
+      "timestamp": "2026-05-10T05:07:10Z",
+      "actor": "operator-local",
+      "status": "completed",
+      "decision": "allowed",
+      "summary": "Prepared module enablement plan without mutating Docker or Azure configuration."
+    }
+  ]
+}

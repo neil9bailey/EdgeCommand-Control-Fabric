@@ -1,0 +1,108 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  executeMcpTool,
+  filterMcpTools,
+  findMcpTool,
+  listMcpAudit,
+  loadMcpOrchestrator,
+  planMcpSession,
+  summarizeMcpOrchestrator,
+} from "../src/mcpOrchestrator.mjs";
+
+const operator = {
+  subject: "operator-local",
+  name: "Local Operator",
+  roles: ["Automation.Operator"],
+};
+
+const approver = {
+  subject: "approver-local",
+  name: "Local Approver",
+  roles: ["Automation.AgentApprover"],
+};
+
+test("MCP orchestrator loads registered tools, agents, sessions, and audit", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const summary = summarizeMcpOrchestrator(orchestrator);
+
+  assert.equal(orchestrator.orchestrator.tenant, "vendorlogic.io");
+  assert.equal(summary.schemaVersion, "0.1.0");
+  assert.equal(summary.toolCount, 10);
+  assert.equal(summary.enabledTools, 10);
+  assert.equal(summary.agentCount, 5);
+  assert.equal(summary.approvalRequiredTools, 4);
+  assert.equal(summary.highRiskTools, 4);
+  assert.equal(summary.byModule["mcp-orchestrator"], undefined);
+});
+
+test("MCP tool filtering and lookup use registered manifests only", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const highRiskTools = filterMcpTools(orchestrator, { risk: "high" });
+
+  assert.equal(highRiskTools.length, 4);
+  assert.equal(findMcpTool(orchestrator, "device.search").risk, "low");
+  assert.equal(findMcpTool(orchestrator, "unknown.tool"), null);
+});
+
+test("MCP session planning infers leak response tools and gates high-risk tools", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const plan = planMcpSession(orchestrator, {
+    intent: "If the cottage leak sensor fires, close the valve over LoRaWAN and record audit evidence.",
+  }, operator);
+
+  assert.equal(plan.status, "needs_permission");
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "narrowband.command.encode"));
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "simulation.run" && tool.status === "ready"));
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "automation.rule.compile" && tool.status === "requires_permission"));
+  assert.ok(plan.requiresPermissionCount >= 3);
+});
+
+test("MCP session planning denies unregistered tools", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const plan = planMcpSession(orchestrator, {
+    intent: "Run a mystery tool",
+    toolIds: ["device.search", "external.shell.delete"],
+  }, operator);
+
+  assert.equal(plan.status, "blocked");
+  assert.equal(plan.deniedCount, 1);
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "external.shell.delete" && tool.status === "denied_unregistered"));
+});
+
+test("MCP execution requires explicit permission for high-risk tools", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const result = executeMcpTool(orchestrator, {
+    toolId: "narrowband.command.encode",
+    input: { command: "close valve", ttlSeconds: 300 },
+  }, operator);
+
+  assert.equal(result.status, "requires_permission");
+  assert.equal(result.canExecute, false);
+  assert.equal(result.result, null);
+  assert.ok(result.reasons.includes("explicit_permission_required"));
+  assert.equal(result.event.stream, "agent");
+});
+
+test("MCP execution allows explicitly approved high-risk tools for approver roles", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const result = executeMcpTool(orchestrator, {
+    toolId: "narrowband.command.encode",
+    approved: true,
+    input: { command: "close valve", ttlSeconds: 120 },
+  }, approver);
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.canExecute, true);
+  assert.equal(result.result.encodedBytes, 46);
+  assert.equal(result.result.ttlSeconds, 120);
+  assert.equal(result.event.status, "completed");
+});
+
+test("MCP audit list exposes seed tool calls", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const audit = listMcpAudit(orchestrator, { sessionId: "mcp-session-leak-response" });
+
+  assert.equal(audit.length, 2);
+  assert.ok(audit.some((call) => call.status === "requires_permission"));
+});

@@ -8,6 +8,7 @@ import type {
   DeviceRegistryResponse,
   EventLedgerResponse,
   IntentProposalResponse,
+  McpResponse,
   ModuleCatalog,
   NarrowbandRoutes,
   PlatformOverview,
@@ -47,6 +48,14 @@ export async function fetchOverview(): Promise<PlatformOverview | null> {
 export async function fetchCommandCentre(): Promise<CommandCentreResponse | null> {
   try {
     return await getJson<CommandCentreResponse>("/api/command-centre");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchMcp(): Promise<McpResponse | null> {
+  try {
+    return await getJson<McpResponse>("/api/mcp");
   } catch {
     return null;
   }

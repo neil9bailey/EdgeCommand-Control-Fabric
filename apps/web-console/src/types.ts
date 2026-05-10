@@ -125,7 +125,7 @@ export interface FabricEvent {
   status: string;
   trafficClass: string;
   auditRequired: boolean;
-  payload: Record<string, string | number | boolean | string[]>;
+  payload: Record<string, unknown>;
 }
 
 export interface EventLedgerSummary {
@@ -300,7 +300,83 @@ export interface ApprovalQueueResponse {
   };
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "connectivity" | "identity" | "audit";
+export interface McpSummary {
+  schemaVersion: string;
+  toolCount: number;
+  enabledTools: number;
+  agentCount: number;
+  sessionCount: number;
+  activeSessions: number;
+  auditEventCount: number;
+  highRiskTools: number;
+  approvalRequiredTools: number;
+  byRisk: Record<string, number>;
+  byAgent: Record<string, number>;
+  byModule: Record<string, number>;
+}
+
+export interface McpAgent {
+  id: string;
+  name: string;
+  rule: string;
+  status: string;
+  tools: string[];
+}
+
+export interface McpTool {
+  id: string;
+  name: string;
+  agentId: string;
+  moduleId: string;
+  description: string;
+  status: string;
+  risk: "low" | "medium" | "high";
+  trafficClass: string;
+  scopes: string[];
+  allowedRoles: string[];
+  requiresApproval: boolean;
+  auditRequired: boolean;
+  inputHints: string[];
+}
+
+export interface McpSession {
+  id: string;
+  name: string;
+  status: string;
+  actor: string;
+  intent: string;
+  requestedTools: string[];
+}
+
+export interface McpToolCall {
+  id: string;
+  sessionId: string;
+  toolId: string;
+  timestamp: string;
+  actor: string;
+  status: string;
+  decision: string;
+  summary: string;
+}
+
+export interface McpResponse {
+  orchestrator: {
+    id: string;
+    name: string;
+    mode: string;
+    defaultDecision: string;
+    auditStream: string;
+    tenant: string;
+  };
+  agents: McpAgent[];
+  permissionScopes: Array<{ id: string; name: string; risk: string }>;
+  tools: McpTool[];
+  sessions: McpSession[];
+  audit: McpToolCall[];
+  summary: McpSummary;
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "agents" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -375,6 +451,14 @@ export interface CommandCentreResponse {
     scenarios: AutomationScenario[];
     approvals: ApprovalQueueResponse["approvals"];
     summary: AutomationSummary;
+  };
+  agents: {
+    orchestrator: McpResponse["orchestrator"];
+    tools: McpTool[];
+    agents: McpAgent[];
+    sessions: McpSession[];
+    audit: McpToolCall[];
+    summary: McpSummary;
   };
   connectivity: {
     links: PlatformOverview["links"];

@@ -33,6 +33,16 @@ import {
   defaultLinkInventory,
   defaultNarrowbandRoutes,
 } from "./commandCentre.mjs";
+import {
+  executeMcpTool,
+  filterMcpTools,
+  findMcpSession,
+  findMcpTool,
+  listMcpAudit,
+  loadMcpOrchestrator,
+  planMcpSession,
+  summarizeMcpOrchestrator,
+} from "./mcpOrchestrator.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -43,6 +53,7 @@ const catalog = loadCatalog();
 const deviceRegistry = loadDeviceRegistry();
 const eventLedger = loadEventLedger();
 const automationEngine = loadAutomationEngine();
+const mcpOrchestrator = loadMcpOrchestrator();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -58,6 +69,7 @@ function buildOverview() {
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
+  const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   return {
     ...summary,
     devices: deviceSummary,
@@ -78,10 +90,10 @@ function buildOverview() {
       pendingApprovals: eventSummary.pendingApprovals,
       criticalEvents: eventSummary.criticalCount,
       narrowbandReadiness: "simulated",
-      agentMode: "deterministic mock",
       deviceRegistry: `${deviceSummary.deviceCount} devices / ${deviceSummary.capabilityCount} capabilities`,
       eventLedger: `${eventSummary.eventCount} events / ${eventSummary.auditRequired} audit-bound`,
       automationEngine: `${automationSummary.armedRules} armed rules / ${automationSummary.policyCount} policies`,
+      agentMode: `${mcpSummary.enabledTools} MCP tools / ${mcpSummary.approvalRequiredTools} permission gates`,
     },
     links: defaultLinkInventory(),
   };
@@ -191,6 +203,7 @@ app.get("/api/command-centre", (_req, res) => {
     deviceRegistry,
     eventLedger,
     automationEngine,
+    mcpOrchestrator,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -309,6 +322,90 @@ app.get("/api/automations", (_req, res) => {
     scenes: automationEngine.scenes,
     scenarios: automationEngine.scenarios,
     summary: summarizeAutomationEngine(automationEngine),
+  });
+});
+
+app.get("/api/mcp", (_req, res) => {
+  res.json({
+    orchestrator: mcpOrchestrator.orchestrator,
+    agents: mcpOrchestrator.agents,
+    permissionScopes: mcpOrchestrator.permissionScopes,
+    tools: mcpOrchestrator.tools,
+    sessions: mcpOrchestrator.sessions,
+    audit: mcpOrchestrator.toolCalls,
+    summary: summarizeMcpOrchestrator(mcpOrchestrator),
+  });
+});
+
+app.get("/api/mcp/tools", (req, res) => {
+  const tools = filterMcpTools(mcpOrchestrator, req.query);
+  res.json({
+    tools,
+    summary: summarizeMcpOrchestrator({ ...mcpOrchestrator, tools }),
+    filters: req.query,
+  });
+});
+
+app.get("/api/mcp/tools/:id", (req, res) => {
+  const tool = findMcpTool(mcpOrchestrator, req.params.id);
+  if (!tool) {
+    res.status(404).json({ error: "mcp_tool_not_found", id: req.params.id });
+    return;
+  }
+  res.json({ tool });
+});
+
+app.get("/api/mcp/sessions", (_req, res) => {
+  res.json({
+    sessions: mcpOrchestrator.sessions,
+    summary: summarizeMcpOrchestrator(mcpOrchestrator),
+  });
+});
+
+app.get("/api/mcp/sessions/:id", (req, res) => {
+  const session = findMcpSession(mcpOrchestrator, req.params.id);
+  if (!session) {
+    res.status(404).json({ error: "mcp_session_not_found", id: req.params.id });
+    return;
+  }
+  res.json({ session });
+});
+
+app.post(
+  "/api/mcp/sessions/plan",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(planMcpSession(mcpOrchestrator, req.body || {}, req.auth));
+  },
+);
+
+app.post(
+  "/api/mcp/tools/:id/execute",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const request = {
+      ...(req.body || {}),
+      toolId: req.params.id,
+    };
+    const result = executeMcpTool(mcpOrchestrator, request, req.auth);
+    if (result.decision === "deny_unregistered") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.canExecute ? 200 : 403).json(result);
+  },
+);
+
+app.get("/api/mcp/audit", (req, res) => {
+  const audit = listMcpAudit(mcpOrchestrator, req.query);
+  res.json({
+    audit,
+    summary: {
+      total: audit.length,
+      requiresPermission: audit.filter((call) => call.status === "requires_permission").length,
+      completed: audit.filter((call) => call.status === "completed").length,
+    },
+    filters: req.query,
   });
 });
 

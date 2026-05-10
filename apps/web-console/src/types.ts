@@ -59,6 +59,7 @@ export interface PlatformOverview {
     automationEngine?: string;
     intentEngine?: string;
     riskAgent?: string;
+    simulationLab?: string;
   };
   links: Array<{
     id: string;
@@ -294,11 +295,22 @@ export interface ApprovalQueueResponse {
     status: string;
     requiredRoles: string[];
     reasons: string[];
+    simulation?: {
+      required: boolean;
+      attached: boolean;
+      reportId: string | null;
+      scenarioId: string | null;
+      variantId: string | null;
+      status: string;
+      safetyVerdict: string;
+      evidence: string[];
+    };
   }>;
   summary: {
     pending: number;
     total: number;
     sourceScenario: string;
+    simulationAttached?: number;
   };
 }
 
@@ -378,7 +390,185 @@ export interface McpResponse {
   summary: McpSummary;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "agents" | "risk" | "connectivity" | "identity" | "audit";
+export interface SimulationSummary {
+  schemaVersion: string;
+  scenarioCount: number;
+  variantCount: number;
+  failureModeCount: number;
+  linkCount: number;
+  simulatedDeviceGroupCount: number;
+  reportTemplateCount: number;
+  approvalAttachmentReady: number;
+  narrowbandVariantCount: number;
+  recentReportCount?: number;
+  recentApprovalAttachmentCount?: number;
+  byRisk: Record<string, number>;
+  byTrafficClass: Record<string, number>;
+  byFailureCategory: Record<string, number>;
+}
+
+export interface SimulationLink {
+  id: string;
+  name: string;
+  class: string;
+  status: string;
+  latencyMs: number;
+  jitterMs: number;
+  maxPayloadBytes: number;
+  ackSupported: boolean;
+  carries: string[];
+  energyCost: string;
+}
+
+export interface SimulationDeviceGroup {
+  id: string;
+  name: string;
+  siteId: string;
+  deviceIds: string[];
+  capabilities: string[];
+  stateSource: string;
+  status: string;
+}
+
+export interface SimulationFailureMode {
+  id: string;
+  name: string;
+  category: string;
+  severity: "medium" | "high" | string;
+  target: string;
+  effect: string;
+}
+
+export interface SimulationVariantDefinition {
+  id: string;
+  name: string;
+  failureModes: string[];
+  expectedOutcome: string;
+}
+
+export interface SimulationScenarioDefinition {
+  id: string;
+  name: string;
+  moduleId: string;
+  automationScenarioId: string;
+  risk: "medium" | "high" | string;
+  trafficClass: string;
+  objective: string;
+  defaultVariantId: string;
+  variants: SimulationVariantDefinition[];
+}
+
+export interface SimulationRecentReport {
+  reportId: string;
+  createdAt: string;
+  scenarioId: string;
+  scenarioName: string;
+  status: string;
+  variantCount: number;
+  approvalAttachmentCount: number;
+  routePassCount: number;
+  routeFailCount: number;
+  nextActions: string[];
+}
+
+export interface SimulationRouteOutcome {
+  commandId: string;
+  deviceId: string | null;
+  selectedPath: string;
+  trafficClass: string;
+  encodedBytes: number;
+  maxPayloadBytes: number;
+  latencyMs: number;
+  jitterMs: number;
+  ackRequired: boolean;
+  ackSupported: boolean;
+  payloadFits: boolean;
+  pathAvailable: boolean;
+  latencyFits: boolean;
+  ackFits: boolean;
+  status: string;
+}
+
+export interface SimulationApprovalAttachment {
+  id: string;
+  reportId: string;
+  scenarioId: string;
+  variantId: string;
+  commandId: string;
+  ruleId: string;
+  status: string;
+  safetyVerdict: string;
+  evidence: string[];
+}
+
+export interface SimulationVariantResult {
+  id: string;
+  name: string;
+  status: string;
+  expectedOutcome: string;
+  failureModes: string[];
+  failureModeDetails: SimulationFailureMode[];
+  automation: AutomationEvaluation | null;
+  links: SimulationLink[];
+  routeOutcomes: SimulationRouteOutcome[];
+  approvalAttachments: SimulationApprovalAttachment[];
+  safetyVerdict: string;
+}
+
+export interface SimulationReport {
+  reportId: string;
+  createdAt: string;
+  lab: {
+    id: string;
+    name: string;
+    mode: string;
+    tenant: string;
+    executionBoundary: string;
+    defaultScenario: string;
+    rule: string;
+  };
+  scenario: {
+    id: string;
+    name: string;
+    moduleId: string;
+    automationScenarioId: string;
+    risk: string;
+    trafficClass: string;
+    objective: string;
+  };
+  status: string;
+  summary: {
+    variantCount: number;
+    passedCount: number;
+    safeHoldCount: number;
+    failedCount: number;
+    commandCount: number;
+    pendingApprovalCount: number;
+    blockedCommandCount: number;
+    approvalAttachmentCount: number;
+    routePassCount: number;
+    routeFailCount: number;
+    byStatus: Record<string, number>;
+  };
+  variants: SimulationVariantResult[];
+  approvalAttachments: SimulationApprovalAttachment[];
+  nextActions: string[];
+  events: FabricEvent[];
+}
+
+export interface SimulationLabResponse {
+  lab: SimulationReport["lab"];
+  summary: SimulationSummary;
+  links: SimulationLink[];
+  simulatedDevices: SimulationDeviceGroup[];
+  failureModes: SimulationFailureMode[];
+  scenarios: SimulationScenarioDefinition[];
+  reportTemplates: Array<{ id: string; name: string; requiredFields: string[] }>;
+  recentReports: SimulationRecentReport[];
+  rule: string;
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -463,6 +653,7 @@ export interface CommandCentreResponse {
     summary: McpSummary;
   };
   risk: KraDashboardResponse;
+  simulations: SimulationLabResponse;
   connectivity: {
     links: PlatformOverview["links"];
     routes: NarrowbandRoutes["routes"];

@@ -224,8 +224,33 @@ Verification:
 - API verification for `/api/kra`, `/api/kra/evaluate`, `/api/intent/propose`, and `/api/command-centre`.
 - Browser verification for the Risk workspace, KRA operations panel, Human Intent Workbench KRA findings, and clean browser console.
 
+### E10 - Simulation Lab
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed Simulation Lab package with deterministic scenarios, link constraints, simulated device groups, failure modes, variants, and report templates.
+- API gateway simulation service for dashboard data, scenario runs, variant runs, failure injection, route proof, report generation, and simulation audit events.
+- `/api/simulations`, `/api/simulations/run`, and `/api/simulations/scenarios/:id/run` endpoints.
+- Leak/shutoff, broadband outage, LoRaWAN delay, payload pressure, manual override, offline sensor, and EV reserve dry-run coverage.
+- Approval queue records now carry attached simulation evidence when high-risk commands require simulation before approval.
+- Global Command Centre Simulations workspace and Simulation Lab dashboard panel in the web console.
+- Tests for simulation loading, leak shutoff approval evidence, broadband outage LoRaWAN routing, payload constraints, safe-hold failure injection, dashboard reports, approval evidence mapping, and command-centre simulation integration.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/simulations`, `/api/simulations/scenarios/:id/run`, `/api/approvals`, and `/api/command-centre`.
+- Browser verification for the Simulations workspace, Simulation Lab panel, remote-cottage outage run, LoRaWAN route proof, approval attachment evidence, and clean browser console.
+
 ## Next
 
-### E10 - Simulation Lab
+### E11 - Human Approval And Policy Workflow
 
 Status: next planned build slice.

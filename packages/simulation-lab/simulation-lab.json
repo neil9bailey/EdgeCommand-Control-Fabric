@@ -1,0 +1,242 @@
+{
+  "schemaVersion": "0.1.0",
+  "lab": {
+    "id": "simulation-lab",
+    "name": "Simulation Lab",
+    "mode": "deterministic-local",
+    "tenant": "vendorlogic.io",
+    "executionBoundary": "simulation-only",
+    "defaultScenario": "sim-cottage-broadband-outage",
+    "rule": "Simulations run on cloned device and link state; physical actuation stays blocked until policy, approval, signing, and command routing complete."
+  },
+  "links": [
+    {
+      "id": "lan",
+      "name": "Local LAN",
+      "class": "lan_local",
+      "status": "available",
+      "latencyMs": 8,
+      "jitterMs": 2,
+      "maxPayloadBytes": 1500,
+      "ackSupported": true,
+      "carries": ["P0_EMERGENCY", "P1_SECURITY", "P2_CONTROL", "P3_TELEMETRY"],
+      "energyCost": "low"
+    },
+    {
+      "id": "broadband",
+      "name": "Broadband WAN",
+      "class": "wan_broadband",
+      "status": "degraded",
+      "latencyMs": 42,
+      "jitterMs": 18,
+      "maxPayloadBytes": 1200,
+      "ackSupported": true,
+      "carries": ["P1_SECURITY", "P2_CONTROL", "P3_TELEMETRY", "P4_BULK"],
+      "energyCost": "medium"
+    },
+    {
+      "id": "lte-m",
+      "name": "LTE-M Remote",
+      "class": "cellular_ltem",
+      "status": "standby",
+      "latencyMs": 470,
+      "jitterMs": 120,
+      "maxPayloadBytes": 256,
+      "ackSupported": true,
+      "carries": ["P0_EMERGENCY", "P1_SECURITY", "P2_CONTROL", "P3_TELEMETRY"],
+      "energyCost": "medium"
+    },
+    {
+      "id": "lorawan",
+      "name": "LoRaWAN Emergency",
+      "class": "lorawan",
+      "status": "available",
+      "latencyMs": 1850,
+      "jitterMs": 520,
+      "maxPayloadBytes": 51,
+      "ackSupported": true,
+      "carries": ["P0_EMERGENCY", "P1_SECURITY", "P3_TELEMETRY"],
+      "energyCost": "very_low"
+    }
+  ],
+  "simulatedDevices": [
+    {
+      "id": "sim-home-water-stack",
+      "name": "Home Water Safety Stack",
+      "siteId": "home-hq",
+      "deviceIds": ["dev-leak-utility-01", "dev-water-valve-main-01", "dev-flow-main-01"],
+      "capabilities": ["leak_sensor", "water_valve", "flow_meter"],
+      "stateSource": "device-registry-clone",
+      "status": "ready"
+    },
+    {
+      "id": "sim-cottage-narrowband-stack",
+      "name": "Remote Cottage Narrowband Stack",
+      "siteId": "remote-cottage",
+      "deviceIds": ["dev-cottage-gateway-01", "dev-cottage-leak-01", "dev-cottage-valve-01"],
+      "capabilities": ["remote_gateway", "leak_sensor", "water_valve"],
+      "stateSource": "device-registry-clone",
+      "status": "ready"
+    },
+    {
+      "id": "sim-energy-reserve-stack",
+      "name": "Energy Reserve Stack",
+      "siteId": "home-hq",
+      "deviceIds": ["dev-energy-meter-01", "dev-ev-charger-01"],
+      "capabilities": ["energy_meter", "ev_charger"],
+      "stateSource": "device-registry-clone",
+      "status": "ready"
+    }
+  ],
+  "failureModes": [
+    {
+      "id": "broadband_outage",
+      "name": "Broadband Outage",
+      "category": "connectivity",
+      "severity": "high",
+      "target": "broadband",
+      "effect": "Broadband is unavailable and remote P0 traffic must use constrained fallback paths."
+    },
+    {
+      "id": "lorawan_delay",
+      "name": "LoRaWAN Delay Injection",
+      "category": "connectivity",
+      "severity": "medium",
+      "target": "lorawan",
+      "effect": "LoRaWAN latency and jitter are increased while payload and acknowledgement checks remain enforced."
+    },
+    {
+      "id": "payload_pressure",
+      "name": "Payload Budget Pressure",
+      "category": "connectivity",
+      "severity": "medium",
+      "target": "lorawan",
+      "effect": "LoRaWAN payload budget is tightened to prove semantic commands remain compact."
+    },
+    {
+      "id": "manual_override_main_valve",
+      "name": "Main Valve Manual Override",
+      "category": "physical_safety",
+      "severity": "high",
+      "target": "dev-water-valve-main-01",
+      "effect": "Home water valve reports manual override and any physical actuation must hold safe."
+    },
+    {
+      "id": "cottage_manual_override",
+      "name": "Cottage Valve Manual Override",
+      "category": "physical_safety",
+      "severity": "high",
+      "target": "dev-cottage-valve-01",
+      "effect": "Remote valve reports manual override and narrowband actuation must hold safe."
+    },
+    {
+      "id": "sensor_offline",
+      "name": "Sensor Offline",
+      "category": "device_state",
+      "severity": "medium",
+      "target": "dev-leak-utility-01",
+      "effect": "Leak sensor is unavailable and the automation engine must avoid fabricating a trigger."
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "sim-home-leak-shutoff",
+      "name": "Home Leak Shutoff Lab",
+      "moduleId": "water-management",
+      "automationScenarioId": "scenario-home-leak",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "objective": "Prove a home leak can plan a valve close and notification while remaining simulation and approval gated.",
+      "defaultVariantId": "variant-home-lan",
+      "variants": [
+        {
+          "id": "variant-home-lan",
+          "name": "LAN Dry Run",
+          "failureModes": [],
+          "expectedOutcome": "passed_pending_approval"
+        },
+        {
+          "id": "variant-home-manual-override",
+          "name": "Manual Override Hold",
+          "failureModes": ["manual_override_main_valve"],
+          "expectedOutcome": "safe_hold"
+        },
+        {
+          "id": "variant-home-sensor-offline",
+          "name": "Offline Sensor No-Trigger",
+          "failureModes": ["sensor_offline"],
+          "eventPatch": {
+            "observedState": { "leak": false, "battery": 0, "offline": true }
+          },
+          "expectedOutcome": "safe_hold"
+        }
+      ]
+    },
+    {
+      "id": "sim-cottage-broadband-outage",
+      "name": "Remote Cottage Broadband Outage Lab",
+      "moduleId": "water-management",
+      "automationScenarioId": "scenario-cottage-leak-lorawan",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "objective": "Prove broadband outage fallback, compact LoRaWAN command routing, and approval evidence for remote water shutoff.",
+      "defaultVariantId": "variant-cottage-lorawan",
+      "variants": [
+        {
+          "id": "variant-cottage-lorawan",
+          "name": "Broadband Down, LoRaWAN Ready",
+          "failureModes": ["broadband_outage"],
+          "expectedOutcome": "passed_pending_approval"
+        },
+        {
+          "id": "variant-cottage-delay",
+          "name": "LoRaWAN Delay And Ack",
+          "failureModes": ["broadband_outage", "lorawan_delay"],
+          "expectedOutcome": "passed_pending_approval"
+        },
+        {
+          "id": "variant-cottage-payload",
+          "name": "Payload Budget Edge",
+          "failureModes": ["broadband_outage", "payload_pressure"],
+          "expectedOutcome": "passed_pending_approval"
+        },
+        {
+          "id": "variant-cottage-manual-override",
+          "name": "Remote Manual Override Hold",
+          "failureModes": ["broadband_outage", "cottage_manual_override"],
+          "expectedOutcome": "safe_hold"
+        }
+      ]
+    },
+    {
+      "id": "sim-ev-reserve-hold",
+      "name": "EV Reserve Policy Lab",
+      "moduleId": "ev-charging",
+      "automationScenarioId": "scenario-ev-reserve",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "objective": "Prove energy reserve policy holds can be simulated without human approval or physical actuation.",
+      "defaultVariantId": "variant-ev-policy-hold",
+      "variants": [
+        {
+          "id": "variant-ev-policy-hold",
+          "name": "Reserve Hold Dry Run",
+          "failureModes": [],
+          "expectedOutcome": "passed"
+        }
+      ]
+    }
+  ],
+  "reportTemplates": [
+    {
+      "id": "approval-attachment",
+      "name": "Approval Evidence Attachment",
+      "requiredFields": ["scenarioId", "variantId", "commandId", "routeStatus", "payloadFits", "safetyVerdict"]
+    },
+    {
+      "id": "narrowband-route-proof",
+      "name": "Narrowband Route Proof",
+      "requiredFields": ["selectedPath", "encodedBytes", "maxPayloadBytes", "latencyMs", "ackRequired", "ackSupported"]
+    }
+  ]
+}

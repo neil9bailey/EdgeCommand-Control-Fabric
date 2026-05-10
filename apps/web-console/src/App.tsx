@@ -48,9 +48,11 @@ import {
   fetchKra,
   fetchNarrowbandRoutes,
   fetchOverview,
+  fetchSimulationLab,
   proposeIntent,
   recordIntentDecision,
   runAutomationScenario,
+  runSimulationScenario,
 } from "./api";
 import type {
   AuthStatus,
@@ -71,6 +73,8 @@ import type {
   ModuleDefinition,
   NarrowbandRoutes,
   PlatformOverview,
+  SimulationLabResponse,
+  SimulationReport,
 } from "./types";
 
 const categoryIcons: Record<string, LucideIcon> = {
@@ -111,6 +115,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   automations: Settings2,
   agents: GitBranch,
   risk: Shield,
+  simulations: FlaskConical,
   connectivity: RadioTower,
   identity: Shield,
   audit: Activity,
@@ -194,6 +199,9 @@ function App() {
   const [automations, setAutomations] = useState<AutomationResponse | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [kra, setKra] = useState<KraDashboardResponse | null>(null);
+  const [simulationLab, setSimulationLab] = useState<SimulationLabResponse | null>(null);
+  const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null);
+  const [simulationLoading, setSimulationLoading] = useState(false);
   const [automationEvaluation, setAutomationEvaluation] = useState<AutomationEvaluation | null>(null);
   const [automationLoading, setAutomationLoading] = useState(false);
   const [commandCentre, setCommandCentre] = useState<CommandCentreResponse | null>(null);
@@ -217,6 +225,7 @@ function App() {
     void fetchAutomations().then(setAutomations);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
+    void fetchSimulationLab().then(setSimulationLab);
     void fetchCommandCentre().then(setCommandCentre);
   }, []);
 
@@ -272,6 +281,15 @@ function App() {
       setAutomationEvaluation(await runAutomationScenario(scenarioId));
     } finally {
       setAutomationLoading(false);
+    }
+  }
+
+  async function runSimulationDrill(scenarioId: string, variantId?: string) {
+    setSimulationLoading(true);
+    try {
+      setSimulationReport(await runSimulationScenario(scenarioId, variantId));
+    } finally {
+      setSimulationLoading(false);
     }
   }
 
@@ -341,6 +359,7 @@ function App() {
           <Metric label="Audit" value={eventLedger?.summary.auditRequired || overview?.events?.auditRequired || "-"} detail="durable gates" tone="warn" />
           <Metric label="Rules" value={automations?.summary.armedRules || overview?.automation?.armedRules || "-"} detail="armed automations" tone="good" />
           <Metric label="Policy" value={automations?.summary.policyCount || overview?.automation?.policyCount || "-"} detail="safety packs" tone="danger" />
+          <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
           <Metric label="Approvals" value={approvals?.summary.pending || eventLedger?.summary.pendingApprovals || overview?.commandCentre.pendingApprovals || 4} detail="pending gates" tone="warn" />
@@ -365,6 +384,12 @@ function App() {
           evaluation={automationEvaluation}
           loading={automationLoading}
           onRunScenario={runScenario}
+        />
+        <SimulationLabPanel
+          simulation={simulationLab || commandCentre?.simulations || null}
+          report={simulationReport}
+          loading={simulationLoading}
+          onRunScenario={runSimulationDrill}
         />
         <KraOpsPanel kra={kra || commandCentre?.risk || null} />
 
@@ -703,6 +728,57 @@ function CommandCentreWorkspaceView({
     );
   }
 
+  if (activeWorkspace === "simulations") {
+    return (
+      <div className="ops-workspace simulation-workspace">
+        <div className="state-rack simulation-state-rack">
+          <div>
+            <span>Scenarios</span>
+            <strong>{commandCentre.simulations.summary.scenarioCount}</strong>
+          </div>
+          <div>
+            <span>Variants</span>
+            <strong>{commandCentre.simulations.summary.variantCount}</strong>
+          </div>
+          <div>
+            <span>Failure Modes</span>
+            <strong>{commandCentre.simulations.summary.failureModeCount}</strong>
+          </div>
+          <div>
+            <span>Attachments</span>
+            <strong>{commandCentre.simulations.summary.recentApprovalAttachmentCount || 0}</strong>
+          </div>
+        </div>
+        <div className="ops-table simulation-ops-table">
+          <div className="ops-row ops-head">
+            <span>Scenario</span>
+            <span>Module</span>
+            <span>Risk</span>
+            <span>Variants</span>
+            <span>Traffic</span>
+          </div>
+          {commandCentre.simulations.scenarios.map((scenario) => (
+            <div className="ops-row" key={scenario.id}>
+              <strong>{scenario.name}</strong>
+              <span>{scenario.moduleId.replace(/-/g, " ")}</span>
+              <StatusPill tone={riskTone(scenario.risk as ModuleDefinition["risk"])} label={scenario.risk} />
+              <span>{scenario.variants.length}</span>
+              <StatusPill tone={trafficTone(scenario.trafficClass)} label={scenario.trafficClass} />
+            </div>
+          ))}
+        </div>
+        <div className="agent-session-strip">
+          {commandCentre.simulations.recentReports.map((report) => (
+            <div key={report.reportId}>
+              <strong>{report.scenarioName}</strong>
+              <span>{report.status.replace(/_/g, " ")} / {report.approvalAttachmentCount} attachment(s)</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (activeWorkspace === "connectivity") {
     return (
       <div className="ops-table connectivity-ops-table">
@@ -913,6 +989,140 @@ function AutomationOpsPanel({
               <div className="event-empty">
                 <Activity size={18} />
                 <span>Run a drill scenario to generate command plans.</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SimulationLabPanel({
+  simulation,
+  report,
+  loading,
+  onRunScenario,
+}: {
+  simulation: SimulationLabResponse | null;
+  report: SimulationReport | null;
+  loading: boolean;
+  onRunScenario: (scenarioId: string, variantId?: string) => void;
+}) {
+  const scenarios = simulation?.scenarios || [];
+  const links = report?.variants[0]?.links || simulation?.links || [];
+  const routeOutcomes = report?.variants.flatMap((variant) => variant.routeOutcomes) || [];
+  const attachments = report?.approvalAttachments || [];
+  const recentReports = simulation?.recentReports || [];
+
+  return (
+    <section className="simulation-lab" aria-label="Simulation lab">
+      <div className="section-header simulation-header">
+        <div>
+          <p className="eyebrow">Simulation Lab</p>
+          <h2>Failure Injection And Approval Evidence</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${simulation?.summary.scenarioCount || 0} labs`} />
+          <StatusPill tone="warn" label={`${simulation?.summary.failureModeCount || 0} failures`} />
+          <StatusPill tone={report?.status === "failed" ? "danger" : "good"} label={report?.status.replace(/_/g, " ") || "ready"} />
+        </div>
+      </div>
+
+      <div className="simulation-grid">
+        <div className="simulation-panel scenario-panel">
+          <div className="section-header compact">
+            <h3>Scenario Runner</h3>
+            <FlaskConical size={18} />
+          </div>
+          <div className="scenario-list">
+            {scenarios.map((scenario) => (
+              <button key={scenario.id} onClick={() => onRunScenario(scenario.id)} disabled={loading}>
+                <span>{scenario.name}</span>
+                <em>{scenario.variants.length} variants / {scenario.trafficClass}</em>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="simulation-panel">
+          <div className="section-header compact">
+            <h3>Link Constraints</h3>
+            <RadioTower size={18} />
+          </div>
+          <div className="sim-link-list">
+            {links.map((link) => (
+              <div className="sim-link-row" key={link.id}>
+                <div>
+                  <strong>{link.name}</strong>
+                  <span>{link.latencyMs}ms / {link.maxPayloadBytes} bytes / {link.energyCost}</span>
+                </div>
+                <StatusPill tone={link.status === "available" ? "good" : link.status === "down" ? "danger" : "warn"} label={link.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="simulation-panel">
+          <div className="section-header compact">
+            <h3>{report ? report.scenario.name : "Recent Reports"}</h3>
+            <ClipboardCheck size={18} />
+          </div>
+          {report ? (
+            <div className="sim-report-list">
+              {report.variants.map((variant) => (
+                <div className="sim-report-row" key={variant.id}>
+                  <div>
+                    <strong>{variant.name}</strong>
+                    <span>{variant.failureModes.map(titleFromId).join(", ") || "Nominal"} / {variant.safetyVerdict.replace(/_/g, " ")}</span>
+                  </div>
+                  <StatusPill tone={variant.status === "failed" || variant.status === "blocked" ? "danger" : variant.status === "safe_hold" ? "warn" : "good"} label={variant.status.replace(/_/g, " ")} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="sim-report-list">
+              {recentReports.map((item) => (
+                <div className="sim-report-row" key={item.reportId}>
+                  <div>
+                    <strong>{item.scenarioName}</strong>
+                    <span>{item.variantCount} variant(s) / {item.approvalAttachmentCount} attachment(s)</span>
+                  </div>
+                  <StatusPill tone={item.status === "failed" ? "danger" : item.status.includes("approval") ? "warn" : "good"} label={item.status.replace(/_/g, " ")} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="simulation-panel">
+          <div className="section-header compact">
+            <h3>Route Proof</h3>
+            <GitBranch size={18} />
+          </div>
+          <div className="sim-route-list">
+            {routeOutcomes.slice(0, 5).map((route) => (
+              <div className="sim-route-row" key={`${route.commandId}-${route.selectedPath}`}>
+                <div>
+                  <strong>{route.selectedPath}</strong>
+                  <span>{route.encodedBytes}/{route.maxPayloadBytes} bytes / {route.latencyMs}ms / ack {route.ackRequired ? "required" : "none"}</span>
+                </div>
+                <StatusPill tone={route.status === "pass" ? "good" : "danger"} label={route.status} />
+              </div>
+            ))}
+            {attachments.slice(0, 3).map((attachment) => (
+              <div className="sim-route-row attachment" key={attachment.id}>
+                <div>
+                  <strong>{attachment.commandId}</strong>
+                  <span>{attachment.safetyVerdict.replace(/_/g, " ")}</span>
+                </div>
+                <StatusPill tone="warn" label="attached" />
+              </div>
+            ))}
+            {routeOutcomes.length === 0 && attachments.length === 0 && (
+              <div className="event-empty">
+                <Activity size={18} />
+                <span>Run a simulation to generate route proof and approval attachments.</span>
               </div>
             )}
           </div>

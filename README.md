@@ -22,7 +22,8 @@ Current status:
 - E07 MCP orchestrator foundation is complete.
 - E08 Automation Intent Partner foundation is complete.
 - E09 Knowledge and Risk Agent foundation is complete.
-- E10 Simulation Lab is the next active build slice.
+- E10 Simulation Lab foundation is complete.
+- E11 Human Approval and Policy Workflow is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -59,6 +60,7 @@ Local URLs:
 - MCP orchestrator API: http://localhost:3101/api/mcp
 - Intent engine API: http://localhost:3101/api/intent
 - KRA engine API: http://localhost:3101/api/kra
+- Simulation lab API: http://localhost:3101/api/simulations
 
 Docker Desktop target:
 

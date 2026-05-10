@@ -333,7 +333,7 @@ h3 {
 
 .workspace-tabs {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 1px;
   background: var(--line);
 }
@@ -500,6 +500,10 @@ h3 {
 
 .risk-ops-table .ops-row {
   grid-template-columns: minmax(188px, 1.4fr) minmax(120px, 0.8fr) minmax(72px, 0.55fr) minmax(84px, 0.65fr) minmax(74px, 0.55fr);
+}
+
+.simulation-ops-table .ops-row {
+  grid-template-columns: minmax(188px, 1.4fr) minmax(116px, 0.85fr) minmax(72px, 0.55fr) minmax(74px, 0.55fr) minmax(104px, 0.75fr);
 }
 
 .connectivity-ops-table .ops-row {
@@ -877,6 +881,85 @@ h3 {
   border-left: 4px solid var(--amber);
   border-radius: 0 8px 8px 0;
   background: #fff8ec;
+}
+
+.simulation-lab {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.simulation-header {
+  background:
+    linear-gradient(90deg, rgba(31, 122, 92, 0.12), rgba(111, 76, 123, 0.1)),
+    #fff8ec;
+}
+
+.simulation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+}
+
+.simulation-panel {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(255, 253, 246, 0.98);
+}
+
+.sim-link-list,
+.sim-report-list,
+.sim-route-list {
+  display: grid;
+  gap: 8px;
+}
+
+.sim-link-row,
+.sim-report-row,
+.sim-route-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.sim-link-row strong,
+.sim-link-row span,
+.sim-report-row strong,
+.sim-report-row span,
+.sim-route-row strong,
+.sim-route-row span {
+  display: block;
+  min-width: 0;
+}
+
+.sim-link-row strong,
+.sim-report-row strong,
+.sim-route-row strong {
+  font-size: 12px;
+}
+
+.sim-link-row span,
+.sim-report-row span,
+.sim-route-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.sim-route-row.attachment {
+  border-left: 4px solid var(--blue);
+  border-radius: 0 8px 8px 0;
 }
 
 .kra-ops {
@@ -1752,6 +1835,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .simulation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .kra-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1794,6 +1881,7 @@ h3 {
   .command-band,
     .event-grid,
     .automation-grid,
+    .simulation-grid,
     .kra-grid,
     .dashboard-grid,
     .proposal-grid,

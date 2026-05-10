@@ -3,6 +3,11 @@ import { summarizeDeviceRegistry } from "./deviceRegistry.mjs";
 import { filterEvents, summarizeEventLedger } from "./eventLedger.mjs";
 import { buildKraDashboard, summarizeKraEngine } from "./kraEngine.mjs";
 import { summarizeMcpOrchestrator } from "./mcpOrchestrator.mjs";
+import {
+  buildApprovalSimulationEvidence,
+  buildSimulationDashboard,
+  summarizeSimulationLab,
+} from "./simulationLab.mjs";
 
 function titleFromId(value) {
   return String(value || "")
@@ -65,15 +70,18 @@ export function defaultNarrowbandRoutes() {
   };
 }
 
-export function buildApprovalQueue(automationEngine, deviceRegistry) {
+export function buildApprovalQueue(automationEngine, deviceRegistry, simulationLab = null) {
   const scenario = findScenario(automationEngine, "scenario-cottage-leak-lorawan");
   if (!scenario) {
     return {
       approvals: [],
-      summary: { pending: 0, total: 0, sourceScenario: null },
+      summary: { pending: 0, total: 0, sourceScenario: null, simulationAttached: 0 },
     };
   }
 
+  const simulationEvidence = simulationLab
+    ? buildApprovalSimulationEvidence({ lab: simulationLab, automationEngine, deviceRegistry })
+    : { byCommandId: {} };
   const evaluation = evaluateAutomation(automationEngine, deviceRegistry, scenario, {
     subject: "system-preview",
     name: "System Preview",
@@ -93,6 +101,16 @@ export function buildApprovalQueue(automationEngine, deviceRegistry) {
       status: command.status,
       requiredRoles: ["Automation.Admin", "Automation.Security", "Automation.AgentApprover"],
       reasons: command.policyReasons,
+      simulation: simulationEvidence.byCommandId[command.id] || {
+        required: command.simulationRequired,
+        attached: false,
+        reportId: null,
+        scenarioId: null,
+        variantId: null,
+        status: "missing",
+        safetyVerdict: "simulation_required",
+        evidence: [],
+      },
     }));
 
   return {
@@ -101,11 +119,12 @@ export function buildApprovalQueue(automationEngine, deviceRegistry) {
       pending: approvals.filter((approval) => approval.status === "pending_approval").length,
       total: approvals.length,
       sourceScenario: scenario.id,
+      simulationAttached: approvals.filter((approval) => approval.simulation?.attached).length,
     },
   };
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, approvalSummary, mcpSummary, kraSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -173,6 +192,18 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
       ],
     },
     {
+      id: "simulations",
+      label: "Simulations",
+      headline: `${simulationSummary.scenarioCount} labs ready`,
+      detail: `${simulationSummary.variantCount} variants, ${simulationSummary.failureModeCount} injectable failures`,
+      status: simulationSummary.approvalAttachmentReady > 0 ? "governed" : "ready",
+      metrics: [
+        { label: "Scenarios", value: simulationSummary.scenarioCount },
+        { label: "Variants", value: simulationSummary.variantCount },
+        { label: "Attachments", value: approvalSummary.simulationAttached || 0 },
+      ],
+    },
+    {
       id: "connectivity",
       label: "Connectivity",
       headline: `${links.length} paths scored`,
@@ -211,7 +242,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestrator, kraDashboard }) {
+function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -275,6 +306,19 @@ function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestr
       evidence: [evaluation.intentClass, "critique-only"],
     }));
 
+  const simulationActions = (simulationDashboard?.recentReports || [])
+    .filter((report) => report.approvalAttachmentCount > 0 || report.status !== "passed")
+    .map((report) => ({
+      id: `simulation-${report.reportId}`,
+      priority: report.status === "failed" ? "P0_EMERGENCY" : "P2_CONTROL",
+      workspaceId: "simulations",
+      title: report.scenarioName,
+      owner: "simulation-lab",
+      status: report.status,
+      detail: `${report.variantCount} variant(s), ${report.approvalAttachmentCount} approval attachment(s)`,
+      evidence: [`route-pass:${report.routePassCount}`, `route-fail:${report.routeFailCount}`],
+    }));
+
   const toolsById = new Map((mcpOrchestrator?.tools || []).map((tool) => [tool.id, tool]));
   const mcpActions = (mcpOrchestrator?.toolCalls || [])
     .filter((call) => call.status === "requires_permission")
@@ -292,15 +336,16 @@ function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestr
       };
     });
 
-  return [...approvalActions, ...mcpActions, ...kraActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 10);
+  return [...approvalActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 12);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, authStatus }) {
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const kraSummary = summarizeKraEngine(kraEngine);
+  const simulationSummary = summarizeSimulationLab(simulationLab);
   const kraDashboard = buildKraDashboard({
     engine: kraEngine,
     catalog,
@@ -309,7 +354,12 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     eventLedger,
     mcpOrchestrator,
   });
-  const approvalQueue = buildApprovalQueue(automationEngine, deviceRegistry);
+  const simulationDashboard = buildSimulationDashboard({
+    lab: simulationLab,
+    automationEngine,
+    deviceRegistry,
+  });
+  const approvalQueue = buildApprovalQueue(automationEngine, deviceRegistry, simulationLab);
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
   const auditEvents = filterEvents(eventLedger, { auditRequired: "true", limit: 8 });
@@ -321,6 +371,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     approvalSummary: approvalQueue.summary,
     mcpSummary,
     kraSummary,
+    simulationSummary,
     links,
     routes: narrowbandRoutes.routes,
     authStatus,
@@ -370,6 +421,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       auditEvents,
       mcpOrchestrator,
       kraDashboard,
+      simulationDashboard,
     }),
     modules: {
       byState: catalog.modules.reduce((acc, module) => {
@@ -398,6 +450,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       summary: mcpSummary,
     },
     risk: kraDashboard,
+    simulations: simulationDashboard,
     connectivity: {
       links,
       routes: narrowbandRoutes.routes,

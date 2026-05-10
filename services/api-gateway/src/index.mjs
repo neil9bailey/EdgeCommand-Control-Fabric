@@ -56,6 +56,12 @@ import {
   loadKraEngine,
   summarizeKraEngine,
 } from "./kraEngine.mjs";
+import {
+  buildSimulationDashboard,
+  loadSimulationLab,
+  runSimulation,
+  summarizeSimulationLab,
+} from "./simulationLab.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -69,6 +75,7 @@ const automationEngine = loadAutomationEngine();
 const mcpOrchestrator = loadMcpOrchestrator();
 const intentEngine = loadIntentEngine();
 const kraEngine = loadKraEngine();
+const simulationLab = loadSimulationLab();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -87,6 +94,7 @@ function buildOverview() {
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const intentSummary = summarizeIntentEngine(intentEngine);
   const kraSummary = summarizeKraEngine(kraEngine);
+  const simulationSummary = summarizeSimulationLab(simulationLab);
   return {
     ...summary,
     devices: deviceSummary,
@@ -113,6 +121,7 @@ function buildOverview() {
       agentMode: `${mcpSummary.enabledTools} MCP tools / ${mcpSummary.approvalRequiredTools} permission gates`,
       intentEngine: `${intentSummary.frameCount} intent frames / propose-only`,
       riskAgent: `${kraSummary.rulePackCount} KRA rule packs / ${kraSummary.sourceCount} sources`,
+      simulationLab: `${simulationSummary.scenarioCount} labs / ${simulationSummary.variantCount} variants`,
     },
     links: defaultLinkInventory(),
   };
@@ -154,6 +163,7 @@ app.get("/api/command-centre", (_req, res) => {
     automationEngine,
     mcpOrchestrator,
     kraEngine,
+    simulationLab,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -389,6 +399,56 @@ app.get("/api/kra", (_req, res) => {
   });
 });
 
+app.get("/api/simulations", (_req, res) => {
+  res.json(buildSimulationDashboard({
+    lab: simulationLab,
+    automationEngine,
+    deviceRegistry,
+  }));
+});
+
+app.post(
+  "/api/simulations/run",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = runSimulation({
+      lab: simulationLab,
+      automationEngine,
+      deviceRegistry,
+      scenarioId: req.body?.scenarioId,
+      variantId: req.body?.variantId,
+      failureModes: req.body?.failureModes,
+      actor: req.auth,
+    });
+    if (result.error === "simulation_scenario_not_found" || result.error === "simulation_variant_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/simulations/scenarios/:id/run",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = runSimulation({
+      lab: simulationLab,
+      automationEngine,
+      deviceRegistry,
+      scenarioId: req.params.id,
+      variantId: req.body?.variantId,
+      failureModes: req.body?.failureModes,
+      actor: req.auth,
+    });
+    if (result.error === "simulation_scenario_not_found" || result.error === "simulation_variant_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
 app.post(
   "/api/kra/evaluate",
   requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
@@ -474,7 +534,7 @@ app.post(
 );
 
 app.get("/api/approvals", (_req, res) => {
-  res.json(buildApprovalQueue(automationEngine, deviceRegistry));
+  res.json(buildApprovalQueue(automationEngine, deviceRegistry, simulationLab));
 });
 
 app.get("/api/narrowband/routes", (_req, res) => {

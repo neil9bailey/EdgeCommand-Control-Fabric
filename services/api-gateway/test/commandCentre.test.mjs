@@ -8,6 +8,7 @@ import { loadDeviceRegistry } from "../src/deviceRegistry.mjs";
 import { loadEventLedger } from "../src/eventLedger.mjs";
 import { loadKraEngine } from "../src/kraEngine.mjs";
 import { loadMcpOrchestrator } from "../src/mcpOrchestrator.mjs";
+import { loadSimulationLab } from "../src/simulationLab.mjs";
 
 function commandCentreFixture() {
   const authConfig = buildAuthConfig({ AUTH_MODE: "development", APP_ENV: "development" });
@@ -18,6 +19,7 @@ function commandCentreFixture() {
     automationEngine: loadAutomationEngine(),
     mcpOrchestrator: loadMcpOrchestrator(),
     kraEngine: loadKraEngine(),
+    simulationLab: loadSimulationLab(),
     authStatus: publicAuthStatus(authConfig, {
       provider: "environment",
       keyVaultEnabled: false,
@@ -38,6 +40,7 @@ test("command centre builds all operational workspaces", () => {
     "automations",
     "agents",
     "risk",
+    "simulations",
     "connectivity",
     "identity",
     "audit",
@@ -53,11 +56,14 @@ test("command centre action queue includes safety approval and route attention",
   assert.ok(commandCentre.actionQueue.some((action) => action.id.startsWith("approval-")));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "agents"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "risk"));
+  assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "simulations"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "connectivity"));
   assert.ok(commandCentre.connectivity.routes.some((route) => route.selectedPath === "lorawan"));
   assert.ok(commandCentre.automations.approvals.every((approval) => approval.status === "pending_approval"));
+  assert.ok(commandCentre.automations.approvals.every((approval) => approval.simulation.attached));
   assert.equal(commandCentre.agents.summary.toolCount, 10);
   assert.equal(commandCentre.risk.summary.rulePackCount, 6);
+  assert.equal(commandCentre.simulations.summary.scenarioCount, 3);
 });
 
 test("shared approval queue and narrowband route helpers stay aligned", () => {

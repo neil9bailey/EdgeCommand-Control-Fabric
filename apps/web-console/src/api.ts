@@ -14,6 +14,8 @@ import type {
   ModuleCatalog,
   NarrowbandRoutes,
   PlatformOverview,
+  SimulationLabResponse,
+  SimulationReport,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3101";
@@ -66,6 +68,14 @@ export async function fetchMcp(): Promise<McpResponse | null> {
 export async function fetchKra(): Promise<KraDashboardResponse | null> {
   try {
     return await getJson<KraDashboardResponse>("/api/kra");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchSimulationLab(): Promise<SimulationLabResponse | null> {
+  try {
+    return await getJson<SimulationLabResponse>("/api/simulations");
   } catch {
     return null;
   }
@@ -127,6 +137,16 @@ export async function runAutomationScenario(scenarioId: string): Promise<Automat
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<AutomationEvaluation>;
+}
+
+export async function runSimulationScenario(scenarioId: string, variantId?: string): Promise<SimulationReport> {
+  const response = await fetch(`${API_BASE}/api/simulations/scenarios/${scenarioId}/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ variantId }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<SimulationReport>;
 }
 
 export async function proposeIntent(intent: string): Promise<IntentProposalResponse> {

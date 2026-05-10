@@ -2479,6 +2479,192 @@ export interface MqttEsphomeResponse {
   rule: string;
 }
 
+export interface MatterThreadSummary {
+  schemaVersion: string;
+  fabricStatus: string;
+  bindingCount: number;
+  matterRegistryDevices: number;
+  onlineMatterDevices: number;
+  threadNetworkCount: number;
+  healthyThreadNetworks: number;
+  borderRouterCount: number;
+  onlineBorderRouters: number;
+  commissioningProfileCount: number;
+  readyCommissioningProfiles: number;
+  commandProfileCount: number;
+  approvalRequiredCommands: number;
+  commandableBindings: number;
+  byDeviceType: Record<string, number>;
+  byRisk: Record<string, number>;
+  byThread: Record<string, number>;
+}
+
+export interface MatterFabric {
+  id: string;
+  name: string;
+  fabricId: string;
+  compressedFabricId: string;
+  controllerNodeId: string;
+  rootCaStatus: string;
+  status: string;
+}
+
+export interface ThreadBorderRouter {
+  id: string;
+  name: string;
+  siteId: string;
+  zoneId: string;
+  status: string;
+  transport: string;
+  threadRole: string;
+  rssi: number;
+  lastSeen: string;
+}
+
+export interface ThreadNetwork {
+  id: string;
+  name: string;
+  siteId: string;
+  status: string;
+  borderRouterIds: string[];
+  datasetStatus: string;
+  channel: number;
+  panId: string;
+  extendedPanId: string;
+  meshLocalPrefix: string;
+  borderRouters?: ThreadBorderRouter[];
+  health?: MatterThreadHealthSample | null;
+}
+
+export interface MatterThreadHealthSample {
+  id: string;
+  threadNetworkId: string;
+  status: string;
+  routerCount: number;
+  commissionedThreadDevices: number;
+  packetErrorPercent: number;
+  averageRssi: number;
+}
+
+export interface MatterDeviceBinding {
+  id: string;
+  deviceId: string;
+  nodeId: string;
+  endpoint: number;
+  deviceType: string;
+  clusters: string[];
+  threadNetworkId: string | null;
+  fabricStatus: string;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  device?: DeviceDefinition | null;
+  threadNetwork?: ThreadNetwork | null;
+  readiness: {
+    deviceKnown: boolean;
+    deviceOnline: boolean;
+    fabricReady: boolean;
+    threadHealthy: boolean;
+    canCommand: boolean;
+    registryCapabilities: string[];
+  };
+}
+
+export interface MatterCommissioningProfile {
+  id: string;
+  name: string;
+  deviceId: string;
+  method: string;
+  fabricId: string;
+  threadNetworkId: string | null;
+  requiresApproval: boolean;
+  status: string;
+  checklist: string[];
+  device?: DeviceDefinition | null;
+  threadNetwork?: ThreadNetwork | null;
+}
+
+export interface MatterCommandProfile {
+  id: string;
+  name: string;
+  bindingId: string;
+  deviceId: string;
+  cluster: string;
+  command: string;
+  desiredState: Record<string, string | number | boolean>;
+  requiresApproval: boolean;
+  trafficClass: string;
+  binding?: MatterDeviceBinding | null;
+  device?: DeviceDefinition | null;
+}
+
+export interface MatterCommandPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: MatterThreadResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  command: MatterCommandProfile;
+  binding: MatterDeviceBinding | null;
+  device: DeviceDefinition | null;
+  fabric: MatterFabric;
+  invoke: { nodeId: string | null; endpoint: number | null; cluster: string; command: string; desiredState: Record<string, string | number | boolean>; simulated: boolean };
+  summary: { canExecute: boolean; requiresApproval: boolean; approvalSatisfied: boolean; deviceOnline: boolean; threadPath: boolean };
+  policy: { result: string; rules: Array<{ id: string; name: string; risk: string; requiresApproval: boolean; message: string }> };
+  nextActions: string[];
+  event: FabricEvent;
+  executeAttempted?: boolean;
+}
+
+export interface MatterCommissioningPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: MatterThreadResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  profile: MatterCommissioningProfile;
+  device: DeviceDefinition | null;
+  fabric: MatterFabric;
+  threadNetwork: ThreadNetwork | null;
+  checklist: Array<{ id: string; label: string; passed: boolean }>;
+  summary: { deviceKnown: boolean; threadRequired: boolean; threadHealthy: boolean; requiresApproval: boolean; approvalSatisfied: boolean; canCommission: boolean };
+  nextActions: string[];
+}
+
+export interface MatterThreadIntentPreview {
+  intent: string;
+  match: null | { id: string; name: string; commandId: string | null; commissioningId: string | null; confidence: number; score: number };
+  preview: MatterCommandPreview | MatterCommissioningPreview;
+}
+
+export interface MatterThreadResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultCommissioningId: string;
+    defaultCommandId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  fabric: MatterFabric;
+  summary: MatterThreadSummary;
+  module: ModuleDefinition | null;
+  threadNetworks: ThreadNetwork[];
+  borderRouters: ThreadBorderRouter[];
+  deviceBindings: MatterDeviceBinding[];
+  commissioningProfiles: MatterCommissioningProfile[];
+  commandProfiles: MatterCommandProfile[];
+  healthSamples: MatterThreadHealthSample[];
+  policies: Array<{ id: string; name: string; risk: string; requiresApproval: boolean; message: string }>;
+  intentRecipes: Array<{ id: string; name: string; keywords: string[]; commandId?: string; commissioningId?: string; confidence: number; exampleIntent: string }>;
+  recentMatterRuns: Array<{ id: string; commandId: string; bindingId: string; status: string; actor: string; summary: string }>;
+  rule: string;
+}
+
 export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
@@ -2550,6 +2736,7 @@ export interface CommandCentreResponse {
     marketplace?: ModuleMarketplaceResponse;
     certification?: ModuleCertificationResponse;
     mqttEsphome?: MqttEsphomeResponse;
+    matterThread?: MatterThreadResponse;
   };
   devices: CommandCentreDevice[];
   automations: {
@@ -2571,6 +2758,7 @@ export interface CommandCentreResponse {
   moduleMarketplace?: ModuleMarketplaceResponse;
   moduleCertification?: ModuleCertificationResponse;
   mqttEsphome?: MqttEsphomeResponse;
+  matterThread?: MatterThreadResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

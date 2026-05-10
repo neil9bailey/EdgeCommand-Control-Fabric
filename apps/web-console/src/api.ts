@@ -34,6 +34,10 @@ import type {
   MqttEsphomeIntentPreview,
   MqttEsphomeResponse,
   MqttPublishPreview,
+  MatterCommissioningPreview,
+  MatterCommandPreview,
+  MatterThreadIntentPreview,
+  MatterThreadResponse,
   McpResponse,
   ModuleManifestResponse,
   ModuleManifestIntentPreview,
@@ -247,6 +251,14 @@ export async function fetchModuleCertification(): Promise<ModuleCertificationRes
 export async function fetchMqttEsphome(): Promise<MqttEsphomeResponse | null> {
   try {
     return await getJson<MqttEsphomeResponse>("/api/mqtt-esphome");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchMatterThread(): Promise<MatterThreadResponse | null> {
+  try {
+    return await getJson<MatterThreadResponse>("/api/matter-thread");
   } catch {
     return null;
   }
@@ -565,6 +577,46 @@ export async function previewMqttIntent(intent: string): Promise<MqttEsphomeInte
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<MqttEsphomeIntentPreview>;
+}
+
+export async function previewMatterCommand(commandId: string): Promise<MatterCommandPreview> {
+  const response = await fetch(`${API_BASE}/api/matter-thread/commands/${commandId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<MatterCommandPreview>;
+}
+
+export async function executeMatterCommand(commandId: string): Promise<MatterCommandPreview> {
+  const response = await fetch(`${API_BASE}/api/matter-thread/commands/${commandId}/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<MatterCommandPreview>;
+}
+
+export async function previewMatterCommissioning(commissioningId: string): Promise<MatterCommissioningPreview> {
+  const response = await fetch(`${API_BASE}/api/matter-thread/commissioning/${commissioningId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<MatterCommissioningPreview>;
+}
+
+export async function previewMatterIntent(intent: string): Promise<MatterThreadIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/matter-thread/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<MatterThreadIntentPreview>;
 }
 
 export async function recordApprovalDecision(

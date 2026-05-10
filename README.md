@@ -35,6 +35,7 @@ Current status:
 - E20 Module Marketplace Dashboard foundation is complete.
 - E21 Module Certification and Test Harness foundation is complete.
 - E22 MQTT and ESPHome Adapter foundation is complete.
+- E23 Matter and Thread Adapter foundation is complete.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -84,6 +85,7 @@ Local URLs:
 - Module marketplace API: http://localhost:3101/api/module-marketplace
 - Module certification API: http://localhost:3101/api/module-certification
 - MQTT and ESPHome adapter API: http://localhost:3101/api/mqtt-esphome
+- Matter and Thread adapter API: http://localhost:3101/api/matter-thread
 
 Docker Desktop target:
 

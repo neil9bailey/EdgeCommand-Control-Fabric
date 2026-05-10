@@ -2736,6 +2736,219 @@ h3 {
   padding: 5px 8px;
 }
 
+.matter-thread-panel {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(250, 248, 253, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.matter-header {
+  background:
+    linear-gradient(90deg, rgba(111, 76, 123, 0.14), rgba(45, 111, 143, 0.1)),
+    #faf8fd;
+}
+
+.matter-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 1fr 1.05fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.matter-panel {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(254, 252, 255, 0.98);
+}
+
+.matter-wide {
+  grid-column: 1 / -1;
+}
+
+.matter-binding-list,
+.matter-command-list,
+.matter-thread-list,
+.matter-commission-list,
+.matter-preview-card {
+  display: grid;
+  gap: 9px;
+}
+
+.matter-binding-row,
+.matter-command-row,
+.matter-thread-row,
+.matter-commission-row,
+.matter-preview-card > div,
+.matter-commission-preview,
+.matter-fabric-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px;
+}
+
+.matter-binding-row,
+.matter-command-row,
+.matter-thread-row,
+.matter-commission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.matter-binding-row.active,
+.matter-command-row.active,
+.matter-commission-row.active {
+  border-color: #c7b2d0;
+  background: rgba(238, 230, 244, 0.82);
+}
+
+.matter-thread-row.router {
+  border-left: 4px solid var(--blue);
+  border-radius: 0 8px 8px 0;
+}
+
+.matter-binding-row strong,
+.matter-binding-row span,
+.matter-command-row strong,
+.matter-command-row span,
+.matter-thread-row strong,
+.matter-thread-row span,
+.matter-commission-row strong,
+.matter-commission-row span,
+.matter-preview-card strong,
+.matter-preview-card span,
+.matter-commission-preview strong,
+.matter-commission-preview span,
+.matter-fabric-card strong,
+.matter-fabric-card span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.matter-binding-row strong,
+.matter-command-row strong,
+.matter-thread-row strong,
+.matter-commission-row strong,
+.matter-preview-card strong,
+.matter-commission-preview strong,
+.matter-fabric-card strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.matter-binding-row span,
+.matter-command-row span,
+.matter-thread-row span,
+.matter-commission-row span,
+.matter-preview-card span,
+.matter-commission-preview span,
+.matter-fabric-card span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.matter-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.matter-command-actions button,
+.matter-commission-row button,
+.matter-intent-button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--plum);
+  color: #fff;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.matter-command-actions button:nth-child(2) {
+  background: var(--blue);
+}
+
+.matter-command-actions button:disabled,
+.matter-commission-row button:disabled,
+.matter-intent-button:disabled {
+  opacity: 0.72;
+  cursor: progress;
+}
+
+.matter-intent-button {
+  width: 100%;
+  margin-top: 10px;
+  justify-content: flex-start;
+  background: var(--coal);
+  color: #fff8ec;
+}
+
+.matter-intent-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matter-commission-preview,
+.matter-intent-result {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  border-color: #c7b2d0;
+  background: rgba(238, 230, 244, 0.82);
+  color: #55395f;
+}
+
+.matter-intent-result {
+  padding: 10px;
+  border: 1px solid #c7b2d0;
+  border-radius: 8px;
+}
+
+.matter-intent-result strong,
+.matter-intent-result span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.matter-intent-result strong {
+  font-size: 12px;
+}
+
+.matter-intent-result span {
+  font-size: 11px;
+}
+
+.matter-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.matter-next-actions span {
+  border: 1px solid #c7b2d0;
+  border-radius: 999px;
+  background: rgba(238, 230, 244, 0.82);
+  color: #55395f;
+  padding: 5px 8px;
+}
+
 .approval-workflow-panel {
   margin-bottom: 18px;
   overflow: hidden;
@@ -3887,6 +4100,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .matter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .approval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3948,6 +4165,7 @@ h3 {
     .builder-grid,
     .certification-grid,
     .mqtt-grid,
+    .matter-grid,
     .approval-grid,
     .simulation-grid,
     .kra-grid,

@@ -526,4 +526,29 @@ Verification:
 
 ### E23 - Matter And Thread Adapter
 
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed Matter and Thread adapter package with fabric metadata, Thread networks, border routers, Matter device bindings, commissioning profiles, command profiles, policies, health samples, intent recipes, and recent run seeds.
+- API gateway Matter/Thread service for fabric health, Thread border-router projection, registry-backed device bindings, commissioning preview, command preview, simulated command execution, and intent-to-command/commissioning preview.
+- `/api/matter-thread`, `/api/matter-thread/commissioning/:id/preview`, `/api/matter-thread/commands/:id/preview`, `/api/matter-thread/commands/:id/execute`, and `/api/matter-thread/intent/preview` endpoints.
+- Global Command Centre Modules workspace now includes Matter binding posture and fabric-ready adapter actions.
+- Web console Matter / Thread Adapter panel showing fabric bindings, command previews, simulated invokes, Thread health, commissioning previews, fabric metadata, and intent routing.
+- Tests for fabric summary, dashboard enrichment, command normalization, high-risk approval gating, simulated execution, Thread commissioning health, and natural-language Matter routing.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/matter-thread`, `/api/matter-thread/commands/:id/preview`, `/api/matter-thread/commands/:id/execute`, `/api/matter-thread/commissioning/:id/preview`, and `/api/command-centre`.
+- Browser verification for the Matter / Thread Adapter panel, Fabric Control And Mesh Health, Kitchen Downlights, Thread Health, Matter metric, and clean browser console.
+
+## Next
+
+### E24 - Zigbee Adapter
+
 Status: next planned build slice.

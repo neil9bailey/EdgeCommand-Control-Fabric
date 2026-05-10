@@ -1,0 +1,275 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "matter-thread-adapter-service",
+    "name": "Matter And Thread Adapter",
+    "moduleId": "matter-thread",
+    "mode": "deterministic-local",
+    "executionBoundary": "commissioning-and-command-preview-only",
+    "defaultCommissioningId": "commission-kitchen-downlights",
+    "defaultCommandId": "cmd-matter-kitchen-dim",
+    "rule": "Matter and Thread operations are represented as governed commissioning and command previews; no real fabric mutation, device command, or Thread dataset change is performed in this foundation slice."
+  },
+  "featureModule": {
+    "moduleId": "matter-thread",
+    "state": "foundation",
+    "buildStrategy": "controller-contract-plus-thread-health",
+    "enabledBy": ["module_certification", "human_intent", "operator_dashboard", "matter_thread_adapter_agent"],
+    "buildArtifacts": [
+      "packages/matter-thread/matter-thread.json",
+      "services/api-gateway/src/matterThread.mjs",
+      "apps/web-console MatterThreadPanel",
+      "api contracts and tests"
+    ]
+  },
+  "fabric": {
+    "id": "fabric-home-hq-001",
+    "name": "Home HQ Matter Fabric",
+    "fabricId": "0xECF00001",
+    "compressedFabricId": "0xECF001",
+    "controllerNodeId": "0x000000000001BEEF",
+    "rootCaStatus": "local_dev_seed",
+    "status": "ready"
+  },
+  "threadNetworks": [
+    {
+      "id": "thread-home-hq",
+      "name": "Home HQ Thread Mesh",
+      "siteId": "home-hq",
+      "status": "healthy",
+      "borderRouterIds": ["br-home-hub-01", "br-living-mesh-01"],
+      "datasetStatus": "stored_in_key_vault_ready",
+      "channel": 20,
+      "panId": "0xEC23",
+      "extendedPanId": "ECF0000000000023",
+      "meshLocalPrefix": "fd41:ec:23::/64"
+    }
+  ],
+  "borderRouters": [
+    {
+      "id": "br-home-hub-01",
+      "name": "Home Hub Thread Border Router",
+      "siteId": "home-hq",
+      "zoneId": "hall",
+      "status": "online",
+      "transport": "ethernet",
+      "threadRole": "leader",
+      "rssi": -42,
+      "lastSeen": "2026-05-10T05:00:05Z"
+    },
+    {
+      "id": "br-living-mesh-01",
+      "name": "Living Mesh Border Router",
+      "siteId": "home-hq",
+      "zoneId": "living-room",
+      "status": "standby",
+      "transport": "wifi",
+      "threadRole": "router",
+      "rssi": -57,
+      "lastSeen": "2026-05-10T05:00:02Z"
+    }
+  ],
+  "deviceBindings": [
+    {
+      "id": "matter-kitchen-downlights",
+      "deviceId": "dev-light-kitchen-01",
+      "nodeId": "0x0000000000001001",
+      "endpoint": 1,
+      "deviceType": "dimmable_light",
+      "clusters": ["on_off", "level_control", "color_temperature"],
+      "threadNetworkId": null,
+      "fabricStatus": "commissioned",
+      "risk": "low",
+      "trafficClass": "P2_CONTROL"
+    },
+    {
+      "id": "matter-hall-lantern",
+      "deviceId": "dev-light-hall-01",
+      "nodeId": "0x0000000000001002",
+      "endpoint": 1,
+      "deviceType": "dimmable_light",
+      "clusters": ["on_off", "level_control", "color_temperature"],
+      "threadNetworkId": "thread-home-hq",
+      "fabricStatus": "commissioned",
+      "risk": "low",
+      "trafficClass": "P2_CONTROL"
+    },
+    {
+      "id": "matter-hall-thermostat",
+      "deviceId": "dev-thermostat-hall-01",
+      "nodeId": "0x0000000000002001",
+      "endpoint": 1,
+      "deviceType": "thermostat",
+      "clusters": ["temperature_measurement", "relative_humidity_measurement", "thermostat"],
+      "threadNetworkId": null,
+      "fabricStatus": "commissioned",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL"
+    },
+    {
+      "id": "matter-front-door-contact",
+      "deviceId": "dev-front-door-contact-01",
+      "nodeId": "0x0000000000003001",
+      "endpoint": 1,
+      "deviceType": "contact_sensor",
+      "clusters": ["boolean_state", "power_source"],
+      "threadNetworkId": "thread-home-hq",
+      "fabricStatus": "commissioned",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY"
+    },
+    {
+      "id": "matter-hall-alarm",
+      "deviceId": "dev-hall-alarm-panel-01",
+      "nodeId": "0x0000000000004001",
+      "endpoint": 1,
+      "deviceType": "security_panel",
+      "clusters": ["ias_ace", "basic_information", "power_source"],
+      "threadNetworkId": null,
+      "fabricStatus": "commissioned",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY"
+    }
+  ],
+  "commissioningProfiles": [
+    {
+      "id": "commission-kitchen-downlights",
+      "name": "Commission Kitchen Downlights",
+      "deviceId": "dev-light-kitchen-01",
+      "method": "manual_pairing_code",
+      "fabricId": "fabric-home-hq-001",
+      "threadNetworkId": null,
+      "requiresApproval": false,
+      "status": "ready",
+      "checklist": ["pairing_code_valid", "device_attestation_checked", "fabric_capacity_ok", "registry_binding_exists"]
+    },
+    {
+      "id": "commission-thread-contact",
+      "name": "Commission Thread Contact Sensor",
+      "deviceId": "dev-front-door-contact-01",
+      "method": "qr_code",
+      "fabricId": "fabric-home-hq-001",
+      "threadNetworkId": "thread-home-hq",
+      "requiresApproval": false,
+      "status": "ready",
+      "checklist": ["qr_code_valid", "thread_dataset_available", "border_router_online", "registry_binding_exists"]
+    },
+    {
+      "id": "commission-hall-alarm-panel",
+      "name": "Commission Hall Alarm Panel",
+      "deviceId": "dev-hall-alarm-panel-01",
+      "method": "manual_pairing_code",
+      "fabricId": "fabric-home-hq-001",
+      "threadNetworkId": null,
+      "requiresApproval": true,
+      "status": "approval_required",
+      "checklist": ["pairing_code_valid", "security_device_review", "approval_record_attached", "audit_event_required"]
+    }
+  ],
+  "commandProfiles": [
+    {
+      "id": "cmd-matter-kitchen-dim",
+      "name": "Dim Kitchen Downlights",
+      "bindingId": "matter-kitchen-downlights",
+      "deviceId": "dev-light-kitchen-01",
+      "cluster": "level_control",
+      "command": "move_to_level_with_on_off",
+      "desiredState": { "on": true, "brightness": 48, "colorTemperatureK": 3200 },
+      "requiresApproval": false,
+      "trafficClass": "P2_CONTROL"
+    },
+    {
+      "id": "cmd-matter-hall-thermostat",
+      "name": "Set Hall Thermostat",
+      "bindingId": "matter-hall-thermostat",
+      "deviceId": "dev-thermostat-hall-01",
+      "cluster": "thermostat",
+      "command": "set_occupied_heating_setpoint",
+      "desiredState": { "setpointC": 20.5, "mode": "heat" },
+      "requiresApproval": false,
+      "trafficClass": "P2_CONTROL"
+    },
+    {
+      "id": "cmd-matter-hall-alarm-arm",
+      "name": "Arm Hall Alarm Panel",
+      "bindingId": "matter-hall-alarm",
+      "deviceId": "dev-hall-alarm-panel-01",
+      "cluster": "ias_ace",
+      "command": "arm_away",
+      "desiredState": { "armed": "away" },
+      "requiresApproval": true,
+      "trafficClass": "P1_SECURITY"
+    }
+  ],
+  "healthSamples": [
+    {
+      "id": "health-thread-home-hq",
+      "threadNetworkId": "thread-home-hq",
+      "status": "healthy",
+      "routerCount": 2,
+      "commissionedThreadDevices": 2,
+      "packetErrorPercent": 0.8,
+      "averageRssi": -49
+    }
+  ],
+  "policies": [
+    {
+      "id": "matter-attestation-required",
+      "name": "Matter Attestation Required",
+      "risk": "medium",
+      "requiresApproval": false,
+      "message": "Commissioning requires device attestation and a known registry binding."
+    },
+    {
+      "id": "thread-dataset-keyvault",
+      "name": "Thread Dataset Key Vault Boundary",
+      "risk": "medium",
+      "requiresApproval": false,
+      "message": "Thread operational dataset references are treated as secret material."
+    },
+    {
+      "id": "matter-security-device-approval",
+      "name": "Matter Security Device Approval",
+      "risk": "high",
+      "requiresApproval": true,
+      "message": "Matter security-panel or lock-style commands require human approval before runtime execution."
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-matter-kitchen",
+      "name": "Matter Kitchen Lighting",
+      "keywords": ["matter", "kitchen", "downlights", "dim", "light"],
+      "commandId": "cmd-matter-kitchen-dim",
+      "confidence": 0.91,
+      "exampleIntent": "Dim the kitchen downlights using Matter."
+    },
+    {
+      "id": "intent-thread-contact",
+      "name": "Thread Contact Commissioning",
+      "keywords": ["thread", "contact", "commission", "sensor", "matter"],
+      "commissioningId": "commission-thread-contact",
+      "confidence": 0.9,
+      "exampleIntent": "Commission the Thread contact sensor into the Matter fabric."
+    },
+    {
+      "id": "intent-matter-alarm",
+      "name": "Matter Alarm Approval",
+      "keywords": ["matter", "alarm", "security", "arm", "approval"],
+      "commandId": "cmd-matter-hall-alarm-arm",
+      "confidence": 0.88,
+      "exampleIntent": "Arm the Hall Alarm Panel using Matter."
+    }
+  ],
+  "recentMatterRuns": [
+    {
+      "id": "matter-run-20260510-001",
+      "commandId": "cmd-matter-kitchen-dim",
+      "bindingId": "matter-kitchen-downlights",
+      "status": "command_previewed",
+      "actor": "system-preview",
+      "summary": "Kitchen downlights Matter command normalized without fabric mutation."
+    }
+  ]
+}

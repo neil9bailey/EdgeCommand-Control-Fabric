@@ -638,9 +638,9 @@ Deliverables:
 
 Acceptance:
 
-- Matter devices can be represented in the registry.
-- Thread network health is visible.
-- Adapter remains replaceable.
+- Matter devices can be represented in the registry. Foundation complete through Matter device bindings that enrich existing registry devices with node ids, endpoints, clusters, and fabric status.
+- Thread network health is visible. Foundation complete through Thread network, border-router, dataset, RSSI, and health sample projections in the API and web console.
+- Adapter remains replaceable. Complete in E23 foundation through package-driven contracts, preview-only commissioning/command execution, and no hard dependency on a concrete Matter SDK runtime.
 
 ## E24 - Zigbee Adapter
 

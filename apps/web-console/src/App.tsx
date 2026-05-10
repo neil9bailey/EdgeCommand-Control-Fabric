@@ -58,6 +58,7 @@ import {
   fetchModuleCertification,
   fetchModuleMarketplace,
   fetchModuleManifest,
+  fetchMatterThread,
   fetchMqttEsphome,
   fetchNarrowbandRoutes,
   fetchOverview,
@@ -78,7 +79,11 @@ import {
   previewMqttCommand,
   previewMqttDiscovery,
   previewMqttIntent,
+  previewMatterCommand,
+  previewMatterCommissioning,
+  previewMatterIntent,
   publishMqttCommand,
+  executeMatterCommand,
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
@@ -137,6 +142,10 @@ import type {
   MqttEsphomeIntentPreview,
   MqttEsphomeResponse,
   MqttPublishPreview,
+  MatterCommissioningPreview,
+  MatterCommandPreview,
+  MatterThreadIntentPreview,
+  MatterThreadResponse,
   NarrowbandRoutes,
   PlatformOverview,
   SimulationLabResponse,
@@ -327,6 +336,11 @@ function App() {
   const [mqttDiscoveryPreview, setMqttDiscoveryPreview] = useState<MqttDiscoveryPreview | null>(null);
   const [mqttIntentPreview, setMqttIntentPreview] = useState<MqttEsphomeIntentPreview | null>(null);
   const [mqttLoading, setMqttLoading] = useState<"preview" | "publish" | "discovery" | "intent" | null>(null);
+  const [matterThread, setMatterThread] = useState<MatterThreadResponse | null>(null);
+  const [matterPreview, setMatterPreview] = useState<MatterCommandPreview | null>(null);
+  const [matterCommissioningPreview, setMatterCommissioningPreview] = useState<MatterCommissioningPreview | null>(null);
+  const [matterIntentPreview, setMatterIntentPreview] = useState<MatterThreadIntentPreview | null>(null);
+  const [matterLoading, setMatterLoading] = useState<"preview" | "execute" | "commission" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -366,6 +380,7 @@ function App() {
     void fetchModuleMarketplace().then(setModuleMarketplace);
     void fetchModuleCertification().then(setModuleCertification);
     void fetchMqttEsphome().then(setMqttEsphome);
+    void fetchMatterThread().then(setMatterThread);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -728,6 +743,45 @@ function App() {
     }
   }
 
+  async function previewMatter(commandId: string) {
+    setMatterLoading("preview");
+    try {
+      setMatterPreview(await previewMatterCommand(commandId));
+    } finally {
+      setMatterLoading(null);
+    }
+  }
+
+  async function executeMatter(commandId: string) {
+    setMatterLoading("execute");
+    try {
+      setMatterPreview(await executeMatterCommand(commandId));
+    } finally {
+      setMatterLoading(null);
+    }
+  }
+
+  async function previewMatterCommissioningProfile(commissioningId: string) {
+    setMatterLoading("commission");
+    try {
+      setMatterCommissioningPreview(await previewMatterCommissioning(commissioningId));
+    } finally {
+      setMatterLoading(null);
+    }
+  }
+
+  async function previewMatterFromIntent(intentText: string) {
+    setMatterLoading("intent");
+    try {
+      const result = await previewMatterIntent(intentText);
+      setMatterIntentPreview(result);
+      if ("command" in result.preview) setMatterPreview(result.preview);
+      if ("profile" in result.preview) setMatterCommissioningPreview(result.preview);
+    } finally {
+      setMatterLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -833,6 +887,7 @@ function App() {
           <Metric label="Market" value={moduleMarketplace?.summary.available ?? commandCentre?.moduleMarketplace?.summary.available ?? "-"} detail="available" tone="good" />
           <Metric label="Certs" value={moduleCertification?.summary.passed ?? commandCentre?.moduleCertification?.summary.passed ?? "-"} detail="passed gates" tone="good" />
           <Metric label="MQTT" value={mqttEsphome?.summary.mappedDeviceCount ?? commandCentre?.mqttEsphome?.summary.mappedDeviceCount ?? "-"} detail="mapped devices" tone="good" />
+          <Metric label="Matter" value={matterThread?.summary.bindingCount ?? commandCentre?.matterThread?.summary.bindingCount ?? "-"} detail="fabric bindings" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -949,6 +1004,17 @@ function App() {
           onPublish={publishMqtt}
           onDiscoveryPreview={previewMqttDiscoveryProfile}
           onIntentPreview={previewMqttFromIntent}
+        />
+        <MatterThreadPanel
+          adapter={matterThread || commandCentre?.matterThread || commandCentre?.modules.matterThread || null}
+          preview={matterPreview}
+          commissioningPreview={matterCommissioningPreview}
+          intentPreview={matterIntentPreview}
+          loading={matterLoading}
+          onPreview={previewMatter}
+          onExecute={executeMatter}
+          onCommissioningPreview={previewMatterCommissioningProfile}
+          onIntentPreview={previewMatterFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -3353,6 +3419,202 @@ function MqttEsphomePanel({
             <div className="mqtt-intent-result">
               <strong>{intentPreview.match.name}</strong>
               <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.commandId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MatterThreadPanel({
+  adapter,
+  preview,
+  commissioningPreview,
+  intentPreview,
+  loading,
+  onPreview,
+  onExecute,
+  onCommissioningPreview,
+  onIntentPreview,
+}: {
+  adapter: MatterThreadResponse | null;
+  preview: MatterCommandPreview | null;
+  commissioningPreview: MatterCommissioningPreview | null;
+  intentPreview: MatterThreadIntentPreview | null;
+  loading: "preview" | "execute" | "commission" | "intent" | null;
+  onPreview: (commandId: string) => void;
+  onExecute: (commandId: string) => void;
+  onCommissioningPreview: (commissioningId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const bindings = adapter?.deviceBindings || [];
+  const commands = adapter?.commandProfiles || [];
+  const commissions = adapter?.commissioningProfiles || [];
+  const networks = adapter?.threadNetworks || [];
+  const recipes = adapter?.intentRecipes || [];
+  const activeCommandId = preview?.command.id || commands.find((command) => !command.requiresApproval)?.id || commands[0]?.id;
+  const activeCommissioningId = commissioningPreview?.profile.id || commissions.find((profile) => profile.status === "ready")?.id || commissions[0]?.id;
+  const activeRecipe = recipes.find((recipe) => recipe.commandId === activeCommandId || recipe.commissioningId === activeCommissioningId) || recipes[0];
+  const activeBinding = preview?.binding || bindings[0] || null;
+
+  return (
+    <section className="matter-thread-panel" aria-label="Matter and Thread adapter">
+      <div className="section-header matter-header">
+        <div>
+          <p className="eyebrow">Matter / Thread Adapter</p>
+          <h2>Fabric Control And Mesh Health</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${adapter?.summary.bindingCount || 0} bindings`} />
+          <StatusPill tone="warn" label={`${adapter?.summary.borderRouterCount || 0} routers`} />
+          <StatusPill tone={adapter?.summary.healthyThreadNetworks ? "good" : "warn"} label={`${adapter?.summary.healthyThreadNetworks || 0} Thread healthy`} />
+        </div>
+      </div>
+
+      <div className="matter-grid">
+        <div className="matter-panel">
+          <div className="section-header compact">
+            <h3>Fabric Bindings</h3>
+            <Cpu size={18} />
+          </div>
+          <div className="matter-binding-list">
+            {bindings.map((binding) => (
+              <div className={`matter-binding-row ${binding.id === activeBinding?.id ? "active" : ""}`} key={binding.id}>
+                <div>
+                  <strong>{binding.device?.name || binding.deviceId}</strong>
+                  <span>{binding.deviceType.replace(/_/g, " ")} / {binding.threadNetworkId ? "Thread" : "IP"} / {binding.nodeId}</span>
+                </div>
+                <StatusPill tone={binding.risk === "high" ? "danger" : binding.readiness.canCommand ? "good" : "warn"} label={binding.readiness.canCommand ? "ready" : "hold"} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="matter-panel">
+          <div className="section-header compact">
+            <h3>Commands</h3>
+            <PlayCircle size={18} />
+          </div>
+          <div className="matter-command-list">
+            {commands.map((command) => (
+              <div className={`matter-command-row ${command.id === activeCommandId ? "active" : ""}`} key={command.id}>
+                <div>
+                  <strong>{command.name}</strong>
+                  <span>{command.cluster} / {command.command}</span>
+                </div>
+                <div className="matter-command-actions">
+                  <button onClick={() => onPreview(command.id)} disabled={Boolean(loading)}>
+                    <Search size={14} />
+                    <span>{loading === "preview" && command.id === activeCommandId ? "Checking" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onExecute(command.id)} disabled={Boolean(loading) || command.requiresApproval}>
+                    <RadioTower size={14} />
+                    <span>{loading === "execute" && command.id === activeCommandId ? "Sending" : "Sim"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="matter-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="matter-panel">
+          <div className="section-header compact">
+            <h3>Thread Health</h3>
+            <Wifi size={18} />
+          </div>
+          <div className="matter-thread-list">
+            {networks.map((network) => (
+              <div className="matter-thread-row" key={network.id}>
+                <div>
+                  <strong>{network.name}</strong>
+                  <span>ch {network.channel} / {network.datasetStatus.replace(/_/g, " ")}</span>
+                </div>
+                <StatusPill tone={network.status === "healthy" ? "good" : "warn"} label={network.status} />
+              </div>
+            ))}
+            {(adapter?.borderRouters || []).map((router) => (
+              <div className="matter-thread-row router" key={router.id}>
+                <div>
+                  <strong>{router.name}</strong>
+                  <span>{router.threadRole} / {router.transport} / RSSI {router.rssi}</span>
+                </div>
+                <StatusPill tone={router.status === "online" ? "good" : "muted"} label={router.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="matter-panel">
+          <div className="section-header compact">
+            <h3>Commissioning</h3>
+            <ClipboardCheck size={18} />
+          </div>
+          <div className="matter-commission-list">
+            {commissions.map((profile) => (
+              <div className={`matter-commission-row ${profile.id === activeCommissioningId ? "active" : ""}`} key={profile.id}>
+                <div>
+                  <strong>{profile.name}</strong>
+                  <span>{profile.method.replace(/_/g, " ")} / {profile.threadNetworkId ? "Thread" : "IP"}</span>
+                </div>
+                <button onClick={() => onCommissioningPreview(profile.id)} disabled={Boolean(loading)}>
+                  <ClipboardCheck size={14} />
+                  <span>{loading === "commission" && profile.id === activeCommissioningId ? "Opening" : "View"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          {commissioningPreview && (
+            <div className="matter-commission-preview">
+              <strong>{commissioningPreview.profile.name}</strong>
+              <span>{commissioningPreview.status.replace(/_/g, " ")} / {commissioningPreview.summary.threadRequired ? "Thread dataset checked" : "IP fabric"}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="matter-panel matter-wide">
+          <div className="section-header compact">
+            <h3>{preview ? preview.command.name : "Matter Invoke Preview"}</h3>
+            <Activity size={18} />
+          </div>
+          {preview ? (
+            <div className="matter-preview-card">
+              <div>
+                <span>Status</span>
+                <strong>{preview.status.replace(/_/g, " ")}</strong>
+              </div>
+              <div>
+                <span>Node</span>
+                <strong>{preview.invoke.nodeId || "none"}</strong>
+              </div>
+              <div>
+                <span>Invoke</span>
+                <strong>{preview.invoke.cluster} / {preview.invoke.command}</strong>
+              </div>
+              <div>
+                <span>Desired</span>
+                <strong>{JSON.stringify(preview.invoke.desiredState)}</strong>
+              </div>
+              <div className="matter-next-actions">
+                {preview.nextActions.map((action) => <span key={action}>{action.replace(/_/g, " ")}</span>)}
+              </div>
+            </div>
+          ) : (
+            <div className="matter-fabric-card">
+              <strong>{adapter?.fabric.name || "Matter fabric"}</strong>
+              <span>{adapter?.fabric.fabricId || "no fabric"} / {adapter?.fabric.rootCaStatus?.replace(/_/g, " ") || "not ready"}</span>
+            </div>
+          )}
+          {intentPreview?.match && (
+            <div className="matter-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {(intentPreview.match.commandId || intentPreview.match.commissioningId || "matter").replace(/-/g, " ")}</span>
             </div>
           )}
         </div>

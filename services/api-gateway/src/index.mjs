@@ -157,6 +157,15 @@ import {
   publishMqttCommand,
   summarizeMqttEsphome,
 } from "./mqttEsphome.mjs";
+import {
+  buildMatterThreadDashboard,
+  executeMatterCommand,
+  loadMatterThread,
+  previewMatterCommand,
+  previewMatterCommissioning,
+  previewMatterIntent,
+  summarizeMatterThread,
+} from "./matterThread.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -183,6 +192,7 @@ const moduleBuilder = loadModuleBuilder();
 const moduleMarketplace = loadModuleMarketplace();
 const moduleCertification = loadModuleCertification();
 const mqttEsphome = loadMqttEsphome();
+const matterThread = loadMatterThread();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -214,6 +224,7 @@ function buildOverview() {
   const moduleMarketplaceSummary = summarizeModuleMarketplace(moduleMarketplace, catalog, moduleManifest, moduleBuilder);
   const moduleCertificationSummary = summarizeModuleCertification(moduleCertification, moduleMarketplace, moduleBuilder, moduleManifest, catalog);
   const mqttEsphomeSummary = summarizeMqttEsphome(mqttEsphome, deviceRegistry);
+  const matterThreadSummary = summarizeMatterThread(matterThread, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -253,6 +264,7 @@ function buildOverview() {
       moduleMarketplace: `${moduleMarketplaceSummary.installed} installed / ${moduleMarketplaceSummary.available} available`,
       moduleCertification: `${moduleCertificationSummary.passed} passed / ${moduleCertificationSummary.approvalRequired} approval-required`,
       mqttEsphome: `${mqttEsphomeSummary.mappedDeviceCount} mapped devices / ${mqttEsphomeSummary.publishableMappings} publishable`,
+      matterThread: `${matterThreadSummary.bindingCount} bindings / ${matterThreadSummary.healthyThreadNetworks} healthy Thread network`,
     },
     links: defaultLinkInventory(),
   };
@@ -307,6 +319,7 @@ app.get("/api/command-centre", (_req, res) => {
     moduleMarketplace,
     moduleCertification,
     mqttEsphome,
+    matterThread,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -661,6 +674,109 @@ app.post(
   (req, res) => {
     res.json(previewMqttIntent({
       adapter: mqttEsphome,
+      deviceRegistry,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/matter-thread", (_req, res) => {
+  res.json(buildMatterThreadDashboard({
+    adapter: matterThread,
+    deviceRegistry,
+    catalog,
+  }));
+});
+
+app.get("/api/matter-thread/commissioning/:id/preview", (req, res) => {
+  const result = previewMatterCommissioning({
+    adapter: matterThread,
+    deviceRegistry,
+    commissioningId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "matter_commissioning_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/matter-thread/commissioning/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewMatterCommissioning({
+      adapter: matterThread,
+      deviceRegistry,
+      commissioningId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "matter_commissioning_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.get("/api/matter-thread/commands/:id/preview", (req, res) => {
+  const result = previewMatterCommand({
+    adapter: matterThread,
+    deviceRegistry,
+    commandId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "matter_command_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/matter-thread/commands/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewMatterCommand({
+      adapter: matterThread,
+      deviceRegistry,
+      commandId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "matter_command_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/matter-thread/commands/:id/execute",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = executeMatterCommand({
+      adapter: matterThread,
+      deviceRegistry,
+      commandId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "matter_command_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.summary?.canExecute ? 200 : 409).json(result);
+  },
+);
+
+app.post(
+  "/api/matter-thread/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewMatterIntent({
+      adapter: matterThread,
       deviceRegistry,
       intent: req.body?.intent || "",
       actor: req.auth,

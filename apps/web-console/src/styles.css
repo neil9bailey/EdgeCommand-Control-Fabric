@@ -275,7 +275,7 @@ h3 {
 
 .command-band {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 18px;
 }
@@ -577,6 +577,63 @@ h3 {
   gap: 12px;
 }
 
+.device-coverage {
+  display: grid;
+  gap: 8px;
+}
+
+.device-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.device-row strong,
+.device-row span {
+  display: block;
+}
+
+.device-row strong {
+  font-size: 12px;
+}
+
+.device-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.device-row-meta {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.device-extra {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.device-empty {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  color: #744b0e;
+  background: var(--amber-soft);
+}
+
 .readiness-list > div {
   min-height: 46px;
   display: flex;
@@ -842,4 +899,3 @@ h3 {
     font-size: 30px;
   }
 }
-

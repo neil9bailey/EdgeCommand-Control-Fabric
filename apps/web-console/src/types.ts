@@ -35,6 +35,7 @@ export interface PlatformOverview {
   byState: Record<string, number>;
   highRisk: number;
   narrowband: number;
+  devices?: DeviceRegistrySummary;
   runtime: {
     service: string;
     mode: string;
@@ -59,6 +60,43 @@ export interface PlatformOverview {
     score: number;
     carries: string[];
   }>;
+}
+
+export interface DeviceDefinition {
+  id: string;
+  name: string;
+  siteId: string;
+  zoneId: string;
+  adapter: string;
+  manufacturer: string;
+  model: string;
+  trustTier: string;
+  status: string;
+  lastSeen: string;
+  capabilities: string[];
+  observedState: Record<string, string | number | boolean>;
+  desiredState: Record<string, string | number | boolean>;
+  narrowbandEligible: boolean;
+}
+
+export interface DeviceRegistrySummary {
+  schemaVersion: string;
+  siteCount: number;
+  zoneCount: number;
+  deviceCount: number;
+  capabilityCount: number;
+  highRiskDevices: number;
+  narrowbandEligible: number;
+  byStatus: Record<string, number>;
+  byAdapter: Record<string, number>;
+  bySite: Record<string, number>;
+  capabilityUse: Record<string, number>;
+}
+
+export interface DeviceRegistryResponse {
+  devices: DeviceDefinition[];
+  summary: DeviceRegistrySummary;
+  filters: Record<string, string>;
 }
 
 export interface IntentProposalResponse {
@@ -105,4 +143,3 @@ export interface NarrowbandRoutes {
     status: string;
   }>;
 }
-

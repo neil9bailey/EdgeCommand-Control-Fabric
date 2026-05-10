@@ -7,11 +7,14 @@ Start here:
 - [Product Blueprint](docs/PRODUCT_BLUEPRINT.md)
 - [Product And Module Design Canvas](docs/DESIGN_CANVAS.md)
 - [Epic Roadmap](docs/EPIC_ROADMAP.md)
+- [Build Status](docs/BUILD_STATUS.md)
 
 Current status:
 
 - Planning artifacts created.
-- E01 scaffold started with a Docker-first workspace, API gateway, shared module catalogue, and React mock console.
+- E01 scaffold complete with a Docker-first workspace, API gateway, shared module catalogue, and React mock console.
+- E03 device registry foundation is complete.
+- E04 event bus, telemetry, and audit is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:

@@ -35,8 +35,16 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { fetchCatalog, fetchNarrowbandRoutes, fetchOverview, proposeIntent } from "./api";
-import type { IntentProposalResponse, ModuleCatalog, ModuleDefinition, NarrowbandRoutes, PlatformOverview } from "./types";
+import { fetchCatalog, fetchDevices, fetchNarrowbandRoutes, fetchOverview, proposeIntent } from "./api";
+import type {
+  DeviceDefinition,
+  DeviceRegistryResponse,
+  IntentProposalResponse,
+  ModuleCatalog,
+  ModuleDefinition,
+  NarrowbandRoutes,
+  PlatformOverview,
+} from "./types";
 
 const categoryIcons: Record<string, LucideIcon> = {
   "Core Platform": Server,
@@ -98,6 +106,7 @@ function App() {
   const [catalog, setCatalog] = useState<ModuleCatalog | null>(null);
   const [overview, setOverview] = useState<PlatformOverview | null>(null);
   const [routes, setRoutes] = useState<NarrowbandRoutes | null>(null);
+  const [deviceRegistry, setDeviceRegistry] = useState<DeviceRegistryResponse | null>(null);
   const [activeCategory, setActiveCategory] = useState("Home Automation");
   const [activeModuleId, setActiveModuleId] = useState("water-management");
   const [query, setQuery] = useState("");
@@ -109,6 +118,7 @@ function App() {
     void fetchCatalog().then(setCatalog);
     void fetchOverview().then(setOverview);
     void fetchNarrowbandRoutes().then(setRoutes);
+    void fetchDevices().then(setDeviceRegistry);
   }, []);
 
   const modules = catalog?.modules || [];
@@ -201,6 +211,7 @@ function App() {
 
         <section className="command-band" aria-label="Platform command centre">
           <Metric label="Modules" value={overview?.moduleCount || modules.length || "-"} detail="manifest surfaces" />
+          <Metric label="Devices" value={deviceRegistry?.summary.deviceCount || overview?.devices?.deviceCount || "-"} detail="registry seed" tone="good" />
           <Metric label="High Risk" value={overview?.highRisk || "-"} detail="policy gated" tone="danger" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
           <Metric label="Approvals" value={overview?.commandCentre.pendingApprovals || 4} detail="agent proposals" tone="warn" />
@@ -229,7 +240,7 @@ function App() {
           </div>
 
           <div className="dashboard-stack">
-            {activeModule && <ModuleDashboard module={activeModule} routes={routes} />}
+            {activeModule && <ModuleDashboard module={activeModule} routes={routes} devices={deviceRegistry?.devices || []} />}
             <IntentWorkbench
               intent={intent}
               onIntentChange={setIntent}
@@ -282,10 +293,23 @@ function ModuleRow({ module, active, onClick }: { module: ModuleDefinition; acti
   );
 }
 
-function ModuleDashboard({ module, routes }: { module: ModuleDefinition; routes: NarrowbandRoutes | null }) {
+function ModuleDashboard({
+  module,
+  routes,
+  devices,
+}: {
+  module: ModuleDefinition;
+  routes: NarrowbandRoutes | null;
+  devices: DeviceDefinition[];
+}) {
   const Icon = iconForModule(module);
   const narrowbandRoutes = routes?.routes || [];
   const routeForModule = module.narrowbandSuitability ? narrowbandRoutes[0] : narrowbandRoutes.find((route) => route.class === module.trafficClass);
+  const matchingDevices = devices.filter((device) => {
+    const capabilityMatch = device.capabilities.some((capability) => module.capabilities.includes(capability));
+    const adapterMatch = module.adapters.includes(device.adapter);
+    return capabilityMatch || adapterMatch;
+  });
 
   return (
     <section className="module-dashboard" aria-label={`${module.name} dashboard`}>
@@ -327,6 +351,14 @@ function ModuleDashboard({ module, routes }: { module: ModuleDefinition; routes:
 
         <section className="surface-panel">
           <div className="section-header compact">
+            <h3>Device Coverage</h3>
+            <Gauge size={18} />
+          </div>
+          <DeviceCoverage devices={matchingDevices} />
+        </section>
+
+        <section className="surface-panel">
+          <div className="section-header compact">
             <h3>Agent And Policy</h3>
             <Bot size={18} />
           </div>
@@ -342,6 +374,38 @@ function ModuleDashboard({ module, routes }: { module: ModuleDefinition; routes:
         </section>
       </div>
     </section>
+  );
+}
+
+function DeviceCoverage({ devices }: { devices: DeviceDefinition[] }) {
+  const visible = devices.slice(0, 5);
+  const extra = Math.max(0, devices.length - visible.length);
+
+  if (devices.length === 0) {
+    return (
+      <div className="device-empty">
+        <AlertTriangle size={18} />
+        <span>No seeded device bindings yet. A future module enablement can add adapters or simulated devices.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="device-coverage">
+      {visible.map((device) => (
+        <div className="device-row" key={device.id}>
+          <div>
+            <strong>{device.name}</strong>
+            <span>{device.siteId.replace(/-/g, " ")} / {device.zoneId.replace(/-/g, " ")}</span>
+          </div>
+          <div className="device-row-meta">
+            <StatusPill tone={device.status === "online" ? "good" : device.status === "degraded" ? "warn" : "muted"} label={device.status} />
+            {device.narrowbandEligible && <StatusPill tone="danger" label="NB" />}
+          </div>
+        </div>
+      ))}
+      {extra > 0 && <span className="device-extra">+{extra} more matching devices</span>}
+    </div>
   );
 }
 

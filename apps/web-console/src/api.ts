@@ -1,5 +1,11 @@
 import fallbackCatalog from "../../../packages/module-catalog/catalog.json";
-import type { IntentProposalResponse, ModuleCatalog, NarrowbandRoutes, PlatformOverview } from "./types";
+import type {
+  DeviceRegistryResponse,
+  IntentProposalResponse,
+  ModuleCatalog,
+  NarrowbandRoutes,
+  PlatformOverview,
+} from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3101";
 
@@ -40,6 +46,14 @@ export async function fetchNarrowbandRoutes(): Promise<NarrowbandRoutes | null> 
   }
 }
 
+export async function fetchDevices(): Promise<DeviceRegistryResponse | null> {
+  try {
+    return await getJson<DeviceRegistryResponse>("/api/devices");
+  } catch {
+    return null;
+  }
+}
+
 export async function proposeIntent(intent: string): Promise<IntentProposalResponse> {
   const response = await fetch(`${API_BASE}/api/intent/propose`, {
     method: "POST",
@@ -49,4 +63,3 @@ export async function proposeIntent(intent: string): Promise<IntentProposalRespo
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<IntentProposalResponse>;
 }
-

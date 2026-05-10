@@ -1,10 +1,17 @@
 import express from "express";
 import cors from "cors";
 import { loadCatalog, summarizeCatalog, findModule } from "./catalog.mjs";
+import {
+  filterDevices,
+  findDevice,
+  loadDeviceRegistry,
+  summarizeDeviceRegistry,
+} from "./deviceRegistry.mjs";
 
 const app = express();
 const port = Number(process.env.API_GATEWAY_PORT || process.env.PORT || 3101);
 const catalog = loadCatalog();
+const deviceRegistry = loadDeviceRegistry();
 
 app.use(cors({ origin: true, credentials: false }));
 app.use(express.json({ limit: "256kb" }));
@@ -15,8 +22,10 @@ function now() {
 
 function buildOverview() {
   const summary = summarizeCatalog(catalog);
+  const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   return {
     ...summary,
+    devices: deviceSummary,
     runtime: {
       service: "api-gateway",
       mode: process.env.AUTH_MODE || "development",
@@ -32,6 +41,7 @@ function buildOverview() {
       criticalEvents: 1,
       narrowbandReadiness: "simulated",
       agentMode: "deterministic mock",
+      deviceRegistry: `${deviceSummary.deviceCount} devices / ${deviceSummary.capabilityCount} capabilities`,
     },
     links: [
       { id: "lan", name: "Local LAN", class: "lan_local", status: "healthy", score: 98, carries: ["P0", "P1", "P2", "P3", "P4"] },
@@ -159,6 +169,53 @@ app.get("/api/modules/:id", (req, res) => {
   res.json({ module: mod });
 });
 
+app.get("/api/sites", (_req, res) => {
+  res.json({
+    sites: deviceRegistry.sites,
+    zones: deviceRegistry.zones,
+  });
+});
+
+app.get("/api/capabilities", (_req, res) => {
+  res.json({
+    capabilities: deviceRegistry.capabilityDefinitions,
+    summary: summarizeDeviceRegistry(deviceRegistry).capabilityUse,
+  });
+});
+
+app.get("/api/devices", (req, res) => {
+  const devices = filterDevices(deviceRegistry, req.query);
+  res.json({
+    devices,
+    summary: summarizeDeviceRegistry({
+      ...deviceRegistry,
+      devices,
+    }),
+    filters: req.query,
+  });
+});
+
+app.get("/api/devices/:id", (req, res) => {
+  const device = findDevice(deviceRegistry, req.params.id);
+  if (!device) {
+    res.status(404).json({ error: "device_not_found", id: req.params.id });
+    return;
+  }
+
+  const site = deviceRegistry.sites.find((entry) => entry.id === device.siteId);
+  const zone = deviceRegistry.zones.find((entry) => entry.id === device.zoneId);
+  const capabilities = device.capabilities.map((id) =>
+    deviceRegistry.capabilityDefinitions.find((entry) => entry.id === id) || { id, class: "unknown" },
+  );
+
+  res.json({
+    device,
+    site,
+    zone,
+    capabilities,
+  });
+});
+
 app.get("/api/narrowband/routes", (_req, res) => {
   res.json({
     controller: "semantic-narrowband-sdwan",
@@ -205,4 +262,3 @@ app.post("/api/intent/propose", (req, res) => {
 app.listen(port, () => {
   console.log(`api-gateway listening on http://localhost:${port}`);
 });
-

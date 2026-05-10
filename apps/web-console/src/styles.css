@@ -316,6 +316,303 @@ h3 {
   color: var(--red);
 }
 
+.command-centre-deck {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.command-centre-header {
+  background:
+    linear-gradient(90deg, rgba(37, 35, 33, 0.08), rgba(31, 122, 92, 0.12)),
+    #fff8ec;
+}
+
+.workspace-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+}
+
+.workspace-tabs button {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 3px 8px;
+  padding: 11px 12px;
+  background: rgba(255, 253, 246, 0.98);
+  color: var(--coal);
+  cursor: pointer;
+  text-align: left;
+}
+
+.workspace-tabs button:hover,
+.workspace-tabs button.active {
+  background: #fff8ec;
+  box-shadow: inset 0 -4px 0 var(--green);
+}
+
+.workspace-tabs svg {
+  grid-row: 1 / span 2;
+  color: var(--green);
+}
+
+.workspace-tabs span,
+.workspace-tabs em {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-tabs span {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.workspace-tabs em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  text-transform: capitalize;
+}
+
+.command-centre-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 316px;
+  gap: 1px;
+  background: var(--line);
+}
+
+.workspace-panel,
+.action-queue {
+  min-height: 390px;
+  padding: 14px;
+  background: rgba(255, 253, 246, 0.98);
+}
+
+.workspace-summary {
+  min-height: 74px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(28, 27, 25, 0.1);
+}
+
+.workspace-summary h3 {
+  margin-bottom: 5px;
+  font-size: 20px;
+}
+
+.workspace-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.workspace-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.workspace-metrics div,
+.state-rack div,
+.identity-facts div {
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.workspace-metrics span,
+.state-rack span,
+.identity-facts span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.workspace-metrics strong,
+.state-rack strong,
+.identity-facts strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 20px;
+}
+
+.ops-workspace {
+  display: grid;
+  gap: 12px;
+}
+
+.state-rack {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ops-table {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.ops-row {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: minmax(150px, 1.3fr) minmax(96px, 1fr) minmax(82px, 0.6fr) minmax(82px, 0.7fr) minmax(78px, 0.7fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  background: #fffdf6;
+}
+
+.module-ops-table .ops-row {
+  grid-template-columns: minmax(170px, 1.4fr) minmax(92px, 0.7fr) minmax(78px, 0.6fr) minmax(112px, 0.8fr);
+}
+
+.device-ops-table .ops-row {
+  grid-template-columns: minmax(136px, 1.1fr) minmax(130px, 1fr) minmax(78px, 0.6fr) minmax(74px, 0.55fr) minmax(68px, 0.5fr) minmax(76px, 0.55fr);
+}
+
+.automation-ops-table .ops-row {
+  grid-template-columns: minmax(168px, 1.35fr) minmax(118px, 0.9fr) minmax(74px, 0.55fr) minmax(112px, 0.8fr) minmax(104px, 0.75fr);
+}
+
+.connectivity-ops-table .ops-row {
+  grid-template-columns: minmax(148px, 1.3fr) minmax(92px, 0.85fr) minmax(88px, 0.65fr) minmax(78px, 0.55fr) minmax(70px, 0.5fr);
+}
+
+.ops-row.ops-head {
+  min-height: 40px;
+  background: #ede5d8;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.ops-row strong,
+.ops-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ops-row strong {
+  font-size: 12px;
+}
+
+.ops-row > span:not(.status-pill) {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.ops-row.attention-row,
+.route-ops-row {
+  box-shadow: inset 4px 0 0 var(--amber);
+}
+
+.audit-ops-table .ops-row,
+.audit-ops-row {
+  grid-template-columns: 78px 92px minmax(190px, 1.7fr) minmax(96px, 0.7fr) minmax(100px, 0.7fr);
+}
+
+.identity-workspace {
+  display: grid;
+  gap: 12px;
+}
+
+.identity-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.identity-facts strong {
+  font-size: 15px;
+}
+
+.role-rack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.action-queue {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.action-row {
+  min-height: 82px;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.action-row strong,
+.action-row span {
+  display: block;
+}
+
+.action-row strong {
+  font-size: 12px;
+}
+
+.action-row span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.action-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.command-centre-loading {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  color: #204c61;
+  background: var(--blue-soft);
+}
+
 .event-audit-strip {
   margin-bottom: 18px;
   overflow: hidden;
@@ -1098,6 +1395,14 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .workspace-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .command-centre-layout {
+    grid-template-columns: 1fr;
+  }
+
   .module-browser {
     position: relative;
     top: 0;
@@ -1121,8 +1426,18 @@ h3 {
   .event-grid,
   .automation-grid,
   .dashboard-grid,
-  .proposal-grid {
+  .proposal-grid,
+  .workspace-tabs,
+  .workspace-metrics,
+  .state-rack,
+  .identity-facts {
     grid-template-columns: 1fr;
+  }
+
+  .ops-row,
+  .audit-ops-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
   }
 
   .category-nav {

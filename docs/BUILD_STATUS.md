@@ -126,8 +126,31 @@ Verification:
 - API verification for `/api/automations`, `/api/automations/scenarios/:id/run`, and `/api/approvals`.
 - Browser render verification for the Automation Engine / Safety Policy panel, LoRaWAN leak drill, EV reserve drill, and approval queue.
 
+### E06 - Web Console And Global Command Centre
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- Consolidated `/api/command-centre` management-service contract for the operator deck.
+- Shared command-centre helpers for link inventory, narrowband routes, and preview approval queue.
+- Global Command Centre operations deck in the web console.
+- Workspace tabs for modules, devices, automations, connectivity, identity, and audit.
+- Workspace-aware action queue covering pending approvals, degraded devices, standby/blocked routes, and critical audit evidence.
+- Desktop-oriented operational tables backed by live API data.
+- Tests for command-centre workspaces, action queue contents, approval queue alignment, and narrowband route alignment.
+
+Verification:
+
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/command-centre`.
+- Browser render verification for the Operations Deck and Connectivity workspace tab.
+
 ## Next
 
-### E06 - Web Console And Global Command Centre
+### E07 - MCP Orchestrator
 
 Status: next planned build slice.

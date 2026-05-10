@@ -4,6 +4,7 @@ import type {
   ApprovalQueueResponse,
   AutomationEvaluation,
   AutomationResponse,
+  CommandCentreResponse,
   DeviceRegistryResponse,
   EventLedgerResponse,
   IntentProposalResponse,
@@ -38,6 +39,14 @@ export async function fetchCatalog(): Promise<ModuleCatalog> {
 export async function fetchOverview(): Promise<PlatformOverview | null> {
   try {
     return await getJson<PlatformOverview>("/api/platform/overview");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchCommandCentre(): Promise<CommandCentreResponse | null> {
+  try {
+    return await getJson<CommandCentreResponse>("/api/command-centre");
   } catch {
     return null;
   }

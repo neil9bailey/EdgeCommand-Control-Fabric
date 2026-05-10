@@ -39,6 +39,7 @@ import {
   fetchAuthStatus,
   fetchAutomations,
   fetchCatalog,
+  fetchCommandCentre,
   fetchDevices,
   fetchEvents,
   fetchNarrowbandRoutes,
@@ -51,6 +52,8 @@ import type {
   ApprovalQueueResponse,
   AutomationEvaluation,
   AutomationResponse,
+  CommandCentreResponse,
+  CommandCentreWorkspaceId,
   DeviceDefinition,
   DeviceRegistryResponse,
   EventLedgerResponse,
@@ -95,6 +98,15 @@ const moduleIcons: Record<string, LucideIcon> = {
   "event-bus-telemetry": Activity,
 };
 
+const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
+  modules: Boxes,
+  devices: Gauge,
+  automations: Settings2,
+  connectivity: RadioTower,
+  identity: Shield,
+  audit: Activity,
+};
+
 const defaultIntent =
   "If the utility room leaks, close the main valve, alert me, and prove the emergency path still works if broadband is down.";
 
@@ -132,6 +144,17 @@ function streamTone(stream: FabricEvent["stream"]) {
   return "neutral";
 }
 
+function commandCentreTone(status: string) {
+  if (status === "ready") return "good";
+  if (status === "blocked") return "danger";
+  if (status === "attention") return "warn";
+  return "neutral";
+}
+
+function titleFromId(value: string) {
+  return value.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function formatTime(timestamp: string) {
   return new Intl.DateTimeFormat(undefined, {
     hour: "2-digit",
@@ -151,6 +174,8 @@ function App() {
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [automationEvaluation, setAutomationEvaluation] = useState<AutomationEvaluation | null>(null);
   const [automationLoading, setAutomationLoading] = useState(false);
+  const [commandCentre, setCommandCentre] = useState<CommandCentreResponse | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = useState<CommandCentreWorkspaceId>("devices");
   const [activeCategory, setActiveCategory] = useState("Home Automation");
   const [activeModuleId, setActiveModuleId] = useState("water-management");
   const [query, setQuery] = useState("");
@@ -167,6 +192,7 @@ function App() {
     void fetchEvents().then(setEventLedger);
     void fetchAutomations().then(setAutomations);
     void fetchApprovals().then(setApprovals);
+    void fetchCommandCentre().then(setCommandCentre);
   }, []);
 
   const modules = catalog?.modules || [];
@@ -283,6 +309,13 @@ function App() {
           />
         </section>
 
+        <CommandCentreDeck
+          commandCentre={commandCentre}
+          activeWorkspace={activeWorkspace}
+          onWorkspaceChange={setActiveWorkspace}
+          modules={modules}
+        />
+
         <EventAuditStrip eventLedger={eventLedger} fallbackSummary={overview?.events || null} />
         <AutomationOpsPanel
           automations={automations}
@@ -326,6 +359,309 @@ function App() {
         </section>
       </main>
     </div>
+  );
+}
+
+function CommandCentreDeck({
+  commandCentre,
+  activeWorkspace,
+  onWorkspaceChange,
+  modules,
+}: {
+  commandCentre: CommandCentreResponse | null;
+  activeWorkspace: CommandCentreWorkspaceId;
+  onWorkspaceChange: (workspace: CommandCentreWorkspaceId) => void;
+  modules: ModuleDefinition[];
+}) {
+  const workspaces = commandCentre?.workspaces || [];
+  const selectedWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspace) || workspaces[0];
+
+  return (
+    <section className="command-centre-deck" aria-label="Global command centre">
+      <div className="section-header command-centre-header">
+        <div>
+          <p className="eyebrow">Global Command Centre</p>
+          <h2>Operations Deck</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone={commandCentre?.posture.api === "online" ? "good" : "danger"} label={commandCentre?.posture.api || "loading"} />
+          <StatusPill tone={commandCentre?.posture.safetyPosture === "approval_required" ? "warn" : "good"} label={commandCentre?.posture.safetyPosture.replace(/_/g, " ") || "governed"} />
+          <StatusPill tone={commandCentre?.posture.secretProvider === "azure-key-vault" ? "good" : "muted"} label={commandCentre?.posture.secretProvider || "secrets"} />
+        </div>
+      </div>
+
+      {commandCentre ? (
+        <>
+          <div className="workspace-tabs" role="tablist" aria-label="Command centre workspaces">
+            {workspaces.map((workspace) => {
+              const Icon = workspaceIcons[workspace.id] || Boxes;
+              return (
+                <button
+                  key={workspace.id}
+                  className={activeWorkspace === workspace.id ? "active" : ""}
+                  onClick={() => onWorkspaceChange(workspace.id)}
+                  role="tab"
+                  aria-selected={activeWorkspace === workspace.id}
+                >
+                  <Icon size={17} />
+                  <span>{workspace.label}</span>
+                  <em>{workspace.status}</em>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="command-centre-layout">
+            <div className="workspace-panel">
+              {selectedWorkspace && (
+                <div className="workspace-summary">
+                  <div>
+                    <p className="eyebrow">{selectedWorkspace.label}</p>
+                    <h3>{selectedWorkspace.headline}</h3>
+                    <span>{selectedWorkspace.detail}</span>
+                  </div>
+                  <StatusPill tone={commandCentreTone(selectedWorkspace.status)} label={selectedWorkspace.status} />
+                </div>
+              )}
+              {selectedWorkspace && (
+                <div className="workspace-metrics">
+                  {selectedWorkspace.metrics.map((metric) => (
+                    <div key={`${selectedWorkspace.id}-${metric.label}`}>
+                      <span>{metric.label}</span>
+                      <strong>{metric.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <CommandCentreWorkspaceView commandCentre={commandCentre} activeWorkspace={activeWorkspace} modules={modules} />
+            </div>
+            <ActionQueue actions={commandCentre.actionQueue} activeWorkspace={activeWorkspace} />
+          </div>
+        </>
+      ) : (
+        <div className="command-centre-loading">
+          <Activity size={18} />
+          <span>Loading command centre data from the API gateway.</span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CommandCentreWorkspaceView({
+  commandCentre,
+  activeWorkspace,
+  modules,
+}: {
+  commandCentre: CommandCentreResponse;
+  activeWorkspace: CommandCentreWorkspaceId;
+  modules: ModuleDefinition[];
+}) {
+  if (activeWorkspace === "modules") {
+    const visibleModules = [
+      ...commandCentre.modules.hero,
+      ...commandCentre.modules.foundations.slice(0, 5),
+      ...commandCentre.modules.next,
+    ]
+      .map((id) => modules.find((mod) => mod.id === id))
+      .filter(Boolean) as ModuleDefinition[];
+    return (
+      <div className="ops-workspace">
+        <div className="state-rack">
+          {Object.entries(commandCentre.modules.byState).map(([state, count]) => (
+            <div key={state}>
+              <span>{stateLabel(state)}</span>
+              <strong>{count}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="ops-table module-ops-table">
+          <div className="ops-row ops-head">
+            <span>Module</span>
+            <span>State</span>
+            <span>Risk</span>
+            <span>Traffic</span>
+          </div>
+          {visibleModules.map((mod) => (
+            <div className="ops-row" key={mod.id}>
+              <strong>{mod.name}</strong>
+              <StatusPill tone={mod.state === "hero" || mod.state === "foundation" ? "good" : "warn"} label={stateLabel(mod.state)} />
+              <StatusPill tone={riskTone(mod.risk)} label={mod.risk} />
+              <span>{mod.trafficClass}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (activeWorkspace === "devices") {
+    const devices = [...commandCentre.devices]
+      .sort((a, b) => Number(a.status === "online") - Number(b.status === "online") || b.risk.localeCompare(a.risk))
+      .slice(0, 8);
+    return (
+      <div className="ops-table device-ops-table">
+        <div className="ops-row ops-head">
+          <span>Device</span>
+          <span>Site / Zone</span>
+          <span>Status</span>
+          <span>Adapter</span>
+          <span>Risk</span>
+          <span>Link</span>
+        </div>
+        {devices.map((device) => (
+          <div className="ops-row device-ops-row" key={device.id}>
+            <strong>{device.name}</strong>
+            <span>{device.siteName} / {device.zoneName}</span>
+            <StatusPill tone={device.status === "online" ? "good" : device.status === "degraded" ? "warn" : "muted"} label={device.status} />
+            <span>{device.adapter}</span>
+            <StatusPill tone={riskTone(device.risk)} label={device.risk} />
+            <StatusPill tone={device.narrowbandEligible ? "danger" : "neutral"} label={device.narrowbandEligible ? "NB ready" : "standard"} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (activeWorkspace === "automations") {
+    return (
+      <div className="ops-table automation-ops-table">
+        <div className="ops-row ops-head">
+          <span>Rule / Policy</span>
+          <span>Module</span>
+          <span>State</span>
+          <span>Traffic</span>
+          <span>Gate</span>
+        </div>
+        {commandCentre.automations.rules.slice(0, 6).map((rule) => (
+          <div className="ops-row" key={rule.id}>
+            <strong>{rule.name}</strong>
+            <span>{titleFromId(rule.moduleId)}</span>
+            <StatusPill tone={rule.state === "armed" ? "good" : "warn"} label={rule.state} />
+            <span>{rule.trafficClass}</span>
+            <span>{rule.approvalMode.replace(/_/g, " ")}</span>
+          </div>
+        ))}
+        {commandCentre.automations.approvals.map((approval) => (
+          <div className="ops-row attention-row" key={approval.id}>
+            <strong>{approval.deviceName}</strong>
+            <span>{titleFromId(approval.moduleId)}</span>
+            <StatusPill tone="warn" label={approval.status.replace(/_/g, " ")} />
+            <span>{approval.trafficClass}</span>
+            <span>{approval.selectedPath}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (activeWorkspace === "connectivity") {
+    return (
+      <div className="ops-table connectivity-ops-table">
+        <div className="ops-row ops-head">
+          <span>Path / Route</span>
+          <span>Class</span>
+          <span>Status</span>
+          <span>Score / Bytes</span>
+          <span>Ack / Type</span>
+        </div>
+        {commandCentre.connectivity.links.map((link) => (
+          <div className="ops-row" key={link.id}>
+            <strong>{link.name}</strong>
+            <span>{link.carries.join(", ")}</span>
+            <StatusPill tone={link.status === "healthy" || link.status === "ready" ? "good" : "warn"} label={link.status} />
+            <span>{link.score}</span>
+            <span>{titleFromId(link.class)}</span>
+          </div>
+        ))}
+        {commandCentre.connectivity.routes.map((route) => (
+          <div className="ops-row route-ops-row" key={route.id}>
+            <strong>{titleFromId(route.command)}</strong>
+            <span>{route.class}</span>
+            <StatusPill tone={String(route.status).includes("blocked") ? "danger" : route.status === "ready" ? "good" : "warn"} label={String(route.status).includes("blocked") ? "blocked" : route.status.replace(/_/g, " ")} />
+            <span>{route.encodedBytes} bytes</span>
+            <span>{route.ackRequired ? "required" : "none"}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (activeWorkspace === "identity") {
+    return (
+      <div className="identity-workspace">
+        <div className="identity-facts">
+          <div><span>Tenant</span><strong>{commandCentre.identity.tenant}</strong></div>
+          <div><span>Mode</span><strong>{commandCentre.identity.normalizedMode}</strong></div>
+          <div><span>Audience</span><strong>{commandCentre.identity.audience}</strong></div>
+          <div><span>Secrets</span><strong>{commandCentre.identity.keyVaultEnabled ? "Key Vault" : "Environment"}</strong></div>
+        </div>
+        <div className="role-rack">
+          {commandCentre.identity.roles.map((role) => <StatusPill key={role} tone="neutral" label={role.replace("Automation.", "")} />)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ops-table audit-ops-table">
+      <div className="ops-row ops-head">
+        <span>Time</span>
+        <span>Stream</span>
+        <span>Summary</span>
+        <span>Status</span>
+        <span>Traffic</span>
+      </div>
+      {commandCentre.audit.events.slice(0, 8).map((event) => (
+        <div className="ops-row audit-ops-row" key={event.id}>
+          <span>{formatTime(event.timestamp)}</span>
+          <StatusPill tone={streamTone(event.stream)} label={event.stream} />
+          <strong>{event.summary}</strong>
+          <span>{event.status.replace(/_/g, " ")}</span>
+          <span>{event.trafficClass}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActionQueue({
+  actions,
+  activeWorkspace,
+}: {
+  actions: CommandCentreResponse["actionQueue"];
+  activeWorkspace: CommandCentreWorkspaceId;
+}) {
+  const visibleActions = actions.filter((action) => action.workspaceId === activeWorkspace);
+  const fallbackActions = visibleActions.length > 0 ? visibleActions : actions.slice(0, 5);
+
+  return (
+    <aside className="action-queue" aria-label="Command centre action queue">
+      <div className="section-header compact">
+        <h3>Action Queue</h3>
+        <AlertTriangle size={18} />
+      </div>
+      <div className="action-list">
+        {fallbackActions.map((action) => (
+          <div className="action-row" key={action.id}>
+            <div>
+              <strong>{action.title}</strong>
+              <span>{action.owner} / {action.detail}</span>
+            </div>
+            <div className="action-row-meta">
+              <StatusPill tone={trafficTone(action.priority)} label={action.priority} />
+              <StatusPill tone={action.status.includes("blocked") ? "danger" : action.status.includes("pending") || action.status.includes("degraded") || action.status.includes("standby") ? "warn" : "good"} label={action.status.replace(/_/g, " ")} />
+            </div>
+          </div>
+        ))}
+        {fallbackActions.length === 0 && (
+          <div className="event-empty">
+            <CheckCircle2 size={18} />
+            <span>No active actions for this workspace.</span>
+          </div>
+        )}
+      </div>
+    </aside>
   );
 }
 

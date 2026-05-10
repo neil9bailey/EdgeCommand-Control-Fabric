@@ -27,6 +27,12 @@ import {
   loadAutomationEngine,
   summarizeAutomationEngine,
 } from "./automationEngine.mjs";
+import {
+  buildApprovalQueue,
+  buildCommandCentre,
+  defaultLinkInventory,
+  defaultNarrowbandRoutes,
+} from "./commandCentre.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -77,12 +83,7 @@ function buildOverview() {
       eventLedger: `${eventSummary.eventCount} events / ${eventSummary.auditRequired} audit-bound`,
       automationEngine: `${automationSummary.armedRules} armed rules / ${automationSummary.policyCount} policies`,
     },
-    links: [
-      { id: "lan", name: "Local LAN", class: "lan_local", status: "healthy", score: 98, carries: ["P0", "P1", "P2", "P3", "P4"] },
-      { id: "broadband", name: "Broadband WAN", class: "wan_broadband", status: "degraded", score: 71, carries: ["P1", "P2", "P3", "P4"] },
-      { id: "lte-m", name: "LTE-M Remote", class: "cellular_ltem", status: "standby", score: 64, carries: ["P0", "P1", "P2", "P3"] },
-      { id: "lorawan", name: "LoRaWAN Emergency", class: "lorawan", status: "ready", score: 82, carries: ["P0", "P1", "P3"] }
-    ],
+    links: defaultLinkInventory(),
   };
 }
 
@@ -182,6 +183,16 @@ app.get("/auth/me", requireRoles(EDGE_ROLES), (req, res) => {
 
 app.get("/api/platform/overview", (_req, res) => {
   res.json(buildOverview());
+});
+
+app.get("/api/command-centre", (_req, res) => {
+  res.json(buildCommandCentre({
+    catalog,
+    deviceRegistry,
+    eventLedger,
+    automationEngine,
+    authStatus: publicAuthStatus(authConfig, secretProviderStatus),
+  }));
 });
 
 app.get("/api/modules", (_req, res) => {
@@ -334,75 +345,11 @@ app.post(
 );
 
 app.get("/api/approvals", (_req, res) => {
-  const scenario = findScenario(automationEngine, "scenario-cottage-leak-lorawan");
-  const evaluation = evaluateAutomation(automationEngine, deviceRegistry, scenario, {
-    subject: "system-preview",
-    name: "System Preview",
-    roles: ["Automation.AgentApprover"],
-  });
-  const approvals = evaluation.commands
-    .filter((command) => command.approvalRequired)
-    .map((command) => ({
-      id: `approval-${command.id}`,
-      commandId: command.id,
-      ruleId: command.ruleId,
-      deviceId: command.deviceId,
-      deviceName: command.deviceName,
-      moduleId: command.moduleId,
-      trafficClass: command.trafficClass,
-      selectedPath: command.selectedPath,
-      status: command.status,
-      requiredRoles: ["Automation.Admin", "Automation.Security", "Automation.AgentApprover"],
-      reasons: command.policyReasons,
-    }));
-
-  res.json({
-    approvals,
-    summary: {
-      pending: approvals.filter((approval) => approval.status === "pending_approval").length,
-      total: approvals.length,
-      sourceScenario: scenario.id,
-    },
-  });
+  res.json(buildApprovalQueue(automationEngine, deviceRegistry));
 });
 
 app.get("/api/narrowband/routes", (_req, res) => {
-  res.json({
-    controller: "semantic-narrowband-sdwan",
-    routes: [
-      {
-        id: "route_water_p0",
-        command: "close remote cottage water valve",
-        class: "P0_EMERGENCY",
-        selectedPath: "lorawan",
-        encodedBytes: 46,
-        ttlSeconds: 300,
-        ackRequired: true,
-        status: "ready",
-      },
-      {
-        id: "route_security_p1",
-        command: "remote gate state check",
-        class: "P1_SECURITY",
-        selectedPath: "lte-m",
-        encodedBytes: 64,
-        ttlSeconds: 180,
-        ackRequired: true,
-        status: "standby",
-      },
-      {
-        id: "route_camera_p4",
-        command: "camera clip upload",
-        class: "P4_BULK",
-        selectedPath: "blocked",
-        encodedBytes: 0,
-        ttlSeconds: 0,
-        ackRequired: false,
-        status: "blocked_from_narrowband",
-      },
-    ],
-    rule: "LoRaWAN carries semantic commands and telemetry deltas only, never rich media or firmware.",
-  });
+  res.json(defaultNarrowbandRoutes());
 });
 
 app.post(

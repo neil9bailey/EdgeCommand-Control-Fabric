@@ -56,6 +56,7 @@ export interface PlatformOverview {
     agentMode: string;
     eventLedger?: string;
     deviceRegistry?: string;
+    automationEngine?: string;
   };
   links: Array<{
     id: string;
@@ -296,6 +297,103 @@ export interface ApprovalQueueResponse {
     pending: number;
     total: number;
     sourceScenario: string;
+  };
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "connectivity" | "identity" | "audit";
+
+export interface CommandCentreMetric {
+  label: string;
+  value: string | number;
+}
+
+export interface CommandCentreWorkspace {
+  id: CommandCentreWorkspaceId;
+  label: string;
+  headline: string;
+  detail: string;
+  status: "ready" | "attention" | "blocked" | "governed";
+  metrics: CommandCentreMetric[];
+}
+
+export interface CommandCentreAction {
+  id: string;
+  priority: string;
+  workspaceId: CommandCentreWorkspaceId;
+  title: string;
+  owner: string;
+  status: string;
+  detail: string;
+  evidence: string[];
+}
+
+export interface CommandCentreDevice {
+  id: string;
+  name: string;
+  siteId: string;
+  siteName: string;
+  zoneId: string;
+  zoneName: string;
+  adapter: string;
+  status: string;
+  risk: "low" | "medium" | "high";
+  trustTier: string;
+  lastSeen: string;
+  capabilities: string[];
+  narrowbandEligible: boolean;
+}
+
+export interface CommandCentreResponse {
+  schemaVersion: string;
+  generatedAt: string;
+  product: ModuleCatalog["product"];
+  posture: {
+    readiness: string;
+    api: string;
+    dockerDesktop: boolean;
+    safetyPosture: string;
+    identityMode: string;
+    secretProvider: string;
+    unresolvedApprovals: number;
+    criticalEvents: number;
+    degradedDevices: number;
+    constrainedRoutes: number;
+  };
+  workspaces: CommandCentreWorkspace[];
+  actionQueue: CommandCentreAction[];
+  modules: {
+    byState: Record<string, number>;
+    hero: string[];
+    next: string[];
+    foundations: string[];
+  };
+  devices: CommandCentreDevice[];
+  automations: {
+    rules: AutomationRule[];
+    policies: AutomationPolicy[];
+    scenes: AutomationResponse["scenes"];
+    scenarios: AutomationScenario[];
+    approvals: ApprovalQueueResponse["approvals"];
+    summary: AutomationSummary;
+  };
+  connectivity: {
+    links: PlatformOverview["links"];
+    routes: NarrowbandRoutes["routes"];
+    rule: string;
+  };
+  identity: {
+    mode: string;
+    normalizedMode: string;
+    tenant: string;
+    audience: string;
+    entraEnabled: boolean;
+    roles: string[];
+    keyVaultEnabled: boolean;
+    secretProvider?: AuthStatus["secretProvider"];
+  };
+  audit: {
+    events: FabricEvent[];
+    summary: EventLedgerSummary;
   };
 }
 

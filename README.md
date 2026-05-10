@@ -18,7 +18,8 @@ Current status:
 - E03 device registry foundation is complete.
 - E04 event ledger, telemetry summary, command stream, and audit foundation is complete.
 - E05 automation engine and safety policy foundation is complete.
-- E06 web console and global command centre hardening is the next active build slice.
+- E06 web console and global command centre hardening is complete.
+- E07 MCP orchestrator is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -51,6 +52,7 @@ Local URLs:
 - Web console: http://localhost:5174
 - API gateway: http://localhost:3101
 - API health: http://localhost:3101/health
+- Command centre API: http://localhost:3101/api/command-centre
 
 Docker Desktop target:
 

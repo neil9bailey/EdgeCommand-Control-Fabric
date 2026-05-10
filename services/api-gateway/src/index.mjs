@@ -7,11 +7,18 @@ import {
   loadDeviceRegistry,
   summarizeDeviceRegistry,
 } from "./deviceRegistry.mjs";
+import {
+  filterEvents,
+  loadEventLedger,
+  summarizeEventLedger,
+  summarizeTelemetry,
+} from "./eventLedger.mjs";
 
 const app = express();
 const port = Number(process.env.API_GATEWAY_PORT || process.env.PORT || 3101);
 const catalog = loadCatalog();
 const deviceRegistry = loadDeviceRegistry();
+const eventLedger = loadEventLedger();
 
 app.use(cors({ origin: true, credentials: false }));
 app.use(express.json({ limit: "256kb" }));
@@ -23,9 +30,11 @@ function now() {
 function buildOverview() {
   const summary = summarizeCatalog(catalog);
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
+  const eventSummary = summarizeEventLedger(eventLedger);
   return {
     ...summary,
     devices: deviceSummary,
+    events: eventSummary,
     runtime: {
       service: "api-gateway",
       mode: process.env.AUTH_MODE || "development",
@@ -37,11 +46,12 @@ function buildOverview() {
       readiness: "foundation",
       activeSite: "Home HQ + Remote Cottage",
       safetyPosture: "governed",
-      pendingApprovals: 4,
-      criticalEvents: 1,
+      pendingApprovals: eventSummary.pendingApprovals,
+      criticalEvents: eventSummary.criticalCount,
       narrowbandReadiness: "simulated",
       agentMode: "deterministic mock",
       deviceRegistry: `${deviceSummary.deviceCount} devices / ${deviceSummary.capabilityCount} capabilities`,
+      eventLedger: `${eventSummary.eventCount} events / ${eventSummary.auditRequired} audit-bound`,
     },
     links: [
       { id: "lan", name: "Local LAN", class: "lan_local", status: "healthy", score: 98, carries: ["P0", "P1", "P2", "P3", "P4"] },
@@ -213,6 +223,47 @@ app.get("/api/devices/:id", (req, res) => {
     site,
     zone,
     capabilities,
+  });
+});
+
+app.get("/api/events", (req, res) => {
+  const events = filterEvents(eventLedger, req.query);
+  res.json({
+    events,
+    summary: summarizeEventLedger({
+      ...eventLedger,
+      events,
+    }),
+    filters: req.query,
+  });
+});
+
+app.get("/api/audit", (_req, res) => {
+  const events = filterEvents(eventLedger, { auditRequired: "true" });
+  res.json({
+    events,
+    summary: summarizeEventLedger({
+      ...eventLedger,
+      events,
+    }),
+    durableStreams: ["audit", "command", "policy", "agent", "module"],
+    rule: "Audit-bound events must remain explainable before physical actuation or constrained-link routing.",
+  });
+});
+
+app.get("/api/telemetry/summary", (_req, res) => {
+  res.json(summarizeTelemetry(eventLedger));
+});
+
+app.get("/api/commands", (_req, res) => {
+  const events = filterEvents(eventLedger, { stream: "command" });
+  res.json({
+    events,
+    summary: summarizeEventLedger({
+      ...eventLedger,
+      events,
+    }),
+    rule: "Commands are proposed, critiqued, policy-gated, approved, signed, routed, and acknowledged.",
   });
 });
 

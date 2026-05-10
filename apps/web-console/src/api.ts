@@ -1,6 +1,7 @@
 import fallbackCatalog from "../../../packages/module-catalog/catalog.json";
 import type {
   DeviceRegistryResponse,
+  EventLedgerResponse,
   IntentProposalResponse,
   ModuleCatalog,
   NarrowbandRoutes,
@@ -49,6 +50,14 @@ export async function fetchNarrowbandRoutes(): Promise<NarrowbandRoutes | null> 
 export async function fetchDevices(): Promise<DeviceRegistryResponse | null> {
   try {
     return await getJson<DeviceRegistryResponse>("/api/devices");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchEvents(): Promise<EventLedgerResponse | null> {
+  try {
+    return await getJson<EventLedgerResponse>("/api/events");
   } catch {
     return null;
   }

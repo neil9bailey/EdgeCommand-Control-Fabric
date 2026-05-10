@@ -35,10 +35,13 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { fetchCatalog, fetchDevices, fetchNarrowbandRoutes, fetchOverview, proposeIntent } from "./api";
+import { fetchCatalog, fetchDevices, fetchEvents, fetchNarrowbandRoutes, fetchOverview, proposeIntent } from "./api";
 import type {
   DeviceDefinition,
   DeviceRegistryResponse,
+  EventLedgerResponse,
+  EventLedgerSummary,
+  FabricEvent,
   IntentProposalResponse,
   ModuleCatalog,
   ModuleDefinition,
@@ -102,11 +105,33 @@ function trafficTone(trafficClass: string) {
   return "good";
 }
 
+function severityTone(severity: FabricEvent["severity"]) {
+  if (severity === "critical") return "danger";
+  if (severity === "warning") return "warn";
+  return "good";
+}
+
+function streamTone(stream: FabricEvent["stream"]) {
+  if (stream === "command" || stream === "policy") return "warn";
+  if (stream === "audit") return "danger";
+  if (stream === "telemetry") return "good";
+  return "neutral";
+}
+
+function formatTime(timestamp: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(timestamp));
+}
+
 function App() {
   const [catalog, setCatalog] = useState<ModuleCatalog | null>(null);
   const [overview, setOverview] = useState<PlatformOverview | null>(null);
   const [routes, setRoutes] = useState<NarrowbandRoutes | null>(null);
   const [deviceRegistry, setDeviceRegistry] = useState<DeviceRegistryResponse | null>(null);
+  const [eventLedger, setEventLedger] = useState<EventLedgerResponse | null>(null);
   const [activeCategory, setActiveCategory] = useState("Home Automation");
   const [activeModuleId, setActiveModuleId] = useState("water-management");
   const [query, setQuery] = useState("");
@@ -119,6 +144,7 @@ function App() {
     void fetchOverview().then(setOverview);
     void fetchNarrowbandRoutes().then(setRoutes);
     void fetchDevices().then(setDeviceRegistry);
+    void fetchEvents().then(setEventLedger);
   }, []);
 
   const modules = catalog?.modules || [];
@@ -212,11 +238,15 @@ function App() {
         <section className="command-band" aria-label="Platform command centre">
           <Metric label="Modules" value={overview?.moduleCount || modules.length || "-"} detail="manifest surfaces" />
           <Metric label="Devices" value={deviceRegistry?.summary.deviceCount || overview?.devices?.deviceCount || "-"} detail="registry seed" tone="good" />
+          <Metric label="Events" value={eventLedger?.summary.eventCount || overview?.events?.eventCount || "-"} detail="ledger records" tone="good" />
+          <Metric label="Audit" value={eventLedger?.summary.auditRequired || overview?.events?.auditRequired || "-"} detail="durable gates" tone="warn" />
           <Metric label="High Risk" value={overview?.highRisk || "-"} detail="policy gated" tone="danger" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
-          <Metric label="Approvals" value={overview?.commandCentre.pendingApprovals || 4} detail="agent proposals" tone="warn" />
-          <Metric label="Mode" value={overview?.commandCentre.agentMode || "mock"} detail="AIP/KRA" />
+          <Metric label="Approvals" value={eventLedger?.summary.pendingApprovals || overview?.commandCentre.pendingApprovals || 4} detail="agent proposals" tone="warn" />
+          <Metric label="Mode" value="mock" detail={overview?.commandCentre.agentMode || "AIP/KRA deterministic"} />
         </section>
+
+        <EventAuditStrip eventLedger={eventLedger} fallbackSummary={overview?.events || null} />
 
         <section className="main-grid">
           <div className="module-browser" aria-label="Module list">
@@ -252,6 +282,66 @@ function App() {
         </section>
       </main>
     </div>
+  );
+}
+
+function EventAuditStrip({
+  eventLedger,
+  fallbackSummary,
+}: {
+  eventLedger: EventLedgerResponse | null;
+  fallbackSummary: EventLedgerSummary | null;
+}) {
+  const summary = eventLedger?.summary || fallbackSummary;
+  const events = eventLedger?.events || [];
+
+  return (
+    <section className="event-audit-strip" aria-label="Event ledger and audit posture">
+      <div className="section-header event-header">
+        <div>
+          <p className="eyebrow">Event Bus / Telemetry / Audit</p>
+          <h2>Operational Ledger</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${summary?.telemetryCount || 0} telemetry`} />
+          <StatusPill tone="warn" label={`${summary?.commandCount || 0} commands`} />
+          <StatusPill tone="danger" label={`${summary?.criticalCount || 0} P0/critical`} />
+        </div>
+      </div>
+
+      <div className="event-grid">
+        {events.length > 0 ? (
+          events.slice(0, 6).map((event) => <EventCard key={event.id} event={event} />)
+        ) : (
+          <div className="event-empty">
+            <Activity size={18} />
+            <span>Waiting for event ledger data from the API gateway.</span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function EventCard({ event }: { event: FabricEvent }) {
+  const verified = event.status === "acknowledged" || event.status === "enforced" || event.status === "ready";
+  return (
+    <article className={`event-card ${event.stream}`}>
+      <div className="event-card-top">
+        <div className="event-stream">
+          {verified ? <CheckCircle2 size={16} /> : event.auditRequired ? <Shield size={16} /> : <Activity size={16} />}
+          <strong>{event.stream}</strong>
+        </div>
+        <span>{formatTime(event.timestamp)}</span>
+      </div>
+      <p>{event.summary}</p>
+      <div className="event-card-meta">
+        <StatusPill tone={severityTone(event.severity)} label={event.severity} />
+        <StatusPill tone={streamTone(event.stream)} label={event.status.replace(/_/g, " ")} />
+        <StatusPill tone={trafficTone(event.trafficClass)} label={event.trafficClass} />
+        {event.auditRequired && <StatusPill tone="danger" label="audit" />}
+      </div>
+    </article>
   );
 }
 

@@ -32,7 +32,9 @@ Verification:
 
 ### E03 - Device Registry And Capability Model
 
-Status: complete; pending commit/push in the current delivery slice.
+Status: complete and pushed to `origin/main`.
+
+Commit: `d95e28a Add device registry foundation`
 
 Delivered:
 
@@ -54,5 +56,29 @@ Verification:
 ## In Progress
 
 ### E04 - Event Bus, Telemetry, And Audit
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed event ledger seed package for telemetry, command, audit, agent, policy, and module lifecycle events.
+- Event summary APIs for ledger counts, audit-bound records, pending approvals, critical/P0 posture, stream counts, and traffic classes.
+- API endpoints for `/api/events`, `/api/audit`, `/api/telemetry/summary`, and `/api/commands`.
+- Command centre metrics wired to live event/audit summary data.
+- Operational Ledger dashboard strip showing recent events, stream, severity, traffic class, status, and audit markers.
+- Tests for event ledger loading, filtering, degraded telemetry, and summary posture.
+
+Verification:
+
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/events`, `/api/audit`, `/api/telemetry/summary`, and `/api/platform/overview`.
+- Browser render verification for the Operational Ledger dashboard.
+
+## Next
+
+### E05 - Automation Engine And Safety Policy
 
 Status: next planned build slice.

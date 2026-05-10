@@ -36,6 +36,7 @@ export interface PlatformOverview {
   highRisk: number;
   narrowband: number;
   devices?: DeviceRegistrySummary;
+  events?: EventLedgerSummary;
   runtime: {
     service: string;
     mode: string;
@@ -51,6 +52,8 @@ export interface PlatformOverview {
     criticalEvents: number;
     narrowbandReadiness: string;
     agentMode: string;
+    eventLedger?: string;
+    deviceRegistry?: string;
   };
   links: Array<{
     id: string;
@@ -96,6 +99,51 @@ export interface DeviceRegistrySummary {
 export interface DeviceRegistryResponse {
   devices: DeviceDefinition[];
   summary: DeviceRegistrySummary;
+  filters: Record<string, string>;
+}
+
+export interface FabricEvent {
+  id: string;
+  timestamp: string;
+  tenant: string;
+  siteId: string | null;
+  zoneId: string | null;
+  deviceId: string | null;
+  moduleId: string;
+  stream: "audit" | "telemetry" | "command" | "agent" | "module" | "policy";
+  severity: "info" | "warning" | "critical";
+  actor: {
+    type: string;
+    id: string;
+    displayName: string;
+  };
+  action: string;
+  summary: string;
+  status: string;
+  trafficClass: string;
+  auditRequired: boolean;
+  payload: Record<string, string | number | boolean | string[]>;
+}
+
+export interface EventLedgerSummary {
+  schemaVersion: string;
+  eventCount: number;
+  auditRequired: number;
+  commandCount: number;
+  telemetryCount: number;
+  pendingApprovals: number;
+  criticalCount: number;
+  latestTimestamp: string | null;
+  byStream: Record<string, number>;
+  bySeverity: Record<string, number>;
+  byStatus: Record<string, number>;
+  byTrafficClass: Record<string, number>;
+  byModule: Record<string, number>;
+}
+
+export interface EventLedgerResponse {
+  events: FabricEvent[];
+  summary: EventLedgerSummary;
   filters: Record<string, string>;
 }
 

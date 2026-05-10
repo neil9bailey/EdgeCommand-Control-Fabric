@@ -7,6 +7,7 @@ import type {
   CommandCentreResponse,
   DeviceRegistryResponse,
   EventLedgerResponse,
+  IntentDecisionResponse,
   IntentProposalResponse,
   McpResponse,
   ModuleCatalog,
@@ -127,4 +128,19 @@ export async function proposeIntent(intent: string): Promise<IntentProposalRespo
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<IntentProposalResponse>;
+}
+
+export async function recordIntentDecision(
+  sessionId: string,
+  proposalId: string,
+  decision: "accept" | "modify" | "reject",
+  note = "",
+): Promise<IntentDecisionResponse> {
+  const response = await fetch(`${API_BASE}/api/intent/sessions/${sessionId}/decisions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ proposalId, decision, note }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<IntentDecisionResponse>;
 }

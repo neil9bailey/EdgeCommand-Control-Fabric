@@ -20,7 +20,8 @@ Current status:
 - E05 automation engine and safety policy foundation is complete.
 - E06 web console and global command centre hardening is complete.
 - E07 MCP orchestrator foundation is complete.
-- E08 Automation Intent Partner is the next active build slice.
+- E08 Automation Intent Partner foundation is complete.
+- E09 Knowledge and Risk Agent is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -55,6 +56,7 @@ Local URLs:
 - API health: http://localhost:3101/health
 - Command centre API: http://localhost:3101/api/command-centre
 - MCP orchestrator API: http://localhost:3101/api/mcp
+- Intent engine API: http://localhost:3101/api/intent
 
 Docker Desktop target:
 

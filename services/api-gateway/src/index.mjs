@@ -43,6 +43,13 @@ import {
   planMcpSession,
   summarizeMcpOrchestrator,
 } from "./mcpOrchestrator.mjs";
+import {
+  createIntentSession,
+  listIntentSeedSessions,
+  loadIntentEngine,
+  recordIntentDecision,
+  summarizeIntentEngine,
+} from "./intentEngine.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -54,6 +61,7 @@ const deviceRegistry = loadDeviceRegistry();
 const eventLedger = loadEventLedger();
 const automationEngine = loadAutomationEngine();
 const mcpOrchestrator = loadMcpOrchestrator();
+const intentEngine = loadIntentEngine();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -70,6 +78,7 @@ function buildOverview() {
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
+  const intentSummary = summarizeIntentEngine(intentEngine);
   return {
     ...summary,
     devices: deviceSummary,
@@ -94,78 +103,9 @@ function buildOverview() {
       eventLedger: `${eventSummary.eventCount} events / ${eventSummary.auditRequired} audit-bound`,
       automationEngine: `${automationSummary.armedRules} armed rules / ${automationSummary.policyCount} policies`,
       agentMode: `${mcpSummary.enabledTools} MCP tools / ${mcpSummary.approvalRequiredTools} permission gates`,
+      intentEngine: `${intentSummary.frameCount} intent frames / propose-only`,
     },
     links: defaultLinkInventory(),
-  };
-}
-
-function keywordScore(text, mod) {
-  const haystack = [
-    mod.id,
-    mod.name,
-    mod.category,
-    mod.description,
-    ...(mod.capabilities || []),
-    ...(mod.services || []),
-    ...(mod.adapters || []),
-    ...(mod.policies || []),
-  ].join(" ").toLowerCase();
-
-  return text
-    .toLowerCase()
-    .split(/[^a-z0-9-]+/)
-    .filter((token) => token.length > 2)
-    .reduce((score, token) => score + (haystack.includes(token) ? 1 : 0), 0);
-}
-
-function proposeFromIntent(intent) {
-  const text = String(intent || "");
-  const scored = catalog.modules
-    .map((mod) => ({ mod, score: keywordScore(text, mod) }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
-
-  const fallback = ["water-management", "narrowband-control-plane", "simulation-lab", "safety-policy"]
-    .map((id) => ({ mod: findModule(catalog, id), score: 1 }))
-    .filter((item) => item.mod);
-
-  const matches = scored.length ? scored : fallback;
-  const highRisk = matches.some(({ mod }) => mod.risk === "high");
-  const narrowband = matches.some(({ mod }) => mod.narrowbandSuitability);
-
-  return {
-    session_id: `intent_${Date.now()}`,
-    created_at: now(),
-    input: text,
-    aip: {
-      role: "Automation Intent Partner",
-      rule: "propose only",
-      proposals: matches.map(({ mod }, index) => ({
-        proposal_id: `proposal_${index + 1}`,
-        module_id: mod.id,
-        title: `Enable or configure ${mod.name}`,
-        target_dashboard: mod.dashboards?.[0] || "Global Command Centre",
-        risk: mod.risk,
-        expected_impact: mod.description,
-        required_services: mod.services,
-        required_capabilities: mod.capabilities,
-        status: "proposed",
-      })),
-    },
-    kra: {
-      role: "Knowledge And Risk Agent",
-      rule: "critique only",
-      status: highRisk ? "needs_review" : "ok",
-      grounding_pointers: matches.map(({ mod }) => `${mod.id}:${mod.policies?.[0] || "module-policy"}`),
-      critique: highRisk
-        ? "One or more proposals can affect physical safety or remote control. Require simulation and explicit approval."
-        : "No high-risk controls detected in this proposal set.",
-      narrowband_note: narrowband
-        ? "Narrowband path is suitable only for compact signed commands, telemetry deltas, and acknowledgements."
-        : "No constrained-link dependency detected.",
-    },
-    next_actions: ["simulate", "review_policy", "approve_or_modify"],
   };
 }
 
@@ -409,6 +349,49 @@ app.get("/api/mcp/audit", (req, res) => {
   });
 });
 
+app.get("/api/intent", (_req, res) => {
+  res.json({
+    engine: intentEngine.engine,
+    frames: intentEngine.frames,
+    confidenceBands: intentEngine.confidenceBands,
+    proposalStates: intentEngine.proposalStates,
+    seedSessions: intentEngine.seedSessions,
+    summary: summarizeIntentEngine(intentEngine),
+  });
+});
+
+app.get("/api/intent/sessions", (_req, res) => {
+  res.json(listIntentSeedSessions(intentEngine));
+});
+
+app.post(
+  "/api/intent/sessions",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(createIntentSession({
+      engine: intentEngine,
+      catalog,
+      mcpOrchestrator,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.post(
+  "/api/intent/sessions/:id/decisions",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(recordIntentDecision({
+      sessionId: req.params.id,
+      proposalId: req.body?.proposalId || "proposal_1",
+      decision: req.body?.decision || "modify",
+      note: req.body?.note || "",
+      actor: req.auth,
+    }));
+  },
+);
+
 app.post(
   "/api/automations/evaluate",
   requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
@@ -453,14 +436,13 @@ app.post(
   "/api/intent/propose",
   requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
   (req, res) => {
-    res.json({
-      ...proposeFromIntent(req.body?.intent || ""),
-      actor: {
-        subject: req.auth?.subject,
-        name: req.auth?.name,
-        roles: req.auth?.roles || [],
-      },
-    });
+    res.json(createIntentSession({
+      engine: intentEngine,
+      catalog,
+      mcpOrchestrator,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
   },
 );
 

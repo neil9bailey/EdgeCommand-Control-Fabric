@@ -1,0 +1,168 @@
+{
+  "schemaVersion": "0.1.0",
+  "engine": {
+    "id": "edgecommand-aip-engine",
+    "name": "Automation Intent Partner",
+    "mode": "deterministic-local",
+    "rule": "propose-only",
+    "tenant": "vendorlogic.io",
+    "defaultStatus": "draft"
+  },
+  "confidenceBands": [
+    { "label": "high", "minimum": 0.72 },
+    { "label": "medium", "minimum": 0.42 },
+    { "label": "low", "minimum": 0 }
+  ],
+  "proposalStates": [
+    "draft",
+    "needs_review",
+    "ready_for_simulation",
+    "approval_required",
+    "accepted_for_simulation",
+    "modification_requested",
+    "rejected"
+  ],
+  "frames": [
+    {
+      "id": "water-leak-response",
+      "name": "Water Leak Response",
+      "intentClass": "automation_rule",
+      "keywords": ["leak", "water", "valve", "shutoff", "shut", "close", "flow", "utility"],
+      "siteHints": ["home", "utility", "cottage", "remote"],
+      "targetModules": ["water-management", "automation-engine", "safety-policy", "simulation-lab"],
+      "targetCapabilities": ["leak_sensor", "water_valve", "flow_meter", "rule", "scenario"],
+      "proposalTemplates": [
+        {
+          "type": "automation_rule",
+          "title": "Governed emergency leak response automation",
+          "status": "approval_required",
+          "risk": "high",
+          "requiredGates": ["simulation", "human_approval", "signed_command"],
+          "requiredTools": ["device.search", "automation.rule.compile", "policy.evaluate", "simulation.run", "audit.record"],
+          "impact": "Detect a leak, prepare valve closure, notify the operator, and attach evidence before physical actuation.",
+          "rollbackPath": "Manual valve override stays authoritative; automation can be disabled without changing device state."
+        },
+        {
+          "type": "device_command",
+          "title": "Policy-gated valve command proposal",
+          "status": "approval_required",
+          "risk": "high",
+          "requiredGates": ["human_approval", "manual_override_check", "audit_record"],
+          "requiredTools": ["device.command.propose", "policy.evaluate", "audit.record"],
+          "impact": "Prepare a command object only; no valve command is executed by AIP.",
+          "rollbackPath": "Command expires unless approved and simulated."
+        }
+      ]
+    },
+    {
+      "id": "narrowband-fallback",
+      "name": "Narrowband Fallback",
+      "intentClass": "connectivity_plan",
+      "keywords": ["lorawan", "narrowband", "remote", "cottage", "outage", "fallback", "sd-wan", "sdwan", "lte-m", "nbiot", "broadband", "down", "offline"],
+      "siteHints": ["remote", "cottage", "outage"],
+      "targetModules": ["narrowband-control-plane", "lorawan-command-codec", "remote-command-queue", "outage-mode"],
+      "targetCapabilities": ["link", "traffic_class", "route_plan", "encode", "payload_budget"],
+      "proposalTemplates": [
+        {
+          "type": "connectivity_route",
+          "title": "Semantic narrowband fallback route",
+          "status": "ready_for_simulation",
+          "risk": "high",
+          "requiredGates": ["payload_budget", "ttl", "ack_required", "approval_for_p0"],
+          "requiredTools": ["connectivity.route.evaluate", "narrowband.command.encode", "policy.evaluate", "simulation.run", "audit.record"],
+          "impact": "Route compact P0/P1 command intents over LoRaWAN or LTE-M while blocking bulk traffic.",
+          "rollbackPath": "Fallback route remains simulated until explicit permission is attached."
+        }
+      ]
+    },
+    {
+      "id": "module-enablement",
+      "name": "Module Enablement",
+      "intentClass": "module_plan",
+      "keywords": ["module", "feature", "build", "enable", "install", "adapter", "mqtt", "esphome", "iac", "docker"],
+      "siteHints": ["local", "docker", "azure"],
+      "targetModules": ["module-marketplace", "mcp-orchestrator", "simulation-lab"],
+      "targetCapabilities": ["feature_module", "dependency", "certification", "test_report"],
+      "proposalTemplates": [
+        {
+          "type": "module_plan",
+          "title": "Governed module enablement plan",
+          "status": "needs_review",
+          "risk": "medium",
+          "requiredGates": ["dependency_check", "tests", "kra_review"],
+          "requiredTools": ["module.plan", "policy.evaluate", "audit.record"],
+          "impact": "Create a build plan for services, dashboards, policies, tests, and IaC fragments without mutating Docker or Azure.",
+          "rollbackPath": "Plan can be rejected or revised before any files or infrastructure are changed."
+        },
+        {
+          "type": "module_enablement",
+          "title": "Module enablement approval placeholder",
+          "status": "approval_required",
+          "risk": "high",
+          "requiredGates": ["human_approval", "certification", "test_pass"],
+          "requiredTools": ["module.enable", "policy.evaluate", "audit.record"],
+          "impact": "Prepare the approval envelope for future enablement; execution remains disabled in E08.",
+          "rollbackPath": "No enablement occurs until certification and approval records exist."
+        }
+      ]
+    },
+    {
+      "id": "energy-reserve",
+      "name": "Energy Reserve Protection",
+      "intentClass": "optimization_plan",
+      "keywords": ["ev", "charge", "charger", "battery", "solar", "tariff", "reserve", "energy", "load"],
+      "siteHints": ["garage", "energy"],
+      "targetModules": ["ev-charging", "battery-backup", "energy-solar", "safety-policy"],
+      "targetCapabilities": ["ev_charger", "battery", "meter", "tariff_signal"],
+      "proposalTemplates": [
+        {
+          "type": "optimization_plan",
+          "title": "Battery reserve aware EV charging proposal",
+          "status": "ready_for_simulation",
+          "risk": "medium",
+          "requiredGates": ["simulation", "reserve_policy", "operator_review"],
+          "requiredTools": ["policy.evaluate", "simulation.run", "audit.record"],
+          "impact": "Propose a tariff-aware charging window while protecting battery reserve.",
+          "rollbackPath": "Existing charger schedule remains unchanged until approved."
+        }
+      ]
+    },
+    {
+      "id": "security-access",
+      "name": "Security Access Governance",
+      "intentClass": "security_plan",
+      "keywords": ["lock", "door", "gate", "alarm", "security", "unlock", "access"],
+      "siteHints": ["front", "gate", "entrance", "remote"],
+      "targetModules": ["security-access", "safety-policy", "audit-ledger"],
+      "targetCapabilities": ["lock", "gate", "door", "approval"],
+      "proposalTemplates": [
+        {
+          "type": "security_check",
+          "title": "High-risk access proposal",
+          "status": "approval_required",
+          "risk": "high",
+          "requiredGates": ["security_role", "human_approval", "audit_record"],
+          "requiredTools": ["device.search", "device.command.propose", "policy.evaluate", "audit.record"],
+          "impact": "Prepare an access-state check or command proposal without unlocking or opening anything.",
+          "rollbackPath": "No physical access state changes occur through AIP."
+        }
+      ]
+    }
+  ],
+  "seedSessions": [
+    {
+      "id": "intent-session-leak-fallback",
+      "status": "approval_required",
+      "intentClass": "automation_rule",
+      "confidence": "high",
+      "summary": "Leak response with simulation, approval, and narrowband fallback evidence."
+    },
+    {
+      "id": "intent-session-mqtt-module",
+      "status": "needs_review",
+      "intentClass": "module_plan",
+      "confidence": "medium",
+      "summary": "MQTT and ESPHome module enablement plan."
+    }
+  ]
+}

@@ -114,7 +114,7 @@ function inferToolIdsFromIntent(orchestrator, intent = "") {
     tools.add("device.command.propose");
     tools.add("simulation.run");
   }
-  if (/lorawan|narrowband|remote|cottage|outage|fallback|sd-wan|sdwan/.test(text)) {
+  if (/lorawan|narrowband|remote|cottage|outage|fallback|sd-wan|sdwan|broadband|offline|\bdown\b/.test(text)) {
     tools.add("connectivity.route.evaluate");
     tools.add("narrowband.command.encode");
   }

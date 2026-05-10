@@ -8,6 +8,7 @@ import {
   Cable,
   Camera,
   CheckCircle2,
+  ClipboardCheck,
   Cloud,
   Cpu,
   Droplets,
@@ -21,6 +22,7 @@ import {
   PlayCircle,
   Puzzle,
   RadioTower,
+  RotateCcw,
   Satellite,
   Search,
   Server,
@@ -31,6 +33,7 @@ import {
   Waves,
   Wifi,
   Wind,
+  XCircle,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -45,6 +48,7 @@ import {
   fetchNarrowbandRoutes,
   fetchOverview,
   proposeIntent,
+  recordIntentDecision,
   runAutomationScenario,
 } from "./api";
 import type {
@@ -59,6 +63,7 @@ import type {
   EventLedgerResponse,
   EventLedgerSummary,
   FabricEvent,
+  IntentDecisionResponse,
   IntentProposalResponse,
   ModuleCatalog,
   ModuleDefinition,
@@ -152,6 +157,18 @@ function commandCentreTone(status: string) {
   return "neutral";
 }
 
+type PillTone = "good" | "warn" | "danger" | "neutral" | "muted";
+
+function intentStatusTone(status: string): PillTone {
+  if (status.includes("rejected") || status.includes("blocked") || status.includes("denied")) return "danger";
+  if (status.includes("approval") || status.includes("permission") || status.includes("review") || status.includes("modify")) return "warn";
+  if (status === "high") return "good";
+  if (status === "medium") return "warn";
+  if (status.includes("ready") || status.includes("accepted") || status.includes("planned") || status.includes("ok")) return "good";
+  if (status.includes("low") || status.includes("draft")) return "muted";
+  return "neutral";
+}
+
 function titleFromId(value: string) {
   return value.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -183,6 +200,8 @@ function App() {
   const [intent, setIntent] = useState(defaultIntent);
   const [proposal, setProposal] = useState<IntentProposalResponse | null>(null);
   const [intentLoading, setIntentLoading] = useState(false);
+  const [intentDecision, setIntentDecision] = useState<IntentDecisionResponse | null>(null);
+  const [decisionLoading, setDecisionLoading] = useState<"accept" | "modify" | "reject" | null>(null);
 
   useEffect(() => {
     void fetchCatalog().then(setCatalog);
@@ -219,10 +238,26 @@ function App() {
 
   async function runIntent() {
     setIntentLoading(true);
+    setIntentDecision(null);
     try {
       setProposal(await proposeIntent(intent));
     } finally {
       setIntentLoading(false);
+    }
+  }
+
+  async function decideIntent(decision: "accept" | "modify" | "reject") {
+    const firstProposal = proposal?.aip.proposals[0];
+    if (!proposal || !firstProposal) return;
+    setDecisionLoading(decision);
+    try {
+      setIntentDecision(await recordIntentDecision(
+        proposal.sessionId || proposal.session_id,
+        firstProposal.proposalId || firstProposal.proposal_id,
+        decision,
+      ));
+    } finally {
+      setDecisionLoading(null);
     }
   }
 
@@ -355,6 +390,9 @@ function App() {
               onRun={runIntent}
               loading={intentLoading}
               proposal={proposal}
+              decision={intentDecision}
+              decisionLoading={decisionLoading}
+              onDecision={decideIntent}
             />
           </div>
         </section>
@@ -1134,13 +1172,22 @@ function IntentWorkbench({
   onRun,
   loading,
   proposal,
+  decision,
+  decisionLoading,
+  onDecision,
 }: {
   intent: string;
   onIntentChange: (value: string) => void;
   onRun: () => void;
   loading: boolean;
   proposal: IntentProposalResponse | null;
+  decision: IntentDecisionResponse | null;
+  decisionLoading: "accept" | "modify" | "reject" | null;
+  onDecision: (decision: "accept" | "modify" | "reject") => void;
 }) {
+  const proposals = proposal?.aip.proposals || [];
+  const firstProposal = proposals[0];
+
   return (
     <section className="intent-workbench" aria-label="Agent intent workbench">
       <div className="section-header">
@@ -1155,26 +1202,126 @@ function IntentWorkbench({
       </div>
       <textarea value={intent} onChange={(event) => onIntentChange(event.target.value)} />
       {proposal ? (
-        <div className="proposal-grid">
-          <div className="proposal-column">
-            <h3>AIP Proposals</h3>
-            {proposal.aip.proposals.map((item) => (
-              <div className="proposal-item" key={item.proposal_id}>
-                <strong>{item.title}</strong>
-                <span>{item.target_dashboard}</span>
-                <em>{item.required_capabilities.join(", ")}</em>
-              </div>
-            ))}
-          </div>
-          <div className="proposal-column critique">
-            <h3>KRA Critique</h3>
-            <p>{proposal.kra.critique}</p>
-            <p>{proposal.kra.narrowband_note}</p>
-            <div className="grounding-list">
-              {proposal.kra.grounding_pointers.map((pointer) => <span key={pointer}>{pointer}</span>)}
+        <>
+          <div className="intent-session-strip">
+            <div>
+              <span>Session</span>
+              <strong>{proposal.sessionId || proposal.session_id}</strong>
+            </div>
+            <div>
+              <span>Intent class</span>
+              <strong>{titleFromId(proposal.intent.class)}</strong>
+            </div>
+            <div>
+              <span>Confidence</span>
+              <strong>{proposal.intent.confidence} {Math.round(proposal.intent.confidenceScore * 100)}%</strong>
+            </div>
+            <div>
+              <span>MCP plan</span>
+              <strong>{proposal.mcp.readyCount}/{proposal.mcp.requestedToolCount} ready</strong>
             </div>
           </div>
-        </div>
+
+          <div className="proposal-grid intent-proposal-grid">
+            <div className="proposal-column aip-column">
+              <div className="proposal-toolbar">
+                <h3>AIP Proposals</h3>
+                <StatusPill tone={intentStatusTone(proposal.status)} label={proposal.status.replace(/_/g, " ")} />
+              </div>
+              {proposals.map((item) => {
+                const capabilities = item.requiredCapabilities?.length ? item.requiredCapabilities : item.required_capabilities;
+                const services = item.requiredServices?.length ? item.requiredServices : item.required_services;
+                const gates = item.requiredGates || [];
+                const tools = item.requiredTools || [];
+                return (
+                  <article className="proposal-item" key={item.proposalId || item.proposal_id}>
+                    <div className="proposal-item-top">
+                      <strong>{item.title}</strong>
+                      <StatusPill tone={intentStatusTone(item.status)} label={item.status.replace(/_/g, " ")} />
+                    </div>
+                    <div className="proposal-card-meta">
+                      <StatusPill tone={riskTone(item.risk as ModuleDefinition["risk"])} label={`${item.risk} risk`} />
+                      <StatusPill tone={intentStatusTone(item.confidence)} label={`${item.confidence} confidence`} />
+                      <span>{item.moduleId || item.module_id}</span>
+                      <span>{item.targetDashboard || item.target_dashboard}</span>
+                    </div>
+                    <p>{item.expectedImpact || item.expected_impact}</p>
+                    <div className="proposal-gates">
+                      {gates.map((gate) => <span key={gate}>{gate.replace(/_/g, " ")}</span>)}
+                      {tools.map((tool) => <em key={tool}>{tool}</em>)}
+                    </div>
+                    <div className="proposal-foot">
+                      <RotateCcw size={14} />
+                      <span>{item.rollbackPath}</span>
+                    </div>
+                    <div className="proposal-foot">
+                      <ClipboardCheck size={14} />
+                      <span>{services.slice(0, 4).join(", ") || capabilities.slice(0, 4).join(", ")}</span>
+                    </div>
+                    <div className="proposal-rule">
+                      <LockKeyhole size={14} />
+                      <span>{item.executionRule}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="proposal-column critique">
+              <div className="proposal-toolbar">
+                <h3>KRA Critique</h3>
+                <StatusPill tone={intentStatusTone(proposal.kra.status)} label={proposal.kra.status.replace(/_/g, " ")} />
+              </div>
+              <p>{proposal.kra.critique}</p>
+              <p>{proposal.kra.narrowband_note}</p>
+              <div className="grounding-list">
+                {proposal.kra.grounding_pointers.map((pointer, index) => <span key={`${pointer}-${index}`}>{pointer}</span>)}
+                {proposal.kra.frames.map((frame) => <span key={frame}>{frame}</span>)}
+              </div>
+            </div>
+
+            <div className="proposal-column mcp-column">
+              <div className="proposal-toolbar">
+                <h3>MCP Tool Plan</h3>
+                <StatusPill tone={intentStatusTone(proposal.mcp.status)} label={proposal.mcp.status.replace(/_/g, " ")} />
+              </div>
+              <div className="tool-plan-list">
+                {proposal.mcp.toolPlans.map((tool) => (
+                  <div className="tool-plan-row" key={tool.toolId}>
+                    <div>
+                      <strong>{tool.name}</strong>
+                      <span>{tool.toolId}</span>
+                    </div>
+                    <div className="tool-plan-meta">
+                      <StatusPill tone={riskTone(tool.risk as ModuleDefinition["risk"])} label={tool.risk} />
+                      <StatusPill tone={intentStatusTone(tool.status)} label={tool.status.replace(/_/g, " ")} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="decision-bar">
+                <button className="decision-button accept" onClick={() => onDecision("accept")} disabled={!firstProposal || Boolean(decisionLoading)}>
+                  <CheckCircle2 size={16} />
+                  <span>{decisionLoading === "accept" ? "Recording" : "Accept"}</span>
+                </button>
+                <button className="decision-button modify" onClick={() => onDecision("modify")} disabled={!firstProposal || Boolean(decisionLoading)}>
+                  <Settings2 size={16} />
+                  <span>{decisionLoading === "modify" ? "Recording" : "Modify"}</span>
+                </button>
+                <button className="decision-button reject" onClick={() => onDecision("reject")} disabled={!firstProposal || Boolean(decisionLoading)}>
+                  <XCircle size={16} />
+                  <span>{decisionLoading === "reject" ? "Recording" : "Reject"}</span>
+                </button>
+              </div>
+              {decision && (
+                <div className="decision-result">
+                  <strong>{decision.state.replace(/_/g, " ")}</strong>
+                  <span>{decision.nextActions.map((action) => action.replace(/_/g, " ")).join(" / ")}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       ) : (
         <div className="proposal-empty">
           <AlertTriangle size={18} />

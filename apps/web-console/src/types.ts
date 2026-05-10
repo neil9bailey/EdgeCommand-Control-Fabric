@@ -57,6 +57,7 @@ export interface PlatformOverview {
     eventLedger?: string;
     deviceRegistry?: string;
     automationEngine?: string;
+    intentEngine?: string;
   };
   links: Array<{
     id: string;
@@ -481,24 +482,98 @@ export interface CommandCentreResponse {
   };
 }
 
+export interface IntentSignalSet {
+  siteHints: string[];
+  targetModules: string[];
+  capabilities: string[];
+  urgency: string;
+  narrowbandMentioned: boolean;
+}
+
+export interface IntentMatchedFrame {
+  id: string;
+  name: string;
+  intentClass: string;
+}
+
+export interface IntentProposal {
+  proposal_id: string;
+  proposalId: string;
+  type: string;
+  module_id: string;
+  moduleId: string;
+  title: string;
+  target_dashboard: string;
+  targetDashboard: string;
+  risk: "low" | "medium" | "high" | string;
+  confidence: string;
+  confidenceScore: number;
+  expected_impact: string;
+  expectedImpact: string;
+  rollbackPath: string;
+  required_services: string[];
+  requiredServices: string[];
+  required_capabilities: string[];
+  requiredCapabilities: string[];
+  requiredPolicies: string[];
+  requiredGates: string[];
+  requiredTools: string[];
+  status: string;
+  canExecute: boolean;
+  executionRule: string;
+}
+
+export interface IntentMcpToolPlan {
+  toolId: string;
+  name: string;
+  agentId: string | null;
+  moduleId: string | null;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  status: string;
+  decision: string;
+  canExecute: boolean;
+  requiresApproval: boolean;
+  auditRequired: boolean;
+  reasons: string[];
+}
+
+export interface IntentDecisionResponse {
+  decisionId: string;
+  sessionId: string;
+  proposalId: string;
+  decision: string;
+  state: string;
+  note: string;
+  actor: {
+    subject: string;
+    name: string;
+    roles: string[];
+  };
+  nextActions: string[];
+  event: FabricEvent;
+}
+
 export interface IntentProposalResponse {
   session_id: string;
+  sessionId: string;
   created_at: string;
+  createdAt: string;
   input: string;
+  status: string;
+  intent: {
+    class: string;
+    summary: string;
+    confidence: string;
+    confidenceScore: number;
+    extractedSignals: IntentSignalSet;
+    matchedFrames: IntentMatchedFrame[];
+  };
   aip: {
     role: string;
     rule: string;
-    proposals: Array<{
-      proposal_id: string;
-      module_id: string;
-      title: string;
-      target_dashboard: string;
-      risk: string;
-      expected_impact: string;
-      required_services: string[];
-      required_capabilities: string[];
-      status: string;
-    }>;
+    status: string;
+    proposals: IntentProposal[];
   };
   kra: {
     role: string;
@@ -507,8 +582,27 @@ export interface IntentProposalResponse {
     grounding_pointers: string[];
     critique: string;
     narrowband_note: string;
+    risk_register: string[];
+    required_review: boolean;
+    frames: string[];
+  };
+  mcp: {
+    sessionId: string;
+    status: string;
+    requestedToolCount: number;
+    readyCount: number;
+    requiresPermissionCount: number;
+    deniedCount: number;
+    toolPlans: IntentMcpToolPlan[];
+    nextActions: string[];
+  };
+  actor: {
+    subject?: string;
+    name?: string;
+    roles: string[];
   };
   next_actions: string[];
+  nextActions: string[];
 }
 
 export interface NarrowbandRoutes {

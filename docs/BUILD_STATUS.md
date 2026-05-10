@@ -149,8 +149,6 @@ Verification:
 - API verification for `/api/command-centre`.
 - Browser render verification for the Operations Deck and Connectivity workspace tab.
 
-## Next
-
 ### E07 - MCP Orchestrator
 
 Status: complete and pushed to `origin/main`.
@@ -175,8 +173,33 @@ Verification:
 - API verification for `/api/mcp`, `/api/mcp/sessions/plan`, `/api/mcp/tools/:id/execute`, `/api/mcp/audit`, and `/api/command-centre`.
 - Browser DOM verification for the Agents workspace.
 
+### E08 - Automation Intent Partner
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed intent engine package with deterministic AIP frames for leak response, narrowband fallback, module enablement, energy reserve, and security access.
+- API gateway intent service for engine metadata, seed sessions, structured session creation, proposal generation, and accept/modify/reject decisions.
+- AIP proposal model with confidence, status, required gates, required tools, rollback path, target modules, and strict propose-only execution rule.
+- KRA-ready critique context attached to every intent session with grounding pointers, risk register, narrowband note, and required-review flag.
+- MCP session planning embedded into intent output so inferred tool calls show ready, permission-required, and denied states.
+- Web console Human Intent Workbench with proposal cards, KRA critique, MCP tool plan, session summary, and decision controls.
+- Tests for intent engine loading, leak plus LoRaWAN proposal planning, module enablement planning, and decision event generation.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/intent`, `/api/intent/propose`, and `/api/intent/sessions/:id/decisions`.
+- Browser verification for Generate Plan, proposal cards, KRA critique, MCP tool plan, and Accept decision recording.
+
 ## Next
 
-### E08 - Automation Intent Partner
+### E09 - Knowledge And Risk Agent
 
 Status: next planned build slice.

@@ -346,8 +346,31 @@ Verification:
 - API verification for `/api/security`, `/api/security/profiles/:id/preview`, `/api/security/access-points/:id/command/preview`, and `/api/command-centre`.
 - Browser verification for the Security workspace, Security And Access panel, unlock guard, and clean browser console.
 
+### E15 - Water Management
+
+Status: complete locally and ready to push to `origin/main`.
+
+Delivered:
+
+- File-backed Water Management package with water zones, leak sensors, flow meters, valves, gateway bindings, policies, profiles, intent recipes, feature-module metadata, and recent run seeds.
+- Promoted Water Management from hero catalogue surface to foundation feature module.
+- API gateway water service for dashboard data, emergency shutoff preview, approval-gated apply, safe reopen guard, automation scenario attachment, and intent-to-water preview.
+- `/api/water`, `/api/water/profiles/:id/preview`, `/api/water/profiles/:id/apply`, and `/api/water/intent/preview` endpoints.
+- MCP orchestrator water profile preview and high-risk water valve proposal tools, permission gates, deterministic tool execution, and AIP water tool requirements.
+- Global Command Centre Water workspace and Water Management dashboard panel in the web console.
+- Tests for water package loading, dashboard enrichment, LoRaWAN shutoff preview, safe reopen approval guard, intent recipe matching, MCP water tools, AIP water proposal tooling, and command-centre integration.
+
+Verification:
+
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/water`, `/api/water/profiles/:id/preview`, `/api/water/intent/preview`, and `/api/command-centre`.
+- Browser verification for the Water workspace, Water Management panel, LoRaWAN shutoff profile, and clean browser console.
+
 ## Next
 
-### E15 - Water Management
+### E16 - Energy And Solar
 
 Status: next planned build slice.

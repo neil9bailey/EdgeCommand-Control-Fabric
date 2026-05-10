@@ -1387,6 +1387,162 @@ h3 {
   font-size: 11px;
 }
 
+.water-management-panel {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.water-header {
+  background:
+    linear-gradient(90deg, rgba(45, 111, 143, 0.16), rgba(178, 59, 53, 0.09)),
+    #fff8ec;
+}
+
+.water-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.9fr 1.1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.water-panel {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(255, 253, 246, 0.98);
+}
+
+.water-profile-list,
+.water-zone-list,
+.water-command-list,
+.water-policy-list {
+  display: grid;
+  gap: 8px;
+}
+
+.water-profile-row,
+.water-zone-row,
+.water-command-row,
+.water-policy-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.water-profile-row.active {
+  box-shadow: inset 4px 0 0 var(--blue);
+}
+
+.water-profile-row strong,
+.water-profile-row span,
+.water-zone-row strong,
+.water-zone-row span,
+.water-command-row strong,
+.water-command-row span,
+.water-policy-row strong,
+.water-policy-row span {
+  display: block;
+  min-width: 0;
+}
+
+.water-profile-row strong,
+.water-zone-row strong,
+.water-command-row strong,
+.water-policy-row strong {
+  font-size: 12px;
+}
+
+.water-profile-row span,
+.water-zone-row span,
+.water-command-row span,
+.water-policy-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.water-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.water-profile-actions button,
+.water-intent-button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff8ec;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.water-profile-actions button:nth-child(2) {
+  background: var(--coal);
+}
+
+.water-profile-actions button:disabled,
+.water-intent-button:disabled {
+  opacity: 0.62;
+  cursor: progress;
+}
+
+.water-intent-button {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--red);
+}
+
+.water-intent-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.water-intent-result {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #a9cfda;
+  border-radius: 8px;
+  background: var(--blue-soft);
+  color: #204c61;
+}
+
+.water-intent-result strong,
+.water-intent-result span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.water-intent-result strong {
+  font-size: 12px;
+}
+
+.water-intent-result span {
+  font-size: 11px;
+}
+
 .approval-workflow-panel {
   margin-bottom: 18px;
   overflow: hidden;
@@ -2506,6 +2662,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .water-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .approval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2559,6 +2719,7 @@ h3 {
     .lighting-grid,
     .climate-grid,
     .security-grid,
+    .water-grid,
     .approval-grid,
     .simulation-grid,
     .kra-grid,

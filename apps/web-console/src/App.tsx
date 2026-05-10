@@ -41,6 +41,7 @@ import {
   applyClimateProfile,
   applyLightingScene,
   applySecurityProfile,
+  applyWaterProfile,
   fetchClimate,
   fetchApprovals,
   fetchAuthStatus,
@@ -55,6 +56,7 @@ import {
   fetchOverview,
   fetchSimulationLab,
   fetchSecurity,
+  fetchWater,
   previewLightingIntent,
   previewLightingScene,
   previewClimateIntent,
@@ -63,6 +65,8 @@ import {
   previewSecurityIntent,
   previewSecurityProfile,
   previewSecurityUnlock,
+  previewWaterIntent,
+  previewWaterProfile,
   proposeIntent,
   recordApprovalDecision,
   recordIntentDecision,
@@ -100,6 +104,9 @@ import type {
   SecurityDashboardResponse,
   SecurityIntentPreview,
   SecurityPreview,
+  WaterDashboardResponse,
+  WaterIntentPreview,
+  WaterPreview,
 } from "./types";
 
 const categoryIcons: Record<string, LucideIcon> = {
@@ -141,6 +148,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   lighting: Lightbulb,
   climate: Thermometer,
   security: LockKeyhole,
+  water: Droplets,
   agents: GitBranch,
   approvals: ClipboardCheck,
   risk: Shield,
@@ -238,6 +246,10 @@ function App() {
   const [securityPreview, setSecurityPreview] = useState<SecurityPreview | null>(null);
   const [securityIntentPreview, setSecurityIntentPreview] = useState<SecurityIntentPreview | null>(null);
   const [securityLoading, setSecurityLoading] = useState<"preview" | "apply" | "intent" | "unlock" | null>(null);
+  const [water, setWater] = useState<WaterDashboardResponse | null>(null);
+  const [waterPreview, setWaterPreview] = useState<WaterPreview | null>(null);
+  const [waterIntentPreview, setWaterIntentPreview] = useState<WaterIntentPreview | null>(null);
+  const [waterLoading, setWaterLoading] = useState<"preview" | "apply" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -269,6 +281,7 @@ function App() {
     void fetchLighting().then(setLighting);
     void fetchClimate().then(setClimate);
     void fetchSecurity().then(setSecurity);
+    void fetchWater().then(setWater);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -435,6 +448,35 @@ function App() {
     }
   }
 
+  async function previewWater(profileId: string) {
+    setWaterLoading("preview");
+    try {
+      setWaterPreview(await previewWaterProfile(profileId));
+    } finally {
+      setWaterLoading(null);
+    }
+  }
+
+  async function applyWater(profileId: string) {
+    setWaterLoading("apply");
+    try {
+      setWaterPreview(await applyWaterProfile(profileId));
+    } finally {
+      setWaterLoading(null);
+    }
+  }
+
+  async function previewWaterFromIntent(intentText: string) {
+    setWaterLoading("intent");
+    try {
+      const result = await previewWaterIntent(intentText);
+      setWaterIntentPreview(result);
+      setWaterPreview(result.preview);
+    } finally {
+      setWaterLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -532,6 +574,7 @@ function App() {
           <Metric label="Lighting" value={lighting?.summary.enabledSceneCount || commandCentre?.lighting.summary.enabledSceneCount || "-"} detail="enabled scenes" tone="good" />
           <Metric label="Climate" value={climate?.summary.enabledProfileCount || commandCentre?.climate.summary.enabledProfileCount || "-"} detail="comfort profiles" tone="warn" />
           <Metric label="Security" value={security?.summary.enabledProfileCount || commandCentre?.security.summary.enabledProfileCount || "-"} detail="guarded profiles" tone="danger" />
+          <Metric label="Water" value={water?.summary.enabledProfileCount || commandCentre?.water.summary.enabledProfileCount || "-"} detail="P0 profiles" tone="danger" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -579,6 +622,15 @@ function App() {
           onApply={applySecurity}
           onUnlockPreview={previewUnlockGuard}
           onIntentPreview={previewSecurityFromIntent}
+        />
+        <WaterManagementPanel
+          water={water || commandCentre?.water || null}
+          preview={waterPreview}
+          intentPreview={waterIntentPreview}
+          loading={waterLoading}
+          onPreview={previewWater}
+          onApply={applyWater}
+          onIntentPreview={previewWaterFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -1747,6 +1799,165 @@ function SecurityAccessPanel({
                     <span>{policy.message}</span>
                   </div>
                   <StatusPill tone={policy.requiresApproval ? "warn" : "good"} label={policy.risk} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function WaterManagementPanel({
+  water,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onApply,
+  onIntentPreview,
+}: {
+  water: WaterDashboardResponse | null;
+  preview: WaterPreview | null;
+  intentPreview: WaterIntentPreview | null;
+  loading: "preview" | "apply" | "intent" | null;
+  onPreview: (profileId: string) => void;
+  onApply: (profileId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const profiles = water?.profiles || [];
+  const zones = water?.zones || [];
+  const policies = water?.policies || [];
+  const recipes = water?.intentRecipes || [];
+  const activeProfileId = preview?.profile.id || water?.service.defaultProfileId || profiles[0]?.id;
+  const activeProfile = profiles.find((profile) => profile.id === activeProfileId) || profiles[0];
+  const activeRecipe = recipes.find((recipe) => recipe.profileId === activeProfile?.id) || recipes[0];
+
+  return (
+    <section className="water-management-panel" aria-label="Water management">
+      <div className="section-header water-header">
+        <div>
+          <p className="eyebrow">Water Management</p>
+          <h2>Emergency Shutoff Surface</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="danger" label={`${water?.summary.zoneCount || 0} zones`} />
+          <StatusPill tone={water?.summary.onlineValveCount === water?.summary.valveCount ? "good" : "warn"} label={`${water?.summary.onlineValveCount || 0}/${water?.summary.valveCount || 0} valves`} />
+          <StatusPill tone={preview?.status === "approval_required" ? "warn" : preview?.status === "executed_simulated" ? "good" : "neutral"} label={preview?.status.replace(/_/g, " ") || "guarded"} />
+        </div>
+      </div>
+
+      <div className="water-grid">
+        <div className="water-panel profile-picker-panel">
+          <div className="section-header compact">
+            <h3>Profiles</h3>
+            <Droplets size={18} />
+          </div>
+          <div className="water-profile-list">
+            {profiles.map((profile) => (
+              <div className={`water-profile-row ${profile.id === activeProfile?.id ? "active" : ""}`} key={profile.id}>
+                <div>
+                  <strong>{profile.name}</strong>
+                  <span>{profile.mode} / {profile.zoneTargets.length} target(s) / {profile.trafficClass}</span>
+                </div>
+                <div className="water-profile-actions">
+                  <button onClick={() => onPreview(profile.id)} disabled={Boolean(loading)}>
+                    <PlayCircle size={15} />
+                    <span>{loading === "preview" && profile.id === activeProfile?.id ? "Previewing" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onApply(profile.id)} disabled={Boolean(loading)}>
+                    <CheckCircle2 size={15} />
+                    <span>{loading === "apply" && profile.id === activeProfile?.id ? "Applying" : "Apply"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="water-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="water-panel">
+          <div className="section-header compact">
+            <h3>Zones</h3>
+            <Home size={18} />
+          </div>
+          <div className="water-zone-list">
+            {zones.map((zone) => {
+              const valve = zone.devices?.valve;
+              const leak = zone.devices?.leakSensor;
+              return (
+                <div className="water-zone-row" key={zone.id}>
+                  <div>
+                    <strong>{zone.name}</strong>
+                    <span>{valve?.observedState.position ?? "-"} valve / leak {String(leak?.observedState.leak ?? false)} / {zone.pathPreference.join(" -> ")}</span>
+                  </div>
+                  <StatusPill tone={zone.trafficClass === "P0_EMERGENCY" ? "danger" : "warn"} label={zone.trafficClass} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="water-panel water-command-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.profile.name : "Command Plan"}</h3>
+            <Settings2 size={18} />
+          </div>
+          <div className="water-command-list">
+            {(preview?.commands || []).slice(0, 5).map((command) => (
+              <div className="water-command-row" key={command.id}>
+                <div>
+                  <strong>{command.deviceName}</strong>
+                  <span>{command.action} / {command.selectedPath} / {command.encodedBytes} bytes</span>
+                </div>
+                <StatusPill tone={command.policyDecision === "approval_required" ? "warn" : command.canExecute ? "good" : "danger"} label={command.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+            {!preview && (
+              <div className="event-empty">
+                <Activity size={18} />
+                <span>Preview a water profile to generate valve command plans.</span>
+              </div>
+            )}
+          </div>
+          {intentPreview && (
+            <div className="water-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.profileId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="water-panel">
+          <div className="section-header compact">
+            <h3>Policy Evidence</h3>
+            <Shield size={18} />
+          </div>
+          <div className="water-policy-list">
+            {preview ? (
+              preview.policy.criteria.slice(0, 5).map((item) => (
+                <div className="water-policy-row" key={item.id}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{item.id.replace(/_/g, " ")}</span>
+                  </div>
+                  <StatusPill tone={item.passed ? "good" : "danger"} label={item.passed ? "pass" : "hold"} />
+                </div>
+              ))
+            ) : (
+              policies.slice(0, 5).map((policy) => (
+                <div className="water-policy-row" key={policy.id}>
+                  <div>
+                    <strong>{policy.name}</strong>
+                    <span>{policy.message}</span>
+                  </div>
+                  <StatusPill tone={policy.risk === "high" ? "danger" : "warn"} label={policy.risk} />
                 </div>
               ))
             )}

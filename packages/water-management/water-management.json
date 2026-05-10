@@ -1,0 +1,200 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "water-management-service",
+    "name": "Water Management",
+    "moduleId": "water-management",
+    "mode": "deterministic-local",
+    "executionBoundary": "simulated-water-command-plan-only",
+    "defaultProfileId": "profile-home-emergency-shutoff",
+    "defaultZoneId": "water-zone-utility",
+    "rule": "Water close commands may be planned and simulated as P0 emergency actions; reopen actions require dry-state proof, human approval, audit evidence, and a separate signed command path."
+  },
+  "featureModule": {
+    "moduleId": "water-management",
+    "state": "foundation",
+    "buildStrategy": "feature-manifest-plus-service-plus-dashboard",
+    "enabledBy": ["human_intent", "module_marketplace", "operator_dashboard", "automation_engine"],
+    "buildArtifacts": [
+      "packages/water-management/water-management.json",
+      "services/api-gateway/src/waterManagement.mjs",
+      "apps/web-console WaterManagementPanel",
+      "api contracts and tests"
+    ]
+  },
+  "policies": [
+    {
+      "id": "emergency-water-shutoff",
+      "name": "Emergency Water Shutoff",
+      "risk": "high",
+      "scope": ["leak_sensor", "water_valve"],
+      "requiresApproval": true,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "Leak-triggered valve close commands are P0 and must preserve simulation, approval, signed command, and audit evidence."
+    },
+    {
+      "id": "manual-override-first",
+      "name": "Manual Override First",
+      "risk": "high",
+      "scope": ["water_valve"],
+      "requiresApproval": false,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "A valve reporting manual override is blocked from automation command plans."
+    },
+    {
+      "id": "remote-reopen-approval",
+      "name": "Remote Reopen Approval",
+      "risk": "high",
+      "scope": ["water_valve", "remote_gateway"],
+      "requiresApproval": true,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "Remote or post-leak valve reopen remains approval-gated until dry proof and signed command evidence exist."
+    },
+    {
+      "id": "dry-state-before-reopen",
+      "name": "Dry State Before Reopen",
+      "risk": "high",
+      "scope": ["leak_sensor", "flow_meter"],
+      "requiresApproval": true,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "Valve reopen is held until leak sensors and flow evidence show a safe dry state."
+    },
+    {
+      "id": "narrowband-p0-water-only",
+      "name": "Narrowband P0 Water Only",
+      "risk": "high",
+      "scope": ["lorawan", "lte-m", "water_valve"],
+      "requiresApproval": true,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "LoRaWAN carries compact signed P0 water commands and telemetry deltas only."
+    }
+  ],
+  "zones": [
+    {
+      "id": "water-zone-utility",
+      "name": "Home Utility Water Core",
+      "siteId": "home-hq",
+      "zoneId": "utility-room",
+      "leakSensorDeviceId": "dev-leak-utility-01",
+      "valveDeviceId": "dev-water-valve-main-01",
+      "flowMeterDeviceId": "dev-flow-main-01",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "pathPreference": ["lan", "lte-m", "lorawan"],
+      "policies": ["emergency-water-shutoff", "manual-override-first", "dry-state-before-reopen"]
+    },
+    {
+      "id": "water-zone-cottage",
+      "name": "Remote Cottage Water Core",
+      "siteId": "remote-cottage",
+      "zoneId": "cottage-utility",
+      "leakSensorDeviceId": "dev-cottage-leak-01",
+      "valveDeviceId": "dev-cottage-valve-01",
+      "gatewayDeviceId": "dev-cottage-gateway-01",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "pathPreference": ["lorawan", "lte-m"],
+      "policies": ["emergency-water-shutoff", "manual-override-first", "remote-reopen-approval", "narrowband-p0-water-only"]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "profile-home-emergency-shutoff",
+      "name": "Home Emergency Shutoff",
+      "mode": "close",
+      "status": "enabled",
+      "trafficClass": "P0_EMERGENCY",
+      "requiresApproval": true,
+      "policies": ["emergency-water-shutoff", "manual-override-first"],
+      "zoneTargets": [
+        { "zoneId": "water-zone-utility", "action": "close", "desiredState": { "position": "closed" } }
+      ],
+      "automationScenarioId": "scenario-home-leak",
+      "simulationScenarioId": "sim-home-leak-shutoff",
+      "commandProfile": { "encodedBytes": 42, "ackRequired": true, "ttlSeconds": 300 }
+    },
+    {
+      "id": "profile-cottage-lorawan-shutoff",
+      "name": "Cottage LoRaWAN Shutoff",
+      "mode": "close",
+      "status": "enabled",
+      "trafficClass": "P0_EMERGENCY",
+      "requiresApproval": true,
+      "policies": ["emergency-water-shutoff", "manual-override-first", "narrowband-p0-water-only"],
+      "zoneTargets": [
+        { "zoneId": "water-zone-cottage", "action": "close", "desiredState": { "position": "closed" } }
+      ],
+      "automationScenarioId": "scenario-cottage-leak-lorawan",
+      "simulationScenarioId": "sim-remote-cottage-outage",
+      "commandProfile": { "encodedBytes": 46, "ackRequired": true, "ttlSeconds": 300 }
+    },
+    {
+      "id": "profile-home-safe-reopen",
+      "name": "Home Safe Reopen",
+      "mode": "reopen",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": true,
+      "policies": ["remote-reopen-approval", "dry-state-before-reopen"],
+      "zoneTargets": [
+        { "zoneId": "water-zone-utility", "action": "reopen", "desiredState": { "position": "open" } }
+      ],
+      "commandProfile": { "encodedBytes": 40, "ackRequired": true, "ttlSeconds": 180 }
+    },
+    {
+      "id": "profile-cottage-safe-reopen",
+      "name": "Cottage Safe Reopen",
+      "mode": "reopen",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": true,
+      "policies": ["remote-reopen-approval", "dry-state-before-reopen", "narrowband-p0-water-only"],
+      "zoneTargets": [
+        { "zoneId": "water-zone-cottage", "action": "reopen", "desiredState": { "position": "open" } }
+      ],
+      "commandProfile": { "encodedBytes": 44, "ackRequired": true, "ttlSeconds": 180 }
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-emergency-leak-response",
+      "name": "Emergency leak response",
+      "keywords": ["leak", "water", "shutoff", "close", "valve", "emergency"],
+      "profileId": "profile-home-emergency-shutoff",
+      "confidence": 0.93,
+      "exampleIntent": "If the utility room leaks, close the main valve and prove the emergency path."
+    },
+    {
+      "id": "intent-remote-cottage-shutoff",
+      "name": "Remote cottage shutoff",
+      "keywords": ["cottage", "remote", "lorawan", "leak", "valve", "broadband"],
+      "profileId": "profile-cottage-lorawan-shutoff",
+      "confidence": 0.91,
+      "exampleIntent": "If the cottage leak sensor fires, close the remote valve over LoRaWAN."
+    },
+    {
+      "id": "intent-safe-reopen",
+      "name": "Safe valve reopen",
+      "keywords": ["reopen", "open", "restore", "dry", "safe"],
+      "profileId": "profile-home-safe-reopen",
+      "confidence": 0.86,
+      "exampleIntent": "Reopen the main valve only after dry-state proof and approval."
+    }
+  ],
+  "recentWaterRuns": [
+    {
+      "id": "water-run-20260510-001",
+      "profileId": "profile-cottage-lorawan-shutoff",
+      "status": "approval_required",
+      "actor": "system-preview",
+      "commandCount": 1,
+      "summary": "Remote cottage leak shutoff plan prepared compact LoRaWAN P0 valve command with approval evidence."
+    }
+  ]
+}

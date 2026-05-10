@@ -38,7 +38,7 @@
           "status": "approval_required",
           "risk": "high",
           "requiredGates": ["simulation", "human_approval", "signed_command"],
-          "requiredTools": ["device.search", "automation.rule.compile", "policy.evaluate", "simulation.run", "audit.record"],
+          "requiredTools": ["device.search", "automation.rule.compile", "water.profile.preview", "policy.evaluate", "simulation.run", "audit.record"],
           "impact": "Detect a leak, prepare valve closure, notify the operator, and attach evidence before physical actuation.",
           "rollbackPath": "Manual valve override stays authoritative; automation can be disabled without changing device state."
         },
@@ -48,7 +48,7 @@
           "status": "approval_required",
           "risk": "high",
           "requiredGates": ["human_approval", "manual_override_check", "audit_record"],
-          "requiredTools": ["device.command.propose", "policy.evaluate", "audit.record"],
+          "requiredTools": ["water.valve.propose", "device.command.propose", "policy.evaluate", "audit.record"],
           "impact": "Prepare a command object only; no valve command is executed by AIP.",
           "rollbackPath": "Command expires unless approved and simulated."
         }

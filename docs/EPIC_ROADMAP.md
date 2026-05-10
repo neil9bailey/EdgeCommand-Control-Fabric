@@ -468,9 +468,10 @@ Deliverables:
 
 Acceptance:
 
-- Leak event can close a valve in simulation.
-- Manual override exists.
-- Narrowband fallback can carry emergency acknowledgement.
+- Leak event can close a valve in simulation. Complete in E15 foundation.
+- Manual override exists. Complete in E15 foundation.
+- Narrowband fallback can carry emergency acknowledgement. Complete in E15 foundation.
+- Water profile preview, LoRaWAN shutoff evidence, safe reopen guard, and intent matching are exposed through MCP tools, API endpoints, and the web console.
 
 ## E16 - Energy, Solar, Battery, And EV
 

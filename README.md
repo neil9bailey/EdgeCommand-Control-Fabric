@@ -27,7 +27,8 @@ Current status:
 - E12 Lighting and Scenes foundation is complete.
 - E13 Climate and HVAC foundation is complete.
 - E14 Security and Access foundation is complete.
-- E15 Water Management is the next active build slice.
+- E15 Water Management foundation is complete.
+- E16 Energy and Solar is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -69,6 +70,7 @@ Local URLs:
 - Lighting and scenes API: http://localhost:3101/api/lighting
 - Climate and HVAC API: http://localhost:3101/api/climate
 - Security and access API: http://localhost:3101/api/security
+- Water management API: http://localhost:3101/api/water
 
 Docker Desktop target:
 

@@ -49,7 +49,8 @@ test("AIP proposes leak response and LoRaWAN fallback without execution", () => 
   assert.ok(session.intent.matchedFrames.some((frame) => frame.id === "narrowband-fallback"));
   assert.ok(session.aip.proposals.length >= 3);
   assert.ok(session.aip.proposals.every((proposal) => proposal.canExecute === false));
-  assert.ok(session.aip.proposals.some((proposal) => proposal.requiredTools.includes("narrowband.command.encode")));
+  assert.ok(session.aip.proposals.some((proposal) => proposal.requiredTools.includes("water.profile.preview")));
+  assert.ok(session.aip.proposals.some((proposal) => proposal.requiredTools.includes("water.valve.propose")));
   assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "narrowband.command.encode" && tool.status === "requires_permission"));
   assert.ok(session.mcp.requiresPermissionCount >= 3);
   assert.equal(session.kra.required_review, true);

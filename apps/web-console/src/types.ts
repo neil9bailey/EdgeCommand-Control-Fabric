@@ -63,6 +63,7 @@ export interface PlatformOverview {
     lightingScenes?: string;
     climateHvac?: string;
     securityAccess?: string;
+    waterManagement?: string;
   };
   links: Array<{
     id: string;
@@ -1302,7 +1303,171 @@ export interface SecurityDashboardResponse {
   rule: string;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
+export interface WaterSummary {
+  schemaVersion: string;
+  zoneCount: number;
+  valveCount: number;
+  onlineValveCount: number;
+  leakSensorCount: number;
+  activeLeakCount: number;
+  profileCount: number;
+  enabledProfileCount: number;
+  approvalProfileCount: number;
+  policyCount: number;
+  intentRecipeCount: number;
+  recentRunCount: number;
+  byPath: Record<string, number>;
+}
+
+export interface WaterZone {
+  id: string;
+  name: string;
+  siteId: string;
+  zoneId: string;
+  leakSensorDeviceId: string;
+  valveDeviceId: string;
+  flowMeterDeviceId?: string;
+  gatewayDeviceId?: string;
+  risk: string;
+  trafficClass: string;
+  pathPreference: string[];
+  policies: string[];
+  devices?: Record<string, null | {
+    id: string;
+    name: string;
+    status: string;
+    adapter: string;
+    observedState: Record<string, string | number | boolean>;
+    desiredState: Record<string, string | number | boolean>;
+  }>;
+}
+
+export interface WaterProfile {
+  id: string;
+  name: string;
+  mode: string;
+  status: string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  policies: string[];
+  zoneTargets: Array<{ zoneId: string; action: string; desiredState: Record<string, string | number | boolean> }>;
+  automationScenarioId?: string;
+  simulationScenarioId?: string;
+  commandProfile: { encodedBytes: number; ackRequired: boolean; ttlSeconds: number };
+}
+
+export interface WaterPolicy {
+  id: string;
+  name: string;
+  risk: string;
+  scope: string[];
+  requiresApproval: boolean;
+  requiresSimulation: boolean;
+  requiresAudit: boolean;
+  message: string;
+}
+
+export interface WaterIntentRecipe {
+  id: string;
+  name: string;
+  keywords: string[];
+  profileId: string;
+  confidence: number;
+  exampleIntent: string;
+}
+
+export interface WaterCommand {
+  id: string;
+  profileId: string;
+  zoneId: string;
+  zoneName: string;
+  deviceId: string | null;
+  deviceName: string;
+  action: string;
+  desiredState: Record<string, string | number | boolean>;
+  observedState: Record<string, string | number | boolean>;
+  leakState: Record<string, string | number | boolean>;
+  flowState: Record<string, string | number | boolean>;
+  trafficClass: string;
+  selectedPath: string;
+  encodedBytes: number;
+  ackRequired: boolean;
+  status: string;
+  canExecute: boolean;
+  requiresApproval: boolean;
+  policyDecision: string;
+  policyReasons: string[];
+}
+
+export interface WaterPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: WaterDashboardResponse["service"];
+  profile: {
+    id: string;
+    name: string;
+    mode: string;
+    status: string;
+    trafficClass: string;
+    requiresApproval: boolean;
+    automationScenarioId: string | null;
+    simulationScenarioId: string | null;
+  };
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  summary: {
+    commandCount: number;
+    readyCount: number;
+    approvalCount: number;
+    blockedCount: number;
+    encodedBytes: number;
+    automationCommandCount: number;
+  };
+  policy: {
+    result: string;
+    canApply: boolean;
+    requiresApproval: boolean;
+    policies: Array<{ id: string; name: string; risk: string; message: string }>;
+    criteria: Array<{ id: string; label: string; passed: boolean }>;
+  };
+  commands: WaterCommand[];
+  automation?: AutomationEvaluation | null;
+  nextActions: string[];
+  event: FabricEvent;
+  applyAttempted?: boolean;
+}
+
+export interface WaterIntentPreview {
+  intent: string;
+  match: { id: string; name: string; profileId: string; confidence: number; score: number };
+  preview: WaterPreview;
+}
+
+export interface WaterDashboardResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultProfileId: string;
+    defaultZoneId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  summary: WaterSummary;
+  zones: WaterZone[];
+  profiles: WaterProfile[];
+  policies: WaterPolicy[];
+  intentRecipes: WaterIntentRecipe[];
+  recentWaterRuns: Array<{ id: string; profileId: string; status: string; actor: string; commandCount: number; summary: string }>;
+  automationRules: AutomationRule[];
+  automationScenarios: AutomationScenario[];
+  rule: string;
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -1381,6 +1546,7 @@ export interface CommandCentreResponse {
   lighting: LightingDashboardResponse;
   climate: ClimateDashboardResponse;
   security: SecurityDashboardResponse;
+  water: WaterDashboardResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

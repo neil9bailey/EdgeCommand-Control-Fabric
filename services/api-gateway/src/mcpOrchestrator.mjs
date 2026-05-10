@@ -17,6 +17,8 @@ const ROLE_SCOPES = {
     "climate:setpoint:apply",
     "security:profile:preview",
     "security:command:propose",
+    "water:profile:preview",
+    "water:valve:propose",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -34,6 +36,8 @@ const ROLE_SCOPES = {
     "climate:setpoint:apply",
     "security:profile:preview",
     "security:command:propose",
+    "water:profile:preview",
+    "water:valve:propose",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -51,6 +55,8 @@ const ROLE_SCOPES = {
     "climate:setpoint:apply",
     "security:profile:preview",
     "security:command:propose",
+    "water:profile:preview",
+    "water:valve:propose",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -130,6 +136,8 @@ function inferToolIdsFromIntent(orchestrator, intent = "") {
   if (/leak|water|valve|shutoff|shut off|close/.test(text)) {
     tools.add("automation.rule.compile");
     tools.add("device.command.propose");
+    tools.add("water.profile.preview");
+    tools.add("water.valve.propose");
     tools.add("simulation.run");
   }
   if (/lorawan|narrowband|remote|cottage|outage|fallback|sd-wan|sdwan|broadband|offline|\bdown\b/.test(text)) {
@@ -329,6 +337,12 @@ function deterministicToolResult(tool, input = {}) {
   }
   if (tool.id === "security.command.propose") {
     return { proposalStatus: "approval_required", accessPointId: input.accessPointId || "access-front-door", action: input.action || "unlock", execution: "not_executed" };
+  }
+  if (tool.id === "water.profile.preview") {
+    return { previewStatus: "approval_required", profileId: input.profileId || "profile-cottage-lorawan-shutoff", commandCount: 1, execution: "not_executed" };
+  }
+  if (tool.id === "water.valve.propose") {
+    return { proposalStatus: "approval_required", zoneId: input.zoneId || "water-zone-cottage", action: input.action || "close", execution: "not_executed" };
   }
   if (tool.id === "policy.evaluate") {
     return { decision: "needs_review", requiredGates: ["simulation", "approval"], policy: "physical-safety-approval" };

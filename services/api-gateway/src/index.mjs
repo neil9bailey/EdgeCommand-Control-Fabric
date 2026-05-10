@@ -97,6 +97,14 @@ import {
   previewSecurityProfile,
   summarizeSecurityAccess,
 } from "./securityAccess.mjs";
+import {
+  applyWaterProfile,
+  buildWaterDashboard,
+  loadWaterManagement,
+  previewWaterIntent,
+  previewWaterProfile,
+  summarizeWaterManagement,
+} from "./waterManagement.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -115,6 +123,7 @@ const approvalWorkflow = loadApprovalWorkflow();
 const lightingScenes = loadLightingScenes();
 const climateHvac = loadClimateHvac();
 const securityAccess = loadSecurityAccess();
+const waterManagement = loadWaterManagement();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -138,6 +147,7 @@ function buildOverview() {
   const lightingSummary = summarizeLightingScenes(lightingScenes, deviceRegistry);
   const climateSummary = summarizeClimateHvac(climateHvac, deviceRegistry);
   const securitySummary = summarizeSecurityAccess(securityAccess, deviceRegistry);
+  const waterSummary = summarizeWaterManagement(waterManagement, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -169,6 +179,7 @@ function buildOverview() {
       lightingScenes: `${lightingSummary.enabledSceneCount} enabled scenes / ${lightingSummary.onlineFixtureCount} online fixtures`,
       climateHvac: `${climateSummary.enabledProfileCount} enabled profiles / ${climateSummary.onlineThermostatCount} online thermostats`,
       securityAccess: `${securitySummary.enabledProfileCount} guarded profiles / ${securitySummary.accessPointCount} access points`,
+      waterManagement: `${waterSummary.enabledProfileCount} water profiles / ${waterSummary.onlineValveCount} online valves`,
     },
     links: defaultLinkInventory(),
   };
@@ -215,6 +226,7 @@ app.get("/api/command-centre", (_req, res) => {
     lightingScenes,
     climateHvac,
     securityAccess,
+    waterManagement,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -622,6 +634,81 @@ app.post(
     res.json(previewSecurityIntent({
       security: securityAccess,
       deviceRegistry,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/water", (_req, res) => {
+  res.json(buildWaterDashboard({
+    water: waterManagement,
+    deviceRegistry,
+    automationEngine,
+  }));
+});
+
+app.get("/api/water/profiles/:id/preview", (req, res) => {
+  const result = previewWaterProfile({
+    water: waterManagement,
+    deviceRegistry,
+    automationEngine,
+    profileId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.AgentApprover"] },
+  });
+  if (result.error === "water_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/water/profiles/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewWaterProfile({
+      water: waterManagement,
+      deviceRegistry,
+      automationEngine,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "water_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/water/profiles/:id/apply",
+  requireRoles(["Automation.Admin", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = applyWaterProfile({
+      water: waterManagement,
+      deviceRegistry,
+      automationEngine,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "water_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.status === "blocked" || result.status === "approval_required" ? 409 : 200).json(result);
+  },
+);
+
+app.post(
+  "/api/water/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewWaterIntent({
+      water: waterManagement,
+      deviceRegistry,
+      automationEngine,
       intent: req.body?.intent || "",
       actor: req.auth,
     }));

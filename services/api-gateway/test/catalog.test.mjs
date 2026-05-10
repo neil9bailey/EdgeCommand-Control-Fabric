@@ -13,8 +13,7 @@ test("catalog exposes the full module spine", () => {
 
 test("hero modules are present", () => {
   const catalog = loadCatalog();
-  assert.equal(findModule(catalog, "water-management").state, "hero");
+  assert.equal(findModule(catalog, "water-management").state, "foundation");
   assert.equal(findModule(catalog, "narrowband-control-plane").state, "hero");
   assert.equal(findModule(catalog, "mcp-orchestrator").category, "Core Platform");
 });
-

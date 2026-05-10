@@ -18,6 +18,8 @@
     { "id": "climate:setpoint:apply", "name": "Apply Climate Setpoint", "risk": "medium" },
     { "id": "security:profile:preview", "name": "Preview Security Profile", "risk": "high" },
     { "id": "security:command:propose", "name": "Propose Security Command", "risk": "high" },
+    { "id": "water:profile:preview", "name": "Preview Water Profile", "risk": "high" },
+    { "id": "water:valve:propose", "name": "Propose Water Valve Command", "risk": "high" },
     { "id": "policy:evaluate", "name": "Evaluate Safety Policy", "risk": "medium" },
     { "id": "simulation:run", "name": "Run Simulation", "risk": "medium" },
     { "id": "connectivity:route:evaluate", "name": "Evaluate Connectivity Route", "risk": "medium" },
@@ -32,7 +34,7 @@
       "name": "Automation Intent Partner",
       "rule": "propose-only",
       "status": "enabled",
-      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "security.profile.preview", "security.command.propose", "module.plan"]
+      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "security.profile.preview", "security.command.propose", "water.profile.preview", "water.valve.propose", "module.plan"]
     },
     {
       "id": "kra-agent",
@@ -200,6 +202,36 @@
       "inputHints": ["accessPointId", "action", "reason", "desiredState"]
     },
     {
+      "id": "water.profile.preview",
+      "name": "Water Profile Preview",
+      "agentId": "aip-agent",
+      "moduleId": "water-management",
+      "description": "Preview water leak response, valve close, and reopen command plans with simulation, approval, and audit evidence.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "scopes": ["water:profile:preview"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["profileId", "intent", "zoneId"]
+    },
+    {
+      "id": "water.valve.propose",
+      "name": "Water Valve Command Proposal",
+      "agentId": "aip-agent",
+      "moduleId": "water-management",
+      "description": "Prepare a high-risk water valve command proposal; physical actuation remains approval-gated and not executed.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "scopes": ["water:valve:propose"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": true,
+      "auditRequired": true,
+      "inputHints": ["zoneId", "action", "reason", "desiredState", "ttlSeconds"]
+    },
+    {
       "id": "policy.evaluate",
       "name": "Safety Policy Evaluation",
       "agentId": "kra-agent",
@@ -353,6 +385,14 @@
       "actor": "operator-local",
       "intent": "Secure the house for night, lock the front door, arm stay mode, and check the remote cottage gate.",
       "requestedTools": ["device.search", "security.profile.preview", "security.command.propose", "policy.evaluate", "audit.record"]
+    },
+    {
+      "id": "mcp-session-water-emergency",
+      "name": "Water Emergency Planning",
+      "status": "needs_permission",
+      "actor": "operator-local",
+      "intent": "If the cottage leak sensor fires, close the remote valve over LoRaWAN and attach approval evidence.",
+      "requestedTools": ["device.search", "water.profile.preview", "water.valve.propose", "policy.evaluate", "simulation.run", "connectivity.route.evaluate", "narrowband.command.encode", "audit.record"]
     }
   ],
   "toolCalls": [
@@ -425,6 +465,26 @@
       "status": "requires_permission",
       "decision": "explicit_permission_required",
       "summary": "High-risk remote unlock/open command proposal paused until explicit permission is attached."
+    },
+    {
+      "id": "toolcall-20260510-008",
+      "sessionId": "mcp-session-water-emergency",
+      "toolId": "water.profile.preview",
+      "timestamp": "2026-05-10T05:30:10Z",
+      "actor": "operator-local",
+      "status": "completed",
+      "decision": "allowed",
+      "summary": "Generated a remote cottage water shutoff preview with LoRaWAN route, simulation, and approval evidence."
+    },
+    {
+      "id": "toolcall-20260510-009",
+      "sessionId": "mcp-session-water-emergency",
+      "toolId": "water.valve.propose",
+      "timestamp": "2026-05-10T05:30:16Z",
+      "actor": "operator-local",
+      "status": "requires_permission",
+      "decision": "explicit_permission_required",
+      "summary": "High-risk P0 water valve command proposal paused until explicit permission is attached."
     }
   ]
 }

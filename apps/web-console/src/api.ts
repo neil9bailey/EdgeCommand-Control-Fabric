@@ -26,6 +26,9 @@ import type {
   SecurityDashboardResponse,
   SecurityIntentPreview,
   SecurityPreview,
+  WaterDashboardResponse,
+  WaterIntentPreview,
+  WaterPreview,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3101";
@@ -163,6 +166,14 @@ export async function fetchSecurity(): Promise<SecurityDashboardResponse | null>
   }
 }
 
+export async function fetchWater(): Promise<WaterDashboardResponse | null> {
+  try {
+    return await getJson<WaterDashboardResponse>("/api/water");
+  } catch {
+    return null;
+  }
+}
+
 export async function previewLightingScene(sceneId: string): Promise<LightingScenePreview> {
   const response = await fetch(`${API_BASE}/api/lighting/scenes/${sceneId}/preview`, {
     method: "POST",
@@ -276,6 +287,36 @@ export async function previewSecurityIntent(intent: string): Promise<SecurityInt
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<SecurityIntentPreview>;
+}
+
+export async function previewWaterProfile(profileId: string): Promise<WaterPreview> {
+  const response = await fetch(`${API_BASE}/api/water/profiles/${profileId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<WaterPreview>;
+}
+
+export async function applyWaterProfile(profileId: string): Promise<WaterPreview> {
+  const response = await fetch(`${API_BASE}/api/water/profiles/${profileId}/apply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<WaterPreview>;
+}
+
+export async function previewWaterIntent(intent: string): Promise<WaterIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/water/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<WaterIntentPreview>;
 }
 
 export async function recordApprovalDecision(

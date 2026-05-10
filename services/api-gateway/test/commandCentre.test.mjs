@@ -12,6 +12,7 @@ import { loadKraEngine } from "../src/kraEngine.mjs";
 import { loadLightingScenes } from "../src/lightingScenes.mjs";
 import { loadMcpOrchestrator } from "../src/mcpOrchestrator.mjs";
 import { loadSecurityAccess } from "../src/securityAccess.mjs";
+import { loadWaterManagement } from "../src/waterManagement.mjs";
 import { loadSimulationLab } from "../src/simulationLab.mjs";
 
 function commandCentreFixture() {
@@ -28,6 +29,7 @@ function commandCentreFixture() {
     lightingScenes: loadLightingScenes(),
     climateHvac: loadClimateHvac(),
     securityAccess: loadSecurityAccess(),
+    waterManagement: loadWaterManagement(),
     authStatus: publicAuthStatus(authConfig, {
       provider: "environment",
       keyVaultEnabled: false,
@@ -49,6 +51,7 @@ test("command centre builds all operational workspaces", () => {
     "lighting",
     "climate",
     "security",
+    "water",
     "approvals",
     "agents",
     "risk",
@@ -69,6 +72,7 @@ test("command centre action queue includes safety approval and route attention",
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "lighting"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "climate"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "security"));
+  assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "water"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "approvals"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "agents"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "risk"));
@@ -85,7 +89,9 @@ test("command centre action queue includes safety approval and route attention",
   assert.equal(commandCentre.climate.summary.onlineThermostatCount, 3);
   assert.equal(commandCentre.security.summary.enabledProfileCount, 4);
   assert.equal(commandCentre.security.summary.accessPointCount, 3);
-  assert.equal(commandCentre.agents.summary.toolCount, 16);
+  assert.equal(commandCentre.water.summary.enabledProfileCount, 4);
+  assert.equal(commandCentre.water.summary.valveCount, 2);
+  assert.equal(commandCentre.agents.summary.toolCount, 18);
   assert.equal(commandCentre.risk.summary.rulePackCount, 6);
   assert.equal(commandCentre.simulations.summary.scenarioCount, 3);
 });

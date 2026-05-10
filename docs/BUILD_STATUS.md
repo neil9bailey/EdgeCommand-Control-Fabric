@@ -501,4 +501,29 @@ Verification:
 
 ### E22 - MQTT And ESPHome Adapter
 
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed MQTT and ESPHome adapter package with broker metadata, topic mappings, ESPHome discovery profiles, command profiles, state samples, policies, intent recipes, and recent run seeds.
+- API gateway adapter service for mapped registry devices, capability/topic projections, discovery preview, command preview, simulated command publish, and intent-to-command preview.
+- `/api/mqtt-esphome`, `/api/mqtt-esphome/discovery/:id/preview`, `/api/mqtt-esphome/commands/:id/preview`, `/api/mqtt-esphome/commands/:id/publish`, and `/api/mqtt-esphome/intent/preview` endpoints.
+- Global Command Centre Modules workspace now includes MQTT mapped-device posture and publish-ready adapter actions.
+- Web console MQTT / ESPHome Adapter panel showing topic mappings, command previews, simulated publishes, ESPHome discovery payloads, state samples, and certification status.
+- Tests for adapter summary, certification-linked dashboard enrichment, payload normalization, high-risk approval gating, simulated publish, ESPHome discovery preview, and natural-language command routing.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/mqtt-esphome`, `/api/mqtt-esphome/commands/:id/preview`, `/api/mqtt-esphome/commands/:id/publish`, `/api/mqtt-esphome/discovery/:id/preview`, and `/api/command-centre`.
+- Browser verification for the MQTT / ESPHome Adapter panel, topic bridge, garden light mapping, ESPHome discovery, MQTT metric, and clean browser console.
+
+## Next
+
+### E23 - Matter And Thread Adapter
+
 Status: next planned build slice.

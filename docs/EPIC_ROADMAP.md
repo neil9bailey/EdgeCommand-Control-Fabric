@@ -618,9 +618,9 @@ Deliverables:
 
 Acceptance:
 
-- MQTT devices can publish state.
-- Commands can be sent through MQTT.
-- Capabilities map into the device registry.
+- MQTT devices can publish state. Foundation complete through deterministic state samples, mapped state topics, and registry-backed topic projections.
+- Commands can be sent through MQTT. Foundation complete through simulated publish previews, command payload normalization, topic allowlisting, and audit-bound command events.
+- Capabilities map into the device registry. Complete in E22 foundation for existing MQTT valve, flow meter, and garden light registry devices with ESPHome discovery profiles.
 
 ## E23 - Matter And Thread Adapter
 

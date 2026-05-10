@@ -2538,6 +2538,204 @@ h3 {
   padding: 5px 8px;
 }
 
+.mqtt-esphome-panel {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245, 251, 250, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.mqtt-header {
+  background:
+    linear-gradient(90deg, rgba(45, 111, 143, 0.14), rgba(31, 122, 92, 0.12)),
+    #f5fbfa;
+}
+
+.mqtt-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 1fr 1.1fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.mqtt-panel {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(251, 254, 253, 0.98);
+}
+
+.mqtt-mapping-list,
+.mqtt-command-list,
+.mqtt-discovery-list,
+.mqtt-sample-list,
+.mqtt-preview-card {
+  display: grid;
+  gap: 9px;
+}
+
+.mqtt-mapping-row,
+.mqtt-command-row,
+.mqtt-discovery-row,
+.mqtt-sample-row,
+.mqtt-preview-card > div,
+.mqtt-discovery-preview {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px;
+}
+
+.mqtt-mapping-row,
+.mqtt-command-row,
+.mqtt-discovery-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mqtt-mapping-row.active,
+.mqtt-command-row.active,
+.mqtt-discovery-row.active {
+  border-color: #a9cfda;
+  background: var(--blue-soft);
+}
+
+.mqtt-mapping-row strong,
+.mqtt-mapping-row span,
+.mqtt-command-row strong,
+.mqtt-command-row span,
+.mqtt-discovery-row strong,
+.mqtt-discovery-row span,
+.mqtt-sample-row strong,
+.mqtt-sample-row span,
+.mqtt-preview-card strong,
+.mqtt-preview-card span,
+.mqtt-discovery-preview strong,
+.mqtt-discovery-preview span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mqtt-mapping-row strong,
+.mqtt-command-row strong,
+.mqtt-discovery-row strong,
+.mqtt-sample-row strong,
+.mqtt-preview-card strong,
+.mqtt-discovery-preview strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.mqtt-mapping-row span,
+.mqtt-command-row span,
+.mqtt-discovery-row span,
+.mqtt-sample-row span,
+.mqtt-preview-card span,
+.mqtt-discovery-preview span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mqtt-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.mqtt-command-actions button,
+.mqtt-discovery-row button,
+.mqtt-intent-button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--blue);
+  color: #fff;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.mqtt-command-actions button:nth-child(2) {
+  background: var(--green);
+}
+
+.mqtt-command-actions button:disabled,
+.mqtt-discovery-row button:disabled,
+.mqtt-intent-button:disabled {
+  opacity: 0.72;
+  cursor: progress;
+}
+
+.mqtt-intent-button {
+  width: 100%;
+  margin-top: 10px;
+  justify-content: flex-start;
+  background: var(--coal);
+  color: #fff8ec;
+}
+
+.mqtt-intent-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mqtt-discovery-preview,
+.mqtt-intent-result {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  border-color: #a7d3bd;
+  background: var(--green-soft);
+  color: #135941;
+}
+
+.mqtt-intent-result {
+  padding: 10px;
+  border: 1px solid #a7d3bd;
+  border-radius: 8px;
+}
+
+.mqtt-intent-result strong,
+.mqtt-intent-result span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mqtt-intent-result strong {
+  font-size: 12px;
+}
+
+.mqtt-intent-result span {
+  font-size: 11px;
+}
+
+.mqtt-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.mqtt-next-actions span {
+  border: 1px solid #a9cfda;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: #204c61;
+  padding: 5px 8px;
+}
+
 .approval-workflow-panel {
   margin-bottom: 18px;
   overflow: hidden;
@@ -3685,6 +3883,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .mqtt-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .approval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3745,6 +3947,7 @@ h3 {
     .marketplace-grid,
     .builder-grid,
     .certification-grid,
+    .mqtt-grid,
     .approval-grid,
     .simulation-grid,
     .kra-grid,

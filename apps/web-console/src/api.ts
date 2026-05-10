@@ -30,6 +30,10 @@ import type {
   ModuleMarketplaceIntentPreview,
   ModuleMarketplacePreview,
   ModuleMarketplaceResponse,
+  MqttDiscoveryPreview,
+  MqttEsphomeIntentPreview,
+  MqttEsphomeResponse,
+  MqttPublishPreview,
   McpResponse,
   ModuleManifestResponse,
   ModuleManifestIntentPreview,
@@ -235,6 +239,14 @@ export async function fetchModuleMarketplace(): Promise<ModuleMarketplaceRespons
 export async function fetchModuleCertification(): Promise<ModuleCertificationResponse | null> {
   try {
     return await getJson<ModuleCertificationResponse>("/api/module-certification");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchMqttEsphome(): Promise<MqttEsphomeResponse | null> {
+  try {
+    return await getJson<MqttEsphomeResponse>("/api/mqtt-esphome");
   } catch {
     return null;
   }
@@ -513,6 +525,46 @@ export async function previewCertificationIntent(intent: string): Promise<Module
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<ModuleCertificationIntentPreview>;
+}
+
+export async function previewMqttCommand(commandId: string): Promise<MqttPublishPreview> {
+  const response = await fetch(`${API_BASE}/api/mqtt-esphome/commands/${commandId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<MqttPublishPreview>;
+}
+
+export async function publishMqttCommand(commandId: string): Promise<MqttPublishPreview> {
+  const response = await fetch(`${API_BASE}/api/mqtt-esphome/commands/${commandId}/publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<MqttPublishPreview>;
+}
+
+export async function previewMqttDiscovery(discoveryProfileId: string): Promise<MqttDiscoveryPreview> {
+  const response = await fetch(`${API_BASE}/api/mqtt-esphome/discovery/${discoveryProfileId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<MqttDiscoveryPreview>;
+}
+
+export async function previewMqttIntent(intent: string): Promise<MqttEsphomeIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/mqtt-esphome/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<MqttEsphomeIntentPreview>;
 }
 
 export async function recordApprovalDecision(

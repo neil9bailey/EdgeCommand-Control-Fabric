@@ -58,6 +58,7 @@ import {
   fetchModuleCertification,
   fetchModuleMarketplace,
   fetchModuleManifest,
+  fetchMqttEsphome,
   fetchNarrowbandRoutes,
   fetchOverview,
   fetchSimulationLab,
@@ -74,6 +75,10 @@ import {
   previewMarketplaceRequest,
   previewCertificationIntent,
   previewCertificationProfile,
+  previewMqttCommand,
+  previewMqttDiscovery,
+  previewMqttIntent,
+  publishMqttCommand,
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
@@ -128,6 +133,10 @@ import type {
   ModuleMarketplaceIntentPreview,
   ModuleMarketplacePreview,
   ModuleMarketplaceResponse,
+  MqttDiscoveryPreview,
+  MqttEsphomeIntentPreview,
+  MqttEsphomeResponse,
+  MqttPublishPreview,
   NarrowbandRoutes,
   PlatformOverview,
   SimulationLabResponse,
@@ -313,6 +322,11 @@ function App() {
   const [certificationPreview, setCertificationPreview] = useState<ModuleCertificationPreview | null>(null);
   const [certificationIntentPreview, setCertificationIntentPreview] = useState<ModuleCertificationIntentPreview | null>(null);
   const [certificationLoading, setCertificationLoading] = useState<"preview" | "intent" | null>(null);
+  const [mqttEsphome, setMqttEsphome] = useState<MqttEsphomeResponse | null>(null);
+  const [mqttPreview, setMqttPreview] = useState<MqttPublishPreview | null>(null);
+  const [mqttDiscoveryPreview, setMqttDiscoveryPreview] = useState<MqttDiscoveryPreview | null>(null);
+  const [mqttIntentPreview, setMqttIntentPreview] = useState<MqttEsphomeIntentPreview | null>(null);
+  const [mqttLoading, setMqttLoading] = useState<"preview" | "publish" | "discovery" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -351,6 +365,7 @@ function App() {
     void fetchModuleBuilder().then(setModuleBuilder);
     void fetchModuleMarketplace().then(setModuleMarketplace);
     void fetchModuleCertification().then(setModuleCertification);
+    void fetchMqttEsphome().then(setMqttEsphome);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -675,6 +690,44 @@ function App() {
     }
   }
 
+  async function previewMqtt(commandId: string) {
+    setMqttLoading("preview");
+    try {
+      setMqttPreview(await previewMqttCommand(commandId));
+    } finally {
+      setMqttLoading(null);
+    }
+  }
+
+  async function publishMqtt(commandId: string) {
+    setMqttLoading("publish");
+    try {
+      setMqttPreview(await publishMqttCommand(commandId));
+    } finally {
+      setMqttLoading(null);
+    }
+  }
+
+  async function previewMqttDiscoveryProfile(discoveryProfileId: string) {
+    setMqttLoading("discovery");
+    try {
+      setMqttDiscoveryPreview(await previewMqttDiscovery(discoveryProfileId));
+    } finally {
+      setMqttLoading(null);
+    }
+  }
+
+  async function previewMqttFromIntent(intentText: string) {
+    setMqttLoading("intent");
+    try {
+      const result = await previewMqttIntent(intentText);
+      setMqttIntentPreview(result);
+      setMqttPreview(result.preview);
+    } finally {
+      setMqttLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -779,6 +832,7 @@ function App() {
           <Metric label="Builds" value={moduleBuilder?.summary.readyToQueue ?? commandCentre?.moduleBuilder?.summary.readyToQueue ?? "-"} detail="queue-ready" tone="warn" />
           <Metric label="Market" value={moduleMarketplace?.summary.available ?? commandCentre?.moduleMarketplace?.summary.available ?? "-"} detail="available" tone="good" />
           <Metric label="Certs" value={moduleCertification?.summary.passed ?? commandCentre?.moduleCertification?.summary.passed ?? "-"} detail="passed gates" tone="good" />
+          <Metric label="MQTT" value={mqttEsphome?.summary.mappedDeviceCount ?? commandCentre?.mqttEsphome?.summary.mappedDeviceCount ?? "-"} detail="mapped devices" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -884,6 +938,17 @@ function App() {
           loading={certificationLoading}
           onPreview={previewCertification}
           onIntentPreview={previewCertificationFromIntent}
+        />
+        <MqttEsphomePanel
+          adapter={mqttEsphome || commandCentre?.mqttEsphome || commandCentre?.modules.mqttEsphome || null}
+          preview={mqttPreview}
+          discoveryPreview={mqttDiscoveryPreview}
+          intentPreview={mqttIntentPreview}
+          loading={mqttLoading}
+          onPreview={previewMqtt}
+          onPublish={publishMqtt}
+          onDiscoveryPreview={previewMqttDiscoveryProfile}
+          onIntentPreview={previewMqttFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -3116,6 +3181,178 @@ function ModuleCertificationPanel({
                   <span>{item.summary}</span>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MqttEsphomePanel({
+  adapter,
+  preview,
+  discoveryPreview,
+  intentPreview,
+  loading,
+  onPreview,
+  onPublish,
+  onDiscoveryPreview,
+  onIntentPreview,
+}: {
+  adapter: MqttEsphomeResponse | null;
+  preview: MqttPublishPreview | null;
+  discoveryPreview: MqttDiscoveryPreview | null;
+  intentPreview: MqttEsphomeIntentPreview | null;
+  loading: "preview" | "publish" | "discovery" | "intent" | null;
+  onPreview: (commandId: string) => void;
+  onPublish: (commandId: string) => void;
+  onDiscoveryPreview: (discoveryProfileId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const mappings = adapter?.topicMappings || [];
+  const commands = adapter?.commandProfiles || [];
+  const discoveries = adapter?.discoveryProfiles || [];
+  const recipes = adapter?.intentRecipes || [];
+  const activeCommandId = preview?.command.id || commands.find((command) => !command.requiresApproval)?.id || commands[0]?.id;
+  const activeDiscoveryId = discoveryPreview?.profile.id || discoveries.find((profile) => profile.status === "ready")?.id || discoveries[0]?.id;
+  const activeRecipe = recipes.find((recipe) => recipe.commandId === activeCommandId) || recipes[0];
+  const activeMapping = preview?.mapping || mappings[0] || null;
+
+  return (
+    <section className="mqtt-esphome-panel" aria-label="MQTT and ESPHome adapter">
+      <div className="section-header mqtt-header">
+        <div>
+          <p className="eyebrow">MQTT / ESPHome Adapter</p>
+          <h2>Topic Bridge And Device Mapping</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${adapter?.summary.mappedDeviceCount || 0} mapped`} />
+          <StatusPill tone="warn" label={`${adapter?.summary.publishableMappings || 0} publishable`} />
+          <StatusPill tone={adapter?.certification?.status === "passed" ? "good" : "warn"} label={adapter?.certification?.status?.replace(/_/g, " ") || "uncertified"} />
+        </div>
+      </div>
+
+      <div className="mqtt-grid">
+        <div className="mqtt-panel">
+          <div className="section-header compact">
+            <h3>Topic Mappings</h3>
+            <Wifi size={18} />
+          </div>
+          <div className="mqtt-mapping-list">
+            {mappings.map((mapping) => (
+              <div className={`mqtt-mapping-row ${mapping.id === activeMapping?.id ? "active" : ""}`} key={mapping.id}>
+                <div>
+                  <strong>{mapping.device?.name || mapping.deviceId}</strong>
+                  <span>{mapping.capability.replace(/_/g, " ")} / QoS {mapping.qos} / {mapping.readiness.deviceOnline ? "online" : "offline"}</span>
+                </div>
+                <StatusPill tone={mapping.requiresApproval ? "danger" : mapping.readiness.canPublish ? "good" : "warn"} label={mapping.requiresApproval ? "approval" : mapping.readiness.canPublish ? "publish" : "state only"} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mqtt-panel">
+          <div className="section-header compact">
+            <h3>Commands</h3>
+            <PlayCircle size={18} />
+          </div>
+          <div className="mqtt-command-list">
+            {commands.map((command) => (
+              <div className={`mqtt-command-row ${command.id === activeCommandId ? "active" : ""}`} key={command.id}>
+                <div>
+                  <strong>{command.name}</strong>
+                  <span>{command.deviceId} / {command.trafficClass}</span>
+                </div>
+                <div className="mqtt-command-actions">
+                  <button onClick={() => onPreview(command.id)} disabled={Boolean(loading)}>
+                    <Search size={14} />
+                    <span>{loading === "preview" && command.id === activeCommandId ? "Checking" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onPublish(command.id)} disabled={Boolean(loading) || command.requiresApproval}>
+                    <RadioTower size={14} />
+                    <span>{loading === "publish" && command.id === activeCommandId ? "Sending" : "Sim"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="mqtt-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="mqtt-panel">
+          <div className="section-header compact">
+            <h3>ESPHome Discovery</h3>
+            <Boxes size={18} />
+          </div>
+          <div className="mqtt-discovery-list">
+            {discoveries.map((discovery) => (
+              <div className={`mqtt-discovery-row ${discovery.id === activeDiscoveryId ? "active" : ""}`} key={discovery.id}>
+                <div>
+                  <strong>{discovery.name}</strong>
+                  <span>{discovery.component} / {discovery.discoveryTopic}</span>
+                </div>
+                <button onClick={() => onDiscoveryPreview(discovery.id)} disabled={Boolean(loading)}>
+                  <ClipboardCheck size={14} />
+                  <span>{loading === "discovery" && discovery.id === activeDiscoveryId ? "Opening" : "View"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          {discoveryPreview && (
+            <div className="mqtt-discovery-preview">
+              <strong>{discoveryPreview.discoveryTopic}</strong>
+              <span>{Object.keys(discoveryPreview.payload).slice(0, 5).join(" / ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="mqtt-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.command.name : "Publish Preview"}</h3>
+            <Activity size={18} />
+          </div>
+          {preview ? (
+            <div className="mqtt-preview-card">
+              <div>
+                <span>Status</span>
+                <strong>{preview.status.replace(/_/g, " ")}</strong>
+              </div>
+              <div>
+                <span>Topic</span>
+                <strong>{preview.publish.topic || "none"}</strong>
+              </div>
+              <div>
+                <span>Payload</span>
+                <strong>{JSON.stringify(preview.publish.payload)}</strong>
+              </div>
+              <div>
+                <span>Bytes</span>
+                <strong>{preview.summary.encodedBytes}</strong>
+              </div>
+              <div className="mqtt-next-actions">
+                {preview.nextActions.map((action) => <span key={action}>{action.replace(/_/g, " ")}</span>)}
+              </div>
+            </div>
+          ) : (
+            <div className="mqtt-sample-list">
+              {(adapter?.stateSamples || []).map((sample) => (
+                <div className="mqtt-sample-row" key={sample.id}>
+                  <strong>{sample.topic}</strong>
+                  <span>{sample.status} / {JSON.stringify(sample.payload)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {intentPreview?.match && (
+            <div className="mqtt-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.commandId.replace(/-/g, " ")}</span>
             </div>
           )}
         </div>

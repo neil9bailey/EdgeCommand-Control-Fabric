@@ -148,6 +148,15 @@ import {
   previewCertificationProfile,
   summarizeModuleCertification,
 } from "./moduleCertification.mjs";
+import {
+  buildMqttEsphomeDashboard,
+  loadMqttEsphome,
+  previewMqttCommand,
+  previewMqttDiscovery,
+  previewMqttIntent,
+  publishMqttCommand,
+  summarizeMqttEsphome,
+} from "./mqttEsphome.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -173,6 +182,7 @@ const moduleManifest = loadModuleManifest();
 const moduleBuilder = loadModuleBuilder();
 const moduleMarketplace = loadModuleMarketplace();
 const moduleCertification = loadModuleCertification();
+const mqttEsphome = loadMqttEsphome();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -203,6 +213,7 @@ function buildOverview() {
   const moduleBuilderSummary = summarizeModuleBuilder(moduleBuilder, moduleManifest, catalog);
   const moduleMarketplaceSummary = summarizeModuleMarketplace(moduleMarketplace, catalog, moduleManifest, moduleBuilder);
   const moduleCertificationSummary = summarizeModuleCertification(moduleCertification, moduleMarketplace, moduleBuilder, moduleManifest, catalog);
+  const mqttEsphomeSummary = summarizeMqttEsphome(mqttEsphome, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -241,6 +252,7 @@ function buildOverview() {
       moduleBuilder: `${moduleBuilderSummary.planCount} build plans / ${moduleBuilderSummary.readyToQueue} queue-ready`,
       moduleMarketplace: `${moduleMarketplaceSummary.installed} installed / ${moduleMarketplaceSummary.available} available`,
       moduleCertification: `${moduleCertificationSummary.passed} passed / ${moduleCertificationSummary.approvalRequired} approval-required`,
+      mqttEsphome: `${mqttEsphomeSummary.mappedDeviceCount} mapped devices / ${mqttEsphomeSummary.publishableMappings} publishable`,
     },
     links: defaultLinkInventory(),
   };
@@ -294,6 +306,7 @@ app.get("/api/command-centre", (_req, res) => {
     moduleBuilder,
     moduleMarketplace,
     moduleCertification,
+    mqttEsphome,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -542,6 +555,113 @@ app.post(
       builder: moduleBuilder,
       manifest: moduleManifest,
       catalog,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/mqtt-esphome", (_req, res) => {
+  res.json(buildMqttEsphomeDashboard({
+    adapter: mqttEsphome,
+    deviceRegistry,
+    certification: moduleCertification,
+    marketplace: moduleMarketplace,
+    builder: moduleBuilder,
+    manifest: moduleManifest,
+    catalog,
+  }));
+});
+
+app.get("/api/mqtt-esphome/discovery/:id/preview", (req, res) => {
+  const result = previewMqttDiscovery({
+    adapter: mqttEsphome,
+    deviceRegistry,
+    discoveryProfileId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "mqtt_discovery_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/mqtt-esphome/discovery/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewMqttDiscovery({
+      adapter: mqttEsphome,
+      deviceRegistry,
+      discoveryProfileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "mqtt_discovery_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.get("/api/mqtt-esphome/commands/:id/preview", (req, res) => {
+  const result = previewMqttCommand({
+    adapter: mqttEsphome,
+    deviceRegistry,
+    commandId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "mqtt_command_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/mqtt-esphome/commands/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewMqttCommand({
+      adapter: mqttEsphome,
+      deviceRegistry,
+      commandId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "mqtt_command_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/mqtt-esphome/commands/:id/publish",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = publishMqttCommand({
+      adapter: mqttEsphome,
+      deviceRegistry,
+      commandId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "mqtt_command_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.summary?.canPublish ? 200 : 409).json(result);
+  },
+);
+
+app.post(
+  "/api/mqtt-esphome/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewMqttIntent({
+      adapter: mqttEsphome,
+      deviceRegistry,
       intent: req.body?.intent || "",
       actor: req.auth,
     }));

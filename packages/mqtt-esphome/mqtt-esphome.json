@@ -1,0 +1,248 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "mqtt-esphome-adapter-service",
+    "name": "MQTT And ESPHome Adapter",
+    "moduleId": "mqtt-esphome",
+    "mode": "deterministic-local",
+    "executionBoundary": "simulated-mqtt-publish-only",
+    "defaultCommandId": "cmd-mqtt-garden-light-on",
+    "defaultDiscoveryProfileId": "discovery-esphome-garden-light",
+    "rule": "MQTT adapter commands are normalized, policy checked, audit-bound, and simulated in this foundation slice; no physical broker publish occurs until adapter runtime certification remains attached."
+  },
+  "featureModule": {
+    "moduleId": "mqtt-esphome",
+    "state": "foundation",
+    "buildStrategy": "certified-adapter-contract-to-runtime-scaffold",
+    "enabledBy": ["module_certification", "human_intent", "operator_dashboard", "mqtt_adapter_agent"],
+    "buildArtifacts": [
+      "packages/mqtt-esphome/mqtt-esphome.json",
+      "services/api-gateway/src/mqttEsphome.mjs",
+      "apps/web-console MqttEsphomePanel",
+      "api contracts and tests"
+    ]
+  },
+  "broker": {
+    "id": "local-mosquitto",
+    "name": "Docker Desktop Mosquitto",
+    "host": "mqtt-broker",
+    "port": 1883,
+    "protocol": "mqtt",
+    "status": "ready",
+    "authMode": "optional_key_vault_secret",
+    "secretRefs": ["MQTT_USERNAME", "MQTT_PASSWORD"]
+  },
+  "topicMappings": [
+    {
+      "id": "map-main-water-valve",
+      "deviceId": "dev-water-valve-main-01",
+      "nodeId": "edge-water-valve-main",
+      "capability": "water_valve",
+      "stateTopic": "edgecommand/home-hq/utility-room/main-valve/state",
+      "commandTopic": "edgecommand/home-hq/utility-room/main-valve/set",
+      "availabilityTopic": "edgecommand/home-hq/utility-room/main-valve/status",
+      "payloadTemplate": { "position": "{{desired.position}}" },
+      "qos": 1,
+      "retain": false,
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "requiresApproval": true
+    },
+    {
+      "id": "map-main-flow-meter",
+      "deviceId": "dev-flow-main-01",
+      "nodeId": "edge-flow-main",
+      "capability": "flow_meter",
+      "stateTopic": "edgecommand/home-hq/utility-room/main-flow/state",
+      "commandTopic": null,
+      "availabilityTopic": "edgecommand/home-hq/utility-room/main-flow/status",
+      "payloadTemplate": {},
+      "qos": 0,
+      "retain": true,
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY",
+      "requiresApproval": false
+    },
+    {
+      "id": "map-garden-path-light",
+      "deviceId": "dev-light-garden-path-01",
+      "nodeId": "edge-garden-path-light",
+      "capability": "light",
+      "stateTopic": "edgecommand/home-hq/garden/path-light/state",
+      "commandTopic": "edgecommand/home-hq/garden/path-light/set",
+      "availabilityTopic": "edgecommand/home-hq/garden/path-light/status",
+      "payloadTemplate": { "on": "{{desired.on}}", "brightness": "{{desired.brightness}}" },
+      "qos": 0,
+      "retain": false,
+      "risk": "low",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false
+    }
+  ],
+  "discoveryProfiles": [
+    {
+      "id": "discovery-esphome-garden-light",
+      "name": "ESPHome Garden Path Light",
+      "nodeId": "edge-garden-path-light",
+      "deviceId": "dev-light-garden-path-01",
+      "component": "light",
+      "discoveryTopic": "homeassistant/light/edge-garden-path-light/config",
+      "payload": {
+        "name": "Garden Path Bollards",
+        "unique_id": "edge-garden-path-light",
+        "schema": "json",
+        "state_topic": "edgecommand/home-hq/garden/path-light/state",
+        "command_topic": "edgecommand/home-hq/garden/path-light/set",
+        "availability_topic": "edgecommand/home-hq/garden/path-light/status",
+        "brightness": true
+      },
+      "status": "ready"
+    },
+    {
+      "id": "discovery-esphome-main-flow",
+      "name": "ESPHome Main Flow Meter",
+      "nodeId": "edge-flow-main",
+      "deviceId": "dev-flow-main-01",
+      "component": "sensor",
+      "discoveryTopic": "homeassistant/sensor/edge-flow-main/config",
+      "payload": {
+        "name": "Main Flow Meter",
+        "unique_id": "edge-flow-main",
+        "state_topic": "edgecommand/home-hq/utility-room/main-flow/state",
+        "availability_topic": "edgecommand/home-hq/utility-room/main-flow/status",
+        "unit_of_measurement": "L/min",
+        "value_template": "{{ value_json.litresPerMinute }}"
+      },
+      "status": "ready"
+    },
+    {
+      "id": "discovery-esphome-main-valve",
+      "name": "ESPHome Main Water Valve",
+      "nodeId": "edge-water-valve-main",
+      "deviceId": "dev-water-valve-main-01",
+      "component": "valve",
+      "discoveryTopic": "homeassistant/valve/edge-water-valve-main/config",
+      "payload": {
+        "name": "Main Water Valve",
+        "unique_id": "edge-water-valve-main",
+        "state_topic": "edgecommand/home-hq/utility-room/main-valve/state",
+        "command_topic": "edgecommand/home-hq/utility-room/main-valve/set",
+        "availability_topic": "edgecommand/home-hq/utility-room/main-valve/status"
+      },
+      "status": "approval_required"
+    }
+  ],
+  "commandProfiles": [
+    {
+      "id": "cmd-mqtt-garden-light-on",
+      "name": "Turn Garden Path Light On",
+      "mappingId": "map-garden-path-light",
+      "deviceId": "dev-light-garden-path-01",
+      "desiredState": { "on": true, "brightness": 62 },
+      "qos": 0,
+      "retain": false,
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false
+    },
+    {
+      "id": "cmd-mqtt-garden-light-off",
+      "name": "Turn Garden Path Light Off",
+      "mappingId": "map-garden-path-light",
+      "deviceId": "dev-light-garden-path-01",
+      "desiredState": { "on": false, "brightness": 0 },
+      "qos": 0,
+      "retain": false,
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false
+    },
+    {
+      "id": "cmd-mqtt-main-valve-close",
+      "name": "Close Main Water Valve Over MQTT",
+      "mappingId": "map-main-water-valve",
+      "deviceId": "dev-water-valve-main-01",
+      "desiredState": { "position": "closed" },
+      "qos": 1,
+      "retain": false,
+      "trafficClass": "P0_EMERGENCY",
+      "requiresApproval": true
+    }
+  ],
+  "stateSamples": [
+    {
+      "id": "sample-garden-light-state",
+      "mappingId": "map-garden-path-light",
+      "topic": "edgecommand/home-hq/garden/path-light/state",
+      "direction": "inbound",
+      "payload": { "on": false, "brightness": 0 },
+      "status": "parsed"
+    },
+    {
+      "id": "sample-main-flow-state",
+      "mappingId": "map-main-flow-meter",
+      "topic": "edgecommand/home-hq/utility-room/main-flow/state",
+      "direction": "inbound",
+      "payload": { "litresPerMinute": 0.8, "todayLitres": 124 },
+      "status": "parsed"
+    },
+    {
+      "id": "sample-main-valve-state",
+      "mappingId": "map-main-water-valve",
+      "topic": "edgecommand/home-hq/utility-room/main-valve/state",
+      "direction": "inbound",
+      "payload": { "position": "open", "manualOverride": false },
+      "status": "parsed"
+    }
+  ],
+  "policies": [
+    {
+      "id": "mqtt-physical-actuation-approval",
+      "name": "MQTT Physical Actuation Approval",
+      "risk": "high",
+      "requiresApproval": true,
+      "message": "High-risk MQTT actuator commands require approval evidence before real broker publish."
+    },
+    {
+      "id": "mqtt-topic-allowlist",
+      "name": "MQTT Topic Allowlist",
+      "risk": "medium",
+      "requiresApproval": false,
+      "message": "Adapter can publish only to declared command topics."
+    },
+    {
+      "id": "esphome-discovery-reviewed",
+      "name": "ESPHome Discovery Review",
+      "risk": "medium",
+      "requiresApproval": false,
+      "message": "Discovery payloads must map back to known registry devices and capabilities."
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-mqtt-garden-light",
+      "name": "MQTT Garden Light",
+      "keywords": ["mqtt", "garden", "light", "esphome", "turn on"],
+      "commandId": "cmd-mqtt-garden-light-on",
+      "confidence": 0.91,
+      "exampleIntent": "Turn on the garden path light using MQTT."
+    },
+    {
+      "id": "intent-mqtt-main-valve",
+      "name": "MQTT Main Valve",
+      "keywords": ["mqtt", "water", "valve", "close", "emergency"],
+      "commandId": "cmd-mqtt-main-valve-close",
+      "confidence": 0.89,
+      "exampleIntent": "Close the main water valve through MQTT."
+    }
+  ],
+  "recentMqttRuns": [
+    {
+      "id": "mqtt-run-20260510-001",
+      "commandId": "cmd-mqtt-garden-light-on",
+      "mappingId": "map-garden-path-light",
+      "status": "publish_simulated",
+      "actor": "system-preview",
+      "summary": "Garden path light command normalized to MQTT JSON payload without broker mutation."
+    }
+  ]
+}

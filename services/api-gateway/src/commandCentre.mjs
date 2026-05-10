@@ -17,6 +17,7 @@ import { buildModuleBuilderDashboard, loadModuleBuilder, summarizeModuleBuilder 
 import { buildModuleCertificationDashboard, loadModuleCertification, summarizeModuleCertification } from "./moduleCertification.mjs";
 import { buildModuleManifestDashboard, loadModuleManifest, summarizeModuleManifest } from "./moduleManifest.mjs";
 import { buildModuleMarketplaceDashboard, loadModuleMarketplace, summarizeModuleMarketplace } from "./moduleMarketplace.mjs";
+import { buildMqttEsphomeDashboard, loadMqttEsphome, summarizeMqttEsphome } from "./mqttEsphome.mjs";
 import {
   buildSimulationDashboard,
   summarizeSimulationLab,
@@ -93,7 +94,7 @@ export function buildApprovalQueue(automationEngine, deviceRegistry, simulationL
   });
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, waterSummary, energySummary, sensingSummary, moduleManifestSummary, moduleBuilderSummary, moduleMarketplaceSummary, moduleCertificationSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, waterSummary, energySummary, sensingSummary, moduleManifestSummary, moduleBuilderSummary, moduleMarketplaceSummary, moduleCertificationSummary, mqttEsphomeSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -103,12 +104,12 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
       id: "modules",
       label: "Modules",
       headline: `${moduleMarketplaceSummary.installed} installed / ${moduleMarketplaceSummary.available} available`,
-      detail: `${moduleBuilderSummary.readyToQueue} queue-ready plan, ${moduleCertificationSummary.passed} certification passed`,
+      detail: `${moduleBuilderSummary.readyToQueue} queue-ready plan, ${mqttEsphomeSummary.mappedDeviceCount} MQTT mapped`,
       status: moduleManifestSummary.blocked > 0 ? "attention" : "ready",
       metrics: [
         { label: "Listings", value: moduleMarketplaceSummary.listingCount },
         { label: "Plans", value: moduleBuilderSummary.planCount },
-        { label: "Certs", value: moduleCertificationSummary.passed },
+        { label: "MQTT", value: mqttEsphomeSummary.mappedDeviceCount },
       ],
     },
     {
@@ -294,7 +295,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, waterDashboard, energyDashboard, sensingDashboard, moduleManifestDashboard, moduleBuilderDashboard, moduleMarketplaceDashboard, moduleCertificationDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
+function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, waterDashboard, energyDashboard, sensingDashboard, moduleManifestDashboard, moduleBuilderDashboard, moduleMarketplaceDashboard, moduleCertificationDashboard, mqttEsphomeDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -445,6 +446,19 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
       evidence: [profile.buildPlanId, profile.readiness.requiresApproval ? "approval-required" : "certification-ready"],
     }));
 
+  const mqttActions = (mqttEsphomeDashboard?.commandProfiles || [])
+    .slice(0, 3)
+    .map((command) => ({
+      id: `mqtt-${command.id}`,
+      priority: command.trafficClass,
+      workspaceId: "modules",
+      title: command.name,
+      owner: "MQTT And ESPHome",
+      status: command.requiresApproval ? "approval_required" : "ready_to_publish",
+      detail: `${command.deviceId} / ${command.mapping?.commandTopic || "no command topic"}`,
+      evidence: [command.mappingId, command.requiresApproval ? "approval-required" : "publish-ready"],
+    }));
+
   const deviceActions = devices
     .filter((device) => device.status !== "online")
     .map((device) => ({
@@ -527,7 +541,7 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
       };
     });
 
-  const primaryActions = [...approvalActions, ...marketplaceActions, ...certificationActions, ...moduleActions, ...buildActions, ...lightingActions, ...climateActions, ...securityActions, ...waterActions, ...energyActions, ...sensingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions];
+  const primaryActions = [...approvalActions, ...marketplaceActions, ...certificationActions, ...mqttActions, ...moduleActions, ...buildActions, ...lightingActions, ...climateActions, ...securityActions, ...waterActions, ...energyActions, ...sensingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions];
   const reservedActions = [
     approvalActions[0],
     lightingActions[0],
@@ -545,11 +559,12 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
   return [...byId.values()].slice(0, 40);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, waterManagement, energyManagement, sensingPresence, moduleManifest, moduleBuilder, moduleMarketplace, moduleCertification, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, waterManagement, energyManagement, sensingPresence, moduleManifest, moduleBuilder, moduleMarketplace, moduleCertification, mqttEsphome, authStatus }) {
   const resolvedModuleManifest = moduleManifest || loadModuleManifest();
   const resolvedModuleBuilder = moduleBuilder || loadModuleBuilder();
   const resolvedModuleMarketplace = moduleMarketplace || loadModuleMarketplace();
   const resolvedModuleCertification = moduleCertification || loadModuleCertification();
+  const resolvedMqttEsphome = mqttEsphome || loadMqttEsphome();
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
@@ -563,6 +578,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
   const moduleBuilderSummary = summarizeModuleBuilder(resolvedModuleBuilder, resolvedModuleManifest, catalog);
   const moduleMarketplaceSummary = summarizeModuleMarketplace(resolvedModuleMarketplace, catalog, resolvedModuleManifest, resolvedModuleBuilder);
   const moduleCertificationSummary = summarizeModuleCertification(resolvedModuleCertification, resolvedModuleMarketplace, resolvedModuleBuilder, resolvedModuleManifest, catalog);
+  const mqttEsphomeSummary = summarizeMqttEsphome(resolvedMqttEsphome, deviceRegistry);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
@@ -638,6 +654,15 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     manifest: resolvedModuleManifest,
     catalog,
   });
+  const mqttEsphomeDashboard = buildMqttEsphomeDashboard({
+    adapter: resolvedMqttEsphome,
+    deviceRegistry,
+    certification: resolvedModuleCertification,
+    marketplace: resolvedModuleMarketplace,
+    builder: resolvedModuleBuilder,
+    manifest: resolvedModuleManifest,
+    catalog,
+  });
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
   const auditEvents = filterEvents(eventLedger, { auditRequired: "true", limit: 8 });
@@ -656,6 +681,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     moduleBuilderSummary,
     moduleMarketplaceSummary,
     moduleCertificationSummary,
+    mqttEsphomeSummary,
     approvalSummary: approvalQueue.summary,
     mcpSummary,
     kraSummary,
@@ -714,6 +740,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       moduleBuilderDashboard,
       moduleMarketplaceDashboard,
       moduleCertificationDashboard,
+      mqttEsphomeDashboard,
       devices,
       routes: narrowbandRoutes.routes,
       auditEvents,
@@ -733,6 +760,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       builder: moduleBuilderDashboard,
       marketplace: moduleMarketplaceDashboard,
       certification: moduleCertificationDashboard,
+      mqttEsphome: mqttEsphomeDashboard,
     },
     devices,
     automations: {
@@ -753,6 +781,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     moduleBuilder: moduleBuilderDashboard,
     moduleMarketplace: moduleMarketplaceDashboard,
     moduleCertification: moduleCertificationDashboard,
+    mqttEsphome: mqttEsphomeDashboard,
     approvals: approvalQueue,
     agents: {
       orchestrator: mcpOrchestrator.orchestrator,

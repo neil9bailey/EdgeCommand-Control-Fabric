@@ -34,6 +34,7 @@ Current status:
 - E19 Module Builder and IaC Fragment System foundation is complete.
 - E20 Module Marketplace Dashboard foundation is complete.
 - E21 Module Certification and Test Harness foundation is complete.
+- E22 MQTT and ESPHome Adapter foundation is complete.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -82,6 +83,7 @@ Local URLs:
 - Module builder and IaC fragments API: http://localhost:3101/api/module-builder
 - Module marketplace API: http://localhost:3101/api/module-marketplace
 - Module certification API: http://localhost:3101/api/module-certification
+- MQTT and ESPHome adapter API: http://localhost:3101/api/mqtt-esphome
 
 Docker Desktop target:
 

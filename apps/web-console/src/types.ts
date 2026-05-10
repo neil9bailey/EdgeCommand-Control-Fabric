@@ -2324,6 +2324,161 @@ export interface ModuleCertificationResponse {
   rule: string;
 }
 
+export interface MqttEsphomeSummary {
+  schemaVersion: string;
+  brokerStatus: string;
+  mappingCount: number;
+  mappedDeviceCount: number;
+  onlineMappedDevices: number;
+  commandProfileCount: number;
+  discoveryProfileCount: number;
+  readyDiscoveryProfiles: number;
+  stateSampleCount: number;
+  recentRunCount: number;
+  approvalRequiredCommands: number;
+  publishableMappings: number;
+  byCapability: Record<string, number>;
+  byRisk: Record<string, number>;
+  byQos: Record<string, number>;
+}
+
+export interface MqttBroker {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  protocol: string;
+  status: string;
+  authMode: string;
+  secretRefs: string[];
+}
+
+export interface MqttTopicMapping {
+  id: string;
+  deviceId: string;
+  nodeId: string;
+  capability: string;
+  stateTopic: string;
+  commandTopic: string | null;
+  availabilityTopic: string;
+  payloadTemplate: Record<string, string | number | boolean>;
+  qos: number;
+  retain: boolean;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  device?: DeviceDefinition | null;
+  capabilityDefinition?: { id: string; class: string; risk: string; trafficClass: string } | null;
+  discovery?: MqttDiscoveryProfile | null;
+  stateSample?: MqttStateSample | null;
+  readiness: {
+    deviceKnown: boolean;
+    deviceOnline: boolean;
+    commandTopicAllowed: boolean;
+    canPublish: boolean;
+    registryCapabilities: string[];
+  };
+}
+
+export interface MqttDiscoveryProfile {
+  id: string;
+  name: string;
+  nodeId: string;
+  deviceId: string;
+  component: string;
+  discoveryTopic: string;
+  payload: Record<string, string | number | boolean>;
+  status: string;
+  device?: DeviceDefinition | null;
+}
+
+export interface MqttCommandProfile {
+  id: string;
+  name: string;
+  mappingId: string;
+  deviceId: string;
+  desiredState: Record<string, string | number | boolean>;
+  qos: number;
+  retain: boolean;
+  trafficClass: string;
+  requiresApproval: boolean;
+  mapping?: MqttTopicMapping | null;
+  device?: DeviceDefinition | null;
+}
+
+export interface MqttStateSample {
+  id: string;
+  mappingId: string;
+  topic: string;
+  direction: string;
+  payload: Record<string, string | number | boolean>;
+  status: string;
+}
+
+export interface MqttPublishPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: MqttEsphomeResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  command: MqttCommandProfile;
+  mapping: MqttTopicMapping | null;
+  device: DeviceDefinition | null;
+  publish: { topic: string | null; payload: Record<string, string | number | boolean>; qos: number; retain: boolean; brokerId: string; simulated: boolean };
+  summary: { canPublish: boolean; requiresApproval: boolean; approvalSatisfied: boolean; deviceOnline: boolean; encodedBytes: number };
+  policy: { result: string; rules: Array<{ id: string; name: string; risk: string; requiresApproval: boolean; message: string }> };
+  nextActions: string[];
+  event: FabricEvent;
+  publishAttempted?: boolean;
+}
+
+export interface MqttDiscoveryPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: MqttEsphomeResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  profile: MqttDiscoveryProfile;
+  device: DeviceDefinition | null;
+  discoveryTopic: string;
+  payload: Record<string, string | number | boolean>;
+  summary: { deviceKnown: boolean; capabilityCount: number; retainRecommended: boolean; canPublishDiscovery: boolean };
+  nextActions: string[];
+}
+
+export interface MqttEsphomeIntentPreview {
+  intent: string;
+  match: null | { id: string; name: string; commandId: string; confidence: number; score: number };
+  preview: MqttPublishPreview;
+}
+
+export interface MqttEsphomeResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultCommandId: string;
+    defaultDiscoveryProfileId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  broker: MqttBroker;
+  summary: MqttEsphomeSummary;
+  topicMappings: MqttTopicMapping[];
+  discoveryProfiles: MqttDiscoveryProfile[];
+  commandProfiles: MqttCommandProfile[];
+  stateSamples: MqttStateSample[];
+  policies: Array<{ id: string; name: string; risk: string; requiresApproval: boolean; message: string }>;
+  intentRecipes: Array<{ id: string; name: string; keywords: string[]; commandId: string; confidence: number; exampleIntent: string }>;
+  recentMqttRuns: Array<{ id: string; commandId: string; mappingId: string; status: string; actor: string; summary: string }>;
+  certification: null | { status: string; profileId: string; canEnable: boolean; evidenceAttached: number; requiredEvidence: number };
+  rule: string;
+}
+
 export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
@@ -2394,6 +2549,7 @@ export interface CommandCentreResponse {
     builder?: ModuleBuilderResponse;
     marketplace?: ModuleMarketplaceResponse;
     certification?: ModuleCertificationResponse;
+    mqttEsphome?: MqttEsphomeResponse;
   };
   devices: CommandCentreDevice[];
   automations: {
@@ -2414,6 +2570,7 @@ export interface CommandCentreResponse {
   moduleBuilder?: ModuleBuilderResponse;
   moduleMarketplace?: ModuleMarketplaceResponse;
   moduleCertification?: ModuleCertificationResponse;
+  mqttEsphome?: MqttEsphomeResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

@@ -1,0 +1,215 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "energy-management-service",
+    "name": "Energy And Solar",
+    "moduleId": "energy-solar",
+    "mode": "deterministic-local",
+    "executionBoundary": "simulated-energy-command-plan-only",
+    "defaultProfileId": "profile-solar-surplus-ev",
+    "defaultAssetId": "energy-asset-home-core",
+    "rule": "Energy profiles may plan tariff, EV, solar, and battery actions locally; battery discharge, critical load changes, and outage actions remain simulation and policy gated."
+  },
+  "featureModule": {
+    "moduleId": "energy-solar",
+    "state": "foundation",
+    "buildStrategy": "feature-manifest-plus-service-plus-dashboard",
+    "enabledBy": ["human_intent", "module_marketplace", "operator_dashboard", "automation_engine"],
+    "buildArtifacts": [
+      "packages/energy-management/energy-management.json",
+      "services/api-gateway/src/energyManagement.mjs",
+      "apps/web-console EnergyManagementPanel",
+      "api contracts and tests"
+    ]
+  },
+  "assets": [
+    {
+      "id": "energy-asset-home-core",
+      "name": "Home Energy Core",
+      "siteId": "home-hq",
+      "zoneId": "energy-room",
+      "meterDeviceId": "dev-energy-meter-01",
+      "solarInverterDeviceId": "dev-solar-inverter-01",
+      "batteryDeviceId": "dev-home-battery-01",
+      "evChargerDeviceId": "dev-ev-charger-01",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "pathPreference": ["lan", "lte-m"],
+      "policies": ["battery-reserve-floor", "grid-export-boundary", "tariff-window-guard"]
+    }
+  ],
+  "policies": [
+    {
+      "id": "battery-reserve-floor",
+      "name": "Battery Reserve Floor",
+      "risk": "high",
+      "scope": ["battery", "ev_charger"],
+      "requiresApproval": false,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "minimumReservePercent": 35,
+      "message": "Flexible loads are held or reduced when battery state of charge would fall below the protected reserve."
+    },
+    {
+      "id": "grid-export-boundary",
+      "name": "Grid Export Boundary",
+      "risk": "medium",
+      "scope": ["solar_inverter", "energy_meter"],
+      "requiresApproval": false,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "Solar export and inverter mode changes remain forecast and policy planned until adapter support is attached."
+    },
+    {
+      "id": "tariff-window-guard",
+      "name": "Tariff Window Guard",
+      "risk": "medium",
+      "scope": ["tariff_signal", "ev_charger"],
+      "requiresApproval": false,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "Load shifting must preserve comfort, battery reserve, and charger safety while targeting low-price windows."
+    },
+    {
+      "id": "outage-critical-load-only",
+      "name": "Outage Critical Load Only",
+      "risk": "high",
+      "scope": ["battery", "critical_load"],
+      "requiresApproval": true,
+      "requiresSimulation": true,
+      "requiresAudit": true,
+      "message": "Outage mode may plan critical-load support, but physical circuit changes require approval and signed command evidence."
+    }
+  ],
+  "tariffs": [
+    {
+      "id": "tariff-agile-home",
+      "name": "Agile Home Tariff",
+      "currency": "GBP",
+      "currentPencePerKwh": 22.4,
+      "exportPencePerKwh": 14.8,
+      "lowWindows": [
+        { "start": "00:30", "end": "04:30", "pencePerKwh": 10.2 },
+        { "start": "12:30", "end": "14:00", "pencePerKwh": 9.6 }
+      ],
+      "peakWindows": [
+        { "start": "16:00", "end": "19:00", "pencePerKwh": 38.5 }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "profile-solar-surplus-ev",
+      "name": "Solar Surplus EV Assist",
+      "mode": "optimize",
+      "status": "enabled",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["battery-reserve-floor", "grid-export-boundary"],
+      "assetTargets": [
+        { "assetId": "energy-asset-home-core", "action": "set_ev_limit", "desiredState": { "charging": true, "limitAmps": 10, "sourcePreference": "solar_surplus" } }
+      ],
+      "automationScenarioId": "scenario-ev-reserve",
+      "simulationScenarioId": "sim-ev-reserve-hold",
+      "commandProfile": { "encodedBytes": 48, "ackRequired": true, "ttlSeconds": 300 }
+    },
+    {
+      "id": "profile-battery-reserve-guard",
+      "name": "Battery Reserve Guard",
+      "mode": "protect",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": false,
+      "policies": ["battery-reserve-floor", "tariff-window-guard"],
+      "assetTargets": [
+        { "assetId": "energy-asset-home-core", "action": "hold_ev_charge", "desiredState": { "charging": false, "reason": "reserve_protection" } }
+      ],
+      "automationScenarioId": "scenario-ev-reserve",
+      "simulationScenarioId": "sim-ev-reserve-hold",
+      "commandProfile": { "encodedBytes": 42, "ackRequired": true, "ttlSeconds": 300 }
+    },
+    {
+      "id": "profile-tariff-load-shift",
+      "name": "Tariff Load Shift",
+      "mode": "shift",
+      "status": "enabled",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["tariff-window-guard", "battery-reserve-floor"],
+      "assetTargets": [
+        { "assetId": "energy-asset-home-core", "action": "schedule_ev_window", "desiredState": { "start": "00:30", "end": "04:30", "limitAmps": 16 } }
+      ],
+      "commandProfile": { "encodedBytes": 52, "ackRequired": true, "ttlSeconds": 600 }
+    },
+    {
+      "id": "profile-outage-critical-loads",
+      "name": "Outage Critical Loads",
+      "mode": "outage",
+      "status": "enabled",
+      "trafficClass": "P1_SECURITY",
+      "requiresApproval": true,
+      "policies": ["outage-critical-load-only", "battery-reserve-floor"],
+      "assetTargets": [
+        { "assetId": "energy-asset-home-core", "action": "critical_load_mode", "desiredState": { "enabled": true, "circuits": ["fridge", "network", "security", "sump"] } }
+      ],
+      "commandProfile": { "encodedBytes": 50, "ackRequired": true, "ttlSeconds": 180 }
+    }
+  ],
+  "forecasts": [
+    {
+      "id": "forecast-home-today",
+      "name": "Home Energy Forecast",
+      "solarKwh": 18.6,
+      "loadKwh": 21.2,
+      "batteryEndPercent": 58,
+      "evFlexibleKwh": 11.4,
+      "savingForecastGbp": 4.72,
+      "confidence": 0.87
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-solar-surplus-charge",
+      "name": "Solar surplus EV charging",
+      "keywords": ["solar", "surplus", "ev", "charge", "charger"],
+      "profileId": "profile-solar-surplus-ev",
+      "confidence": 0.91,
+      "exampleIntent": "Use solar surplus to charge the EV without draining the home battery."
+    },
+    {
+      "id": "intent-battery-reserve",
+      "name": "Battery reserve protection",
+      "keywords": ["battery", "reserve", "hold", "protect", "backup"],
+      "profileId": "profile-battery-reserve-guard",
+      "confidence": 0.9,
+      "exampleIntent": "Hold EV charging if the battery reserve is at risk."
+    },
+    {
+      "id": "intent-tariff-load-shift",
+      "name": "Tariff load shifting",
+      "keywords": ["tariff", "cheap", "shift", "window", "load"],
+      "profileId": "profile-tariff-load-shift",
+      "confidence": 0.88,
+      "exampleIntent": "Shift flexible loads into the cheapest tariff window."
+    },
+    {
+      "id": "intent-outage-critical-loads",
+      "name": "Outage critical loads",
+      "keywords": ["outage", "critical", "backup", "load", "power"],
+      "profileId": "profile-outage-critical-loads",
+      "confidence": 0.86,
+      "exampleIntent": "If the grid is down, preserve battery for critical loads only."
+    }
+  ],
+  "recentEnergyRuns": [
+    {
+      "id": "energy-run-20260510-001",
+      "profileId": "profile-battery-reserve-guard",
+      "status": "ready",
+      "actor": "system-preview",
+      "commandCount": 1,
+      "summary": "Battery reserve guard prepared an EV hold command while preserving protected battery reserve."
+    }
+  ]
+}

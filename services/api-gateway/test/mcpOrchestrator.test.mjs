@@ -28,15 +28,16 @@ test("MCP orchestrator loads registered tools, agents, sessions, and audit", () 
 
   assert.equal(orchestrator.orchestrator.tenant, "vendorlogic.io");
   assert.equal(summary.schemaVersion, "0.1.0");
-  assert.equal(summary.toolCount, 18);
-  assert.equal(summary.enabledTools, 18);
+  assert.equal(summary.toolCount, 20);
+  assert.equal(summary.enabledTools, 20);
   assert.equal(summary.agentCount, 5);
-  assert.equal(summary.approvalRequiredTools, 6);
-  assert.equal(summary.highRiskTools, 8);
+  assert.equal(summary.approvalRequiredTools, 7);
+  assert.equal(summary.highRiskTools, 9);
   assert.equal(summary.byModule["lighting-scenes"], 2);
   assert.equal(summary.byModule["climate-hvac"], 2);
   assert.equal(summary.byModule["security-access"], 2);
   assert.equal(summary.byModule["water-management"], 2);
+  assert.equal(summary.byModule["energy-solar"], 2);
   assert.equal(summary.byModule["mcp-orchestrator"], undefined);
 });
 
@@ -44,7 +45,7 @@ test("MCP tool filtering and lookup use registered manifests only", () => {
   const orchestrator = loadMcpOrchestrator();
   const highRiskTools = filterMcpTools(orchestrator, { risk: "high" });
 
-  assert.equal(highRiskTools.length, 8);
+  assert.equal(highRiskTools.length, 9);
   assert.equal(findMcpTool(orchestrator, "device.search").risk, "low");
   assert.equal(findMcpTool(orchestrator, "unknown.tool"), null);
 });
@@ -161,6 +162,30 @@ test("MCP execution simulates water profile preview", () => {
   assert.equal(result.canExecute, true);
   assert.equal(result.result.profileId, "profile-cottage-lorawan-shutoff");
   assert.equal(result.event.moduleId, "water-management");
+});
+
+test("MCP session planning gates high-risk energy load proposals", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const plan = planMcpSession(orchestrator, {
+    intent: "Use solar surplus for EV charging but protect the battery reserve and critical loads.",
+  }, operator);
+
+  assert.equal(plan.status, "needs_permission");
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "energy.profile.preview" && tool.status === "ready"));
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "energy.load.propose" && tool.status === "requires_permission"));
+});
+
+test("MCP execution simulates energy profile preview", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const result = executeMcpTool(orchestrator, {
+    toolId: "energy.profile.preview",
+    input: { profileId: "profile-battery-reserve-guard" },
+  }, operator);
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.canExecute, true);
+  assert.equal(result.result.profileId, "profile-battery-reserve-guard");
+  assert.equal(result.event.moduleId, "energy-solar");
 });
 
 test("MCP execution requires explicit permission for high-risk tools", () => {

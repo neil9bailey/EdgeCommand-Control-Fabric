@@ -489,9 +489,10 @@ Deliverables:
 
 Acceptance:
 
-- Energy telemetry is visible.
-- AIP can propose load shifting.
-- Policy can prevent unsafe battery/charger actions.
+- Energy telemetry is visible. Complete in E16 foundation.
+- AIP can propose load shifting. Complete in E16 foundation.
+- Policy can prevent unsafe battery/charger actions. Complete in E16 foundation.
+- Solar surplus EV assist, battery reserve guard, tariff load shift, outage critical-load guard, MCP energy tools, API endpoints, and the web console Energy workspace are complete in E16 foundation.
 
 ## E17 - Occupancy, Presence, And Environmental Sensing
 

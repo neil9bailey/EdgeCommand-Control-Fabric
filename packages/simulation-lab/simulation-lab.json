@@ -82,8 +82,8 @@
       "id": "sim-energy-reserve-stack",
       "name": "Energy Reserve Stack",
       "siteId": "home-hq",
-      "deviceIds": ["dev-energy-meter-01", "dev-ev-charger-01"],
-      "capabilities": ["energy_meter", "ev_charger"],
+      "deviceIds": ["dev-energy-meter-01", "dev-solar-inverter-01", "dev-home-battery-01", "dev-ev-charger-01"],
+      "capabilities": ["energy_meter", "solar_inverter", "battery", "ev_charger"],
       "stateSource": "device-registry-clone",
       "status": "ready"
     }

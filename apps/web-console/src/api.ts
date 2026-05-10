@@ -10,6 +10,9 @@ import type {
   ClimatePreview,
   CommandCentreResponse,
   DeviceRegistryResponse,
+  EnergyDashboardResponse,
+  EnergyIntentPreview,
+  EnergyPreview,
   EventLedgerResponse,
   IntentDecisionResponse,
   IntentProposalResponse,
@@ -174,6 +177,14 @@ export async function fetchWater(): Promise<WaterDashboardResponse | null> {
   }
 }
 
+export async function fetchEnergy(): Promise<EnergyDashboardResponse | null> {
+  try {
+    return await getJson<EnergyDashboardResponse>("/api/energy");
+  } catch {
+    return null;
+  }
+}
+
 export async function previewLightingScene(sceneId: string): Promise<LightingScenePreview> {
   const response = await fetch(`${API_BASE}/api/lighting/scenes/${sceneId}/preview`, {
     method: "POST",
@@ -317,6 +328,36 @@ export async function previewWaterIntent(intent: string): Promise<WaterIntentPre
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<WaterIntentPreview>;
+}
+
+export async function previewEnergyProfile(profileId: string): Promise<EnergyPreview> {
+  const response = await fetch(`${API_BASE}/api/energy/profiles/${profileId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<EnergyPreview>;
+}
+
+export async function applyEnergyProfile(profileId: string): Promise<EnergyPreview> {
+  const response = await fetch(`${API_BASE}/api/energy/profiles/${profileId}/apply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<EnergyPreview>;
+}
+
+export async function previewEnergyIntent(intent: string): Promise<EnergyIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/energy/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<EnergyIntentPreview>;
 }
 
 export async function recordApprovalDecision(

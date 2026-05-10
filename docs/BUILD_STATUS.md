@@ -325,7 +325,7 @@ Verification:
 
 ### E14 - Security And Access
 
-Status: complete locally and ready to push to `origin/main`.
+Status: complete and pushed to `origin/main`.
 
 Delivered:
 
@@ -348,7 +348,7 @@ Verification:
 
 ### E15 - Water Management
 
-Status: complete locally and ready to push to `origin/main`.
+Status: complete and pushed to `origin/main`.
 
 Delivered:
 
@@ -369,8 +369,27 @@ Verification:
 - API verification for `/api/water`, `/api/water/profiles/:id/preview`, `/api/water/intent/preview`, and `/api/command-centre`.
 - Browser verification for the Water workspace, Water Management panel, LoRaWAN shutoff profile, and clean browser console.
 
+### E16 - Energy, Solar, Battery, And EV
+
+Status: complete locally and ready to push to `origin/main`.
+
+Delivered:
+
+- File-backed Energy Management package with home energy asset, meter, solar inverter, battery, EV charger, tariff windows, forecasts, policies, profiles, intent recipes, feature-module metadata, and recent run seeds.
+- Expanded device registry with solar inverter, home battery, solar, tariff, and critical-load capabilities.
+- Promoted Energy And Solar, EV Charging, and Battery And Backup Power catalogue surfaces to foundation modules.
+- API gateway energy service for dashboard data, solar-surplus EV preview, tariff load shift preview, battery reserve guard, outage critical-load approval boundary, simulated apply, and intent-to-energy preview.
+- `/api/energy`, `/api/energy/profiles/:id/preview`, `/api/energy/profiles/:id/apply`, and `/api/energy/intent/preview` endpoints.
+- MCP orchestrator energy profile preview and high-risk energy load proposal tools, permission gates, deterministic tool execution, and AIP energy tool requirements.
+- Global Command Centre Energy workspace and Energy And Solar dashboard panel in the web console.
+- Tests for energy package loading, dashboard enrichment, solar/EV preview, critical-load approval guard, intent recipe matching, MCP energy tools, device registry energy assets, and command-centre integration.
+
+Verification:
+
+- `npm test`
+
 ## Next
 
-### E16 - Energy And Solar
+### E17 - Occupancy, Presence, And Environmental Sensing
 
 Status: next planned build slice.

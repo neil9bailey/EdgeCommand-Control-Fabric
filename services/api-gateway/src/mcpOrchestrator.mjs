@@ -19,6 +19,8 @@ const ROLE_SCOPES = {
     "security:command:propose",
     "water:profile:preview",
     "water:valve:propose",
+    "energy:profile:preview",
+    "energy:load:propose",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -38,6 +40,8 @@ const ROLE_SCOPES = {
     "security:command:propose",
     "water:profile:preview",
     "water:valve:propose",
+    "energy:profile:preview",
+    "energy:load:propose",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -57,6 +61,8 @@ const ROLE_SCOPES = {
     "security:command:propose",
     "water:profile:preview",
     "water:valve:propose",
+    "energy:profile:preview",
+    "energy:load:propose",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -161,6 +167,11 @@ function inferToolIdsFromIntent(orchestrator, intent = "") {
   if (/security|secure|lock|unlock|door|gate|alarm|\barm\b|disarm|access/.test(text)) {
     tools.add("security.profile.preview");
     tools.add("security.command.propose");
+  }
+  if (/energy|solar|battery|reserve|tariff|\bev\b|charger|charge|load|outage|critical/.test(text)) {
+    tools.add("energy.profile.preview");
+    tools.add("energy.load.propose");
+    tools.add("simulation.run");
   }
 
   const registered = toolMap(orchestrator);
@@ -343,6 +354,12 @@ function deterministicToolResult(tool, input = {}) {
   }
   if (tool.id === "water.valve.propose") {
     return { proposalStatus: "approval_required", zoneId: input.zoneId || "water-zone-cottage", action: input.action || "close", execution: "not_executed" };
+  }
+  if (tool.id === "energy.profile.preview") {
+    return { previewStatus: "ready", profileId: input.profileId || "profile-battery-reserve-guard", commandCount: 1, execution: "not_executed" };
+  }
+  if (tool.id === "energy.load.propose") {
+    return { proposalStatus: "approval_required", assetId: input.assetId || "energy-asset-home-core", action: input.action || "critical_load_mode", execution: "not_executed" };
   }
   if (tool.id === "policy.evaluate") {
     return { decision: "needs_review", requiredGates: ["simulation", "approval"], policy: "physical-safety-approval" };

@@ -20,6 +20,8 @@
     { "id": "security:command:propose", "name": "Propose Security Command", "risk": "high" },
     { "id": "water:profile:preview", "name": "Preview Water Profile", "risk": "high" },
     { "id": "water:valve:propose", "name": "Propose Water Valve Command", "risk": "high" },
+    { "id": "energy:profile:preview", "name": "Preview Energy Profile", "risk": "medium" },
+    { "id": "energy:load:propose", "name": "Propose Energy Load Command", "risk": "high" },
     { "id": "policy:evaluate", "name": "Evaluate Safety Policy", "risk": "medium" },
     { "id": "simulation:run", "name": "Run Simulation", "risk": "medium" },
     { "id": "connectivity:route:evaluate", "name": "Evaluate Connectivity Route", "risk": "medium" },
@@ -34,7 +36,7 @@
       "name": "Automation Intent Partner",
       "rule": "propose-only",
       "status": "enabled",
-      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "security.profile.preview", "security.command.propose", "water.profile.preview", "water.valve.propose", "module.plan"]
+      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "security.profile.preview", "security.command.propose", "water.profile.preview", "water.valve.propose", "energy.profile.preview", "energy.load.propose", "module.plan"]
     },
     {
       "id": "kra-agent",
@@ -232,6 +234,36 @@
       "inputHints": ["zoneId", "action", "reason", "desiredState", "ttlSeconds"]
     },
     {
+      "id": "energy.profile.preview",
+      "name": "Energy Profile Preview",
+      "agentId": "aip-agent",
+      "moduleId": "energy-solar",
+      "description": "Preview solar, battery reserve, EV charging, tariff, and outage energy plans with policy evidence.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["energy:profile:preview"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["profileId", "intent", "assetId"]
+    },
+    {
+      "id": "energy.load.propose",
+      "name": "Energy Load Command Proposal",
+      "agentId": "aip-agent",
+      "moduleId": "energy-solar",
+      "description": "Prepare a high-risk battery, critical-load, or EV load command proposal; execution remains approval-gated.",
+      "status": "enabled",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY",
+      "scopes": ["energy:load:propose"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": true,
+      "auditRequired": true,
+      "inputHints": ["assetId", "action", "reason", "desiredState", "ttlSeconds"]
+    },
+    {
       "id": "policy.evaluate",
       "name": "Safety Policy Evaluation",
       "agentId": "kra-agent",
@@ -393,6 +425,14 @@
       "actor": "operator-local",
       "intent": "If the cottage leak sensor fires, close the remote valve over LoRaWAN and attach approval evidence.",
       "requestedTools": ["device.search", "water.profile.preview", "water.valve.propose", "policy.evaluate", "simulation.run", "connectivity.route.evaluate", "narrowband.command.encode", "audit.record"]
+    },
+    {
+      "id": "mcp-session-energy-reserve",
+      "name": "Energy Reserve Planning",
+      "status": "needs_permission",
+      "actor": "operator-local",
+      "intent": "Use solar surplus to charge the EV, but hold loads if battery reserve or outage critical loads are at risk.",
+      "requestedTools": ["device.search", "energy.profile.preview", "energy.load.propose", "policy.evaluate", "simulation.run", "audit.record"]
     }
   ],
   "toolCalls": [
@@ -485,6 +525,26 @@
       "status": "requires_permission",
       "decision": "explicit_permission_required",
       "summary": "High-risk P0 water valve command proposal paused until explicit permission is attached."
+    },
+    {
+      "id": "toolcall-20260510-010",
+      "sessionId": "mcp-session-energy-reserve",
+      "toolId": "energy.profile.preview",
+      "timestamp": "2026-05-10T05:36:10Z",
+      "actor": "operator-local",
+      "status": "completed",
+      "decision": "allowed",
+      "summary": "Generated a battery reserve and solar surplus energy preview with tariff and reserve evidence."
+    },
+    {
+      "id": "toolcall-20260510-011",
+      "sessionId": "mcp-session-energy-reserve",
+      "toolId": "energy.load.propose",
+      "timestamp": "2026-05-10T05:36:16Z",
+      "actor": "operator-local",
+      "status": "requires_permission",
+      "decision": "explicit_permission_required",
+      "summary": "High-risk energy load or critical-load command proposal paused until explicit permission is attached."
     }
   ]
 }

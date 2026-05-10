@@ -64,6 +64,7 @@ export interface PlatformOverview {
     climateHvac?: string;
     securityAccess?: string;
     waterManagement?: string;
+    energyManagement?: string;
   };
   links: Array<{
     id: string;
@@ -1467,7 +1468,207 @@ export interface WaterDashboardResponse {
   rule: string;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
+export interface EnergySummary {
+  schemaVersion: string;
+  assetCount: number;
+  meterCount: number;
+  solarInverterCount: number;
+  batteryCount: number;
+  evChargerCount: number;
+  onlineAssetDeviceCount: number;
+  totalLoadWatts: number;
+  totalSolarWatts: number;
+  netGridWatts: number;
+  batteryPercent: number;
+  profileCount: number;
+  enabledProfileCount: number;
+  approvalProfileCount: number;
+  policyCount: number;
+  tariffCount: number;
+  intentRecipeCount: number;
+  recentRunCount: number;
+  byMode: Record<string, number>;
+}
+
+export interface EnergyAsset {
+  id: string;
+  name: string;
+  siteId: string;
+  zoneId: string;
+  meterDeviceId: string;
+  solarInverterDeviceId: string;
+  batteryDeviceId: string;
+  evChargerDeviceId: string;
+  risk: string;
+  trafficClass: string;
+  pathPreference: string[];
+  policies: string[];
+  devices?: Record<string, null | {
+    id: string;
+    name: string;
+    status: string;
+    adapter: string;
+    observedState: Record<string, string | number | boolean>;
+    desiredState: Record<string, string | number | boolean>;
+  }>;
+}
+
+export interface EnergyProfile {
+  id: string;
+  name: string;
+  mode: string;
+  status: string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  policies: string[];
+  assetTargets: Array<{ assetId: string; action: string; desiredState: Record<string, string | number | boolean | string[]> }>;
+  automationScenarioId?: string;
+  simulationScenarioId?: string;
+  commandProfile: { encodedBytes: number; ackRequired: boolean; ttlSeconds: number };
+}
+
+export interface EnergyPolicy {
+  id: string;
+  name: string;
+  risk: string;
+  scope: string[];
+  requiresApproval: boolean;
+  requiresSimulation: boolean;
+  requiresAudit: boolean;
+  minimumReservePercent?: number;
+  message: string;
+}
+
+export interface EnergyTariff {
+  id: string;
+  name: string;
+  currency: string;
+  currentPencePerKwh: number;
+  exportPencePerKwh: number;
+  lowWindows: Array<{ start: string; end: string; pencePerKwh: number }>;
+  peakWindows: Array<{ start: string; end: string; pencePerKwh: number }>;
+}
+
+export interface EnergyForecast {
+  id: string;
+  name: string;
+  solarKwh: number;
+  loadKwh: number;
+  batteryEndPercent: number;
+  evFlexibleKwh: number;
+  savingForecastGbp: number;
+  confidence: number;
+}
+
+export interface EnergyIntentRecipe {
+  id: string;
+  name: string;
+  keywords: string[];
+  profileId: string;
+  confidence: number;
+  exampleIntent: string;
+}
+
+export interface EnergyCommand {
+  id: string;
+  profileId: string;
+  assetId: string;
+  assetName: string;
+  deviceId: string | null;
+  deviceName: string;
+  capability: string;
+  action: string;
+  desiredState: Record<string, string | number | boolean | string[]>;
+  observedState: Record<string, string | number | boolean>;
+  energyState: {
+    loadWatts: number;
+    solarWatts: number;
+    batteryPercent: number;
+    evPluggedIn: boolean;
+  };
+  trafficClass: string;
+  selectedPath: string;
+  encodedBytes: number;
+  ackRequired: boolean;
+  status: string;
+  canExecute: boolean;
+  requiresApproval: boolean;
+  policyDecision: string;
+  policyReasons: string[];
+}
+
+export interface EnergyPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: EnergyDashboardResponse["service"];
+  profile: {
+    id: string;
+    name: string;
+    mode: string;
+    status: string;
+    trafficClass: string;
+    requiresApproval: boolean;
+    automationScenarioId: string | null;
+    simulationScenarioId: string | null;
+  };
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  summary: {
+    commandCount: number;
+    readyCount: number;
+    approvalCount: number;
+    blockedCount: number;
+    encodedBytes: number;
+    forecastSavingGbp: number;
+    automationCommandCount: number;
+  };
+  policy: {
+    result: string;
+    canApply: boolean;
+    requiresApproval: boolean;
+    policies: Array<{ id: string; name: string; risk: string; message: string }>;
+    criteria: Array<{ id: string; label: string; passed: boolean }>;
+  };
+  commands: EnergyCommand[];
+  automation?: AutomationEvaluation | null;
+  nextActions: string[];
+  event: FabricEvent;
+  applyAttempted?: boolean;
+}
+
+export interface EnergyIntentPreview {
+  intent: string;
+  match: { id: string; name: string; profileId: string; confidence: number; score: number };
+  preview: EnergyPreview;
+}
+
+export interface EnergyDashboardResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultProfileId: string;
+    defaultAssetId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  summary: EnergySummary;
+  assets: EnergyAsset[];
+  profiles: EnergyProfile[];
+  policies: EnergyPolicy[];
+  tariffs: EnergyTariff[];
+  forecasts: EnergyForecast[];
+  intentRecipes: EnergyIntentRecipe[];
+  recentEnergyRuns: Array<{ id: string; profileId: string; status: string; actor: string; commandCount: number; summary: string }>;
+  automationRules: AutomationRule[];
+  automationScenarios: AutomationScenario[];
+  rule: string;
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -1547,6 +1748,7 @@ export interface CommandCentreResponse {
   climate: ClimateDashboardResponse;
   security: SecurityDashboardResponse;
   water: WaterDashboardResponse;
+  energy: EnergyDashboardResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

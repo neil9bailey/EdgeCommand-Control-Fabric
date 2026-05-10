@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import {
   applyClimateProfile,
+  applyEnergyProfile,
   applyLightingScene,
   applySecurityProfile,
   applyWaterProfile,
@@ -49,6 +50,7 @@ import {
   fetchCatalog,
   fetchCommandCentre,
   fetchDevices,
+  fetchEnergy,
   fetchEvents,
   fetchKra,
   fetchLighting,
@@ -62,6 +64,8 @@ import {
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
+  previewEnergyIntent,
+  previewEnergyProfile,
   previewSecurityIntent,
   previewSecurityProfile,
   previewSecurityUnlock,
@@ -107,6 +111,9 @@ import type {
   WaterDashboardResponse,
   WaterIntentPreview,
   WaterPreview,
+  EnergyDashboardResponse,
+  EnergyIntentPreview,
+  EnergyPreview,
 } from "./types";
 
 const categoryIcons: Record<string, LucideIcon> = {
@@ -149,6 +156,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   climate: Thermometer,
   security: LockKeyhole,
   water: Droplets,
+  energy: Zap,
   agents: GitBranch,
   approvals: ClipboardCheck,
   risk: Shield,
@@ -250,6 +258,10 @@ function App() {
   const [waterPreview, setWaterPreview] = useState<WaterPreview | null>(null);
   const [waterIntentPreview, setWaterIntentPreview] = useState<WaterIntentPreview | null>(null);
   const [waterLoading, setWaterLoading] = useState<"preview" | "apply" | "intent" | null>(null);
+  const [energy, setEnergy] = useState<EnergyDashboardResponse | null>(null);
+  const [energyPreview, setEnergyPreview] = useState<EnergyPreview | null>(null);
+  const [energyIntentPreview, setEnergyIntentPreview] = useState<EnergyIntentPreview | null>(null);
+  const [energyLoading, setEnergyLoading] = useState<"preview" | "apply" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -282,6 +294,7 @@ function App() {
     void fetchClimate().then(setClimate);
     void fetchSecurity().then(setSecurity);
     void fetchWater().then(setWater);
+    void fetchEnergy().then(setEnergy);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -477,6 +490,35 @@ function App() {
     }
   }
 
+  async function previewEnergy(profileId: string) {
+    setEnergyLoading("preview");
+    try {
+      setEnergyPreview(await previewEnergyProfile(profileId));
+    } finally {
+      setEnergyLoading(null);
+    }
+  }
+
+  async function applyEnergy(profileId: string) {
+    setEnergyLoading("apply");
+    try {
+      setEnergyPreview(await applyEnergyProfile(profileId));
+    } finally {
+      setEnergyLoading(null);
+    }
+  }
+
+  async function previewEnergyFromIntent(intentText: string) {
+    setEnergyLoading("intent");
+    try {
+      const result = await previewEnergyIntent(intentText);
+      setEnergyIntentPreview(result);
+      setEnergyPreview(result.preview);
+    } finally {
+      setEnergyLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -575,6 +617,7 @@ function App() {
           <Metric label="Climate" value={climate?.summary.enabledProfileCount || commandCentre?.climate.summary.enabledProfileCount || "-"} detail="comfort profiles" tone="warn" />
           <Metric label="Security" value={security?.summary.enabledProfileCount || commandCentre?.security.summary.enabledProfileCount || "-"} detail="guarded profiles" tone="danger" />
           <Metric label="Water" value={water?.summary.enabledProfileCount || commandCentre?.water.summary.enabledProfileCount || "-"} detail="P0 profiles" tone="danger" />
+          <Metric label="Energy" value={energy?.summary.totalSolarWatts || commandCentre?.energy.summary.totalSolarWatts || "-"} detail="solar watts" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -631,6 +674,15 @@ function App() {
           onPreview={previewWater}
           onApply={applyWater}
           onIntentPreview={previewWaterFromIntent}
+        />
+        <EnergyManagementPanel
+          energy={energy || commandCentre?.energy || null}
+          preview={energyPreview}
+          intentPreview={energyIntentPreview}
+          loading={energyLoading}
+          onPreview={previewEnergy}
+          onApply={applyEnergy}
+          onIntentPreview={previewEnergyFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -1953,6 +2005,186 @@ function WaterManagementPanel({
             ) : (
               policies.slice(0, 5).map((policy) => (
                 <div className="water-policy-row" key={policy.id}>
+                  <div>
+                    <strong>{policy.name}</strong>
+                    <span>{policy.message}</span>
+                  </div>
+                  <StatusPill tone={policy.risk === "high" ? "danger" : "warn"} label={policy.risk} />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EnergyManagementPanel({
+  energy,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onApply,
+  onIntentPreview,
+}: {
+  energy: EnergyDashboardResponse | null;
+  preview: EnergyPreview | null;
+  intentPreview: EnergyIntentPreview | null;
+  loading: "preview" | "apply" | "intent" | null;
+  onPreview: (profileId: string) => void;
+  onApply: (profileId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const profiles = energy?.profiles || [];
+  const assets = energy?.assets || [];
+  const policies = energy?.policies || [];
+  const tariffs = energy?.tariffs || [];
+  const forecasts = energy?.forecasts || [];
+  const recipes = energy?.intentRecipes || [];
+  const activeProfileId = preview?.profile.id || energy?.service.defaultProfileId || profiles[0]?.id;
+  const activeProfile = profiles.find((profile) => profile.id === activeProfileId) || profiles[0];
+  const activeRecipe = recipes.find((recipe) => recipe.profileId === activeProfile?.id) || recipes[0];
+  const forecast = forecasts[0];
+  const tariff = tariffs[0];
+
+  return (
+    <section className="energy-management-panel" aria-label="Energy and solar management">
+      <div className="section-header energy-header">
+        <div>
+          <p className="eyebrow">Energy And Solar</p>
+          <h2>Reserve-Aware Power Surface</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${energy?.summary.totalSolarWatts || 0}W solar`} />
+          <StatusPill tone={Number(energy?.summary.batteryPercent || 0) >= 35 ? "good" : "danger"} label={`${energy?.summary.batteryPercent || 0}% battery`} />
+          <StatusPill tone={preview?.status === "approval_required" ? "warn" : preview?.status === "ready" ? "good" : "neutral"} label={preview?.status.replace(/_/g, " ") || "optimizing"} />
+        </div>
+      </div>
+
+      <div className="energy-grid">
+        <div className="energy-panel profile-picker-panel">
+          <div className="section-header compact">
+            <h3>Profiles</h3>
+            <Zap size={18} />
+          </div>
+          <div className="energy-profile-list">
+            {profiles.map((profile) => (
+              <div className={`energy-profile-row ${profile.id === activeProfile?.id ? "active" : ""}`} key={profile.id}>
+                <div>
+                  <strong>{profile.name}</strong>
+                  <span>{profile.mode} / {profile.assetTargets.length} target(s) / {profile.trafficClass}</span>
+                </div>
+                <div className="energy-profile-actions">
+                  <button onClick={() => onPreview(profile.id)} disabled={Boolean(loading)}>
+                    <PlayCircle size={15} />
+                    <span>{loading === "preview" && profile.id === activeProfile?.id ? "Previewing" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onApply(profile.id)} disabled={Boolean(loading)}>
+                    <CheckCircle2 size={15} />
+                    <span>{loading === "apply" && profile.id === activeProfile?.id ? "Applying" : "Apply"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="energy-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="energy-panel">
+          <div className="section-header compact">
+            <h3>Assets</h3>
+            <BatteryCharging size={18} />
+          </div>
+          <div className="energy-asset-list">
+            {assets.map((asset) => {
+              const meter = asset.devices?.meter;
+              const solar = asset.devices?.solarInverter;
+              const battery = asset.devices?.battery;
+              const charger = asset.devices?.evCharger;
+              return (
+                <div className="energy-asset-row" key={asset.id}>
+                  <div>
+                    <strong>{asset.name}</strong>
+                    <span>{meter?.observedState.watts ?? 0}W load / {solar?.observedState.generationWatts ?? 0}W solar / {battery?.observedState.stateOfChargePercent ?? 0}% battery / EV {String(charger?.observedState.pluggedIn ?? false)}</span>
+                  </div>
+                  <StatusPill tone={asset.trafficClass === "P1_SECURITY" ? "warn" : "good"} label={asset.trafficClass} />
+                </div>
+              );
+            })}
+          </div>
+          {forecast && (
+            <div className="energy-forecast">
+              <strong>{forecast.name}</strong>
+              <span>{forecast.solarKwh}kWh solar / £{forecast.savingForecastGbp.toFixed(2)} saving / {Math.round(forecast.confidence * 100)}% confidence</span>
+            </div>
+          )}
+        </div>
+
+        <div className="energy-panel energy-command-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.profile.name : "Command Plan"}</h3>
+            <Settings2 size={18} />
+          </div>
+          <div className="energy-command-list">
+            {(preview?.commands || []).slice(0, 5).map((command) => (
+              <div className="energy-command-row" key={command.id}>
+                <div>
+                  <strong>{command.deviceName}</strong>
+                  <span>{command.action} / {command.selectedPath} / {command.encodedBytes} bytes</span>
+                </div>
+                <StatusPill tone={command.policyDecision === "approval_required" ? "warn" : command.canExecute ? "good" : "danger"} label={command.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+            {!preview && (
+              <div className="event-empty">
+                <Activity size={18} />
+                <span>Preview an energy profile to generate tariff and reserve command plans.</span>
+              </div>
+            )}
+          </div>
+          {intentPreview && (
+            <div className="energy-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.profileId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="energy-panel">
+          <div className="section-header compact">
+            <h3>Tariff And Policy</h3>
+            <Shield size={18} />
+          </div>
+          <div className="energy-policy-list">
+            {tariff && (
+              <div className="energy-policy-row">
+                <div>
+                  <strong>{tariff.name}</strong>
+                  <span>{tariff.currentPencePerKwh}p import / {tariff.exportPencePerKwh}p export / low {tariff.lowWindows[0]?.start}-{tariff.lowWindows[0]?.end}</span>
+                </div>
+                <StatusPill tone="good" label="tariff" />
+              </div>
+            )}
+            {preview ? (
+              preview.policy.criteria.slice(0, 4).map((item) => (
+                <div className="energy-policy-row" key={item.id}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{item.id.replace(/_/g, " ")}</span>
+                  </div>
+                  <StatusPill tone={item.passed ? "good" : "danger"} label={item.passed ? "pass" : "hold"} />
+                </div>
+              ))
+            ) : (
+              policies.slice(0, 4).map((policy) => (
+                <div className="energy-policy-row" key={policy.id}>
                   <div>
                     <strong>{policy.name}</strong>
                     <span>{policy.message}</span>

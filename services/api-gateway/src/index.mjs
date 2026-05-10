@@ -105,6 +105,14 @@ import {
   previewWaterProfile,
   summarizeWaterManagement,
 } from "./waterManagement.mjs";
+import {
+  applyEnergyProfile,
+  buildEnergyDashboard,
+  loadEnergyManagement,
+  previewEnergyIntent,
+  previewEnergyProfile,
+  summarizeEnergyManagement,
+} from "./energyManagement.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -124,6 +132,7 @@ const lightingScenes = loadLightingScenes();
 const climateHvac = loadClimateHvac();
 const securityAccess = loadSecurityAccess();
 const waterManagement = loadWaterManagement();
+const energyManagement = loadEnergyManagement();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -148,6 +157,7 @@ function buildOverview() {
   const climateSummary = summarizeClimateHvac(climateHvac, deviceRegistry);
   const securitySummary = summarizeSecurityAccess(securityAccess, deviceRegistry);
   const waterSummary = summarizeWaterManagement(waterManagement, deviceRegistry);
+  const energySummary = summarizeEnergyManagement(energyManagement, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -180,6 +190,7 @@ function buildOverview() {
       climateHvac: `${climateSummary.enabledProfileCount} enabled profiles / ${climateSummary.onlineThermostatCount} online thermostats`,
       securityAccess: `${securitySummary.enabledProfileCount} guarded profiles / ${securitySummary.accessPointCount} access points`,
       waterManagement: `${waterSummary.enabledProfileCount} water profiles / ${waterSummary.onlineValveCount} online valves`,
+      energyManagement: `${energySummary.enabledProfileCount} energy profiles / ${energySummary.totalSolarWatts}W solar`,
     },
     links: defaultLinkInventory(),
   };
@@ -227,6 +238,7 @@ app.get("/api/command-centre", (_req, res) => {
     climateHvac,
     securityAccess,
     waterManagement,
+    energyManagement,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -707,6 +719,81 @@ app.post(
   (req, res) => {
     res.json(previewWaterIntent({
       water: waterManagement,
+      deviceRegistry,
+      automationEngine,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/energy", (_req, res) => {
+  res.json(buildEnergyDashboard({
+    energy: energyManagement,
+    deviceRegistry,
+    automationEngine,
+  }));
+});
+
+app.get("/api/energy/profiles/:id/preview", (req, res) => {
+  const result = previewEnergyProfile({
+    energy: energyManagement,
+    deviceRegistry,
+    automationEngine,
+    profileId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.AgentApprover"] },
+  });
+  if (result.error === "energy_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/energy/profiles/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewEnergyProfile({
+      energy: energyManagement,
+      deviceRegistry,
+      automationEngine,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "energy_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/energy/profiles/:id/apply",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = applyEnergyProfile({
+      energy: energyManagement,
+      deviceRegistry,
+      automationEngine,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "energy_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.status === "blocked" || result.status === "approval_required" ? 409 : 200).json(result);
+  },
+);
+
+app.post(
+  "/api/energy/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewEnergyIntent({
+      energy: energyManagement,
       deviceRegistry,
       automationEngine,
       intent: req.body?.intent || "",

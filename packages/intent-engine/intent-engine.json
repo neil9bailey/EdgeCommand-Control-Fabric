@@ -183,8 +183,8 @@
           "status": "ready_for_simulation",
           "risk": "medium",
           "requiredGates": ["simulation", "reserve_policy", "operator_review"],
-          "requiredTools": ["policy.evaluate", "simulation.run", "audit.record"],
-          "impact": "Propose a tariff-aware charging window while protecting battery reserve.",
+          "requiredTools": ["energy.profile.preview", "policy.evaluate", "simulation.run", "audit.record"],
+          "impact": "Propose a tariff-aware charging window while protecting battery reserve, solar surplus, and critical-load boundaries.",
           "rollbackPath": "Existing charger schedule remains unchanged until approved."
         }
       ]

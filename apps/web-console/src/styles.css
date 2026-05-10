@@ -1543,6 +1543,168 @@ h3 {
   font-size: 11px;
 }
 
+.energy-management-panel {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(248, 252, 245, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.energy-header {
+  background:
+    linear-gradient(90deg, rgba(31, 122, 92, 0.15), rgba(182, 122, 29, 0.1)),
+    #fbfff6;
+}
+
+.energy-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.95fr 1.1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.energy-panel {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(253, 255, 248, 0.98);
+}
+
+.energy-profile-list,
+.energy-asset-list,
+.energy-command-list,
+.energy-policy-list {
+  display: grid;
+  gap: 8px;
+}
+
+.energy-profile-row,
+.energy-asset-row,
+.energy-command-row,
+.energy-policy-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfff6;
+}
+
+.energy-profile-row.active {
+  box-shadow: inset 4px 0 0 var(--green);
+}
+
+.energy-profile-row strong,
+.energy-profile-row span,
+.energy-asset-row strong,
+.energy-asset-row span,
+.energy-command-row strong,
+.energy-command-row span,
+.energy-policy-row strong,
+.energy-policy-row span,
+.energy-forecast strong,
+.energy-forecast span {
+  display: block;
+  min-width: 0;
+}
+
+.energy-profile-row strong,
+.energy-asset-row strong,
+.energy-command-row strong,
+.energy-policy-row strong,
+.energy-forecast strong {
+  font-size: 12px;
+}
+
+.energy-profile-row span,
+.energy-asset-row span,
+.energy-command-row span,
+.energy-policy-row span,
+.energy-forecast span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.energy-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.energy-profile-actions button,
+.energy-intent-button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--green);
+  color: #fbfff6;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.energy-profile-actions button:nth-child(2) {
+  background: var(--coal);
+}
+
+.energy-profile-actions button:disabled,
+.energy-intent-button:disabled {
+  opacity: 0.62;
+  cursor: progress;
+}
+
+.energy-intent-button {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--gold);
+  color: var(--coal);
+}
+
+.energy-intent-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.energy-intent-result,
+.energy-forecast {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid rgba(31, 122, 92, 0.28);
+  border-radius: 8px;
+  background: rgba(31, 122, 92, 0.09);
+  color: #1f5f4a;
+}
+
+.energy-intent-result strong,
+.energy-intent-result span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.energy-intent-result strong {
+  font-size: 12px;
+}
+
+.energy-intent-result span {
+  font-size: 11px;
+}
+
 .approval-workflow-panel {
   margin-bottom: 18px;
   overflow: hidden;
@@ -2666,6 +2828,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .energy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .approval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2720,6 +2886,7 @@ h3 {
     .climate-grid,
     .security-grid,
     .water-grid,
+    .energy-grid,
     .approval-grid,
     .simulation-grid,
     .kra-grid,

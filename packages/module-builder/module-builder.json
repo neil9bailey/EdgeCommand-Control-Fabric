@@ -1,0 +1,236 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "module-builder-service",
+    "name": "Module Builder And IaC Fragments",
+    "moduleId": "module-marketplace",
+    "mode": "deterministic-local",
+    "executionBoundary": "proposal-only-no-filesystem-mutation",
+    "defaultPlanId": "build-mqtt-esphome-local",
+    "rule": "A module build plan may describe manifests, services, dashboards, tests, Docker compose fragments, Azure fragments, and migrations, but it cannot mutate files or enable runtime flags until approval and certification are attached."
+  },
+  "featureModule": {
+    "moduleId": "module-marketplace",
+    "state": "foundation",
+    "buildStrategy": "manifest-flag-to-build-plan",
+    "enabledBy": ["human_intent", "module_manifest", "module_builder_agent", "operator_dashboard"],
+    "buildArtifacts": [
+      "packages/module-builder/module-builder.json",
+      "services/api-gateway/src/moduleBuilder.mjs",
+      "apps/web-console ModuleBuilderPanel",
+      "api contracts and tests"
+    ]
+  },
+  "buildPlanStates": [
+    { "id": "draft", "name": "Draft", "canQueue": false, "requiresApproval": false },
+    { "id": "ready_to_queue", "name": "Ready To Queue", "canQueue": true, "requiresApproval": false },
+    { "id": "approval_required", "name": "Approval Required", "canQueue": false, "requiresApproval": true },
+    { "id": "blocked", "name": "Blocked", "canQueue": false, "requiresApproval": true }
+  ],
+  "fragmentKinds": [
+    "docker_compose_service",
+    "docker_compose_profile",
+    "azure_container_app",
+    "azure_key_vault_secret_binding",
+    "entra_role_binding",
+    "api_route_registration",
+    "web_dashboard_registration",
+    "mcp_tool_registration",
+    "test_pack",
+    "migration_hook",
+    "certification_gate"
+  ],
+  "verificationCommands": [
+    { "id": "unit", "command": "npm test", "required": true },
+    { "id": "build", "command": "npm run build", "required": true },
+    { "id": "docker", "command": "docker compose up --build -d", "required": true },
+    { "id": "health", "command": "npm run health", "required": true },
+    { "id": "browser", "command": "browser smoke verification", "required": true }
+  ],
+  "plans": [
+    {
+      "id": "build-mqtt-esphome-local",
+      "moduleId": "mqtt-esphome",
+      "name": "MQTT And ESPHome Adapter Local Build",
+      "status": "ready_to_queue",
+      "targetEnvironment": "local-docker",
+      "laneId": "lane-connectivity-adapter",
+      "flagId": "flag-mqtt-esphome",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "requiresCertification": true,
+      "objective": "Create the first real connectivity adapter path for MQTT topics, ESPHome-style sensors, relays, and state sync.",
+      "composeFragments": [
+        {
+          "id": "compose-mqtt-adapter",
+          "serviceName": "mqtt-adapter",
+          "image": "edgecommand/mqtt-adapter:local",
+          "profile": "connectivity",
+          "dependsOn": ["api-gateway", "mqtt-broker"],
+          "ports": [],
+          "environment": ["MQTT_BROKER_URL", "EDGE_TENANT", "FEATURE_FLAG_MQTT_ESPHOME"]
+        }
+      ],
+      "azureFragments": [
+        {
+          "id": "aca-mqtt-adapter",
+          "resourceType": "Microsoft.App/containerApps",
+          "name": "mqtt-adapter",
+          "scale": { "minReplicas": 0, "maxReplicas": 3 },
+          "secretBindings": ["MQTT_BROKER_URL", "MQTT_USERNAME", "MQTT_PASSWORD"]
+        }
+      ],
+      "migrationHooks": [
+        { "id": "mqtt-topic-map-seed", "type": "data_seed", "target": "packages/device-registry/registry.json", "mode": "proposal_only" },
+        { "id": "mqtt-capability-map", "type": "capability_binding", "target": "packages/module-catalog/catalog.json", "mode": "proposal_only" }
+      ],
+      "testPacks": [
+        "mqtt topic normalization",
+        "sensor telemetry ingestion",
+        "relay command proposal",
+        "offline broker degradation"
+      ],
+      "dashboardSurfaces": ["Connectivity", "Devices", "Module Marketplace"],
+      "agentTools": ["module.plan", "policy.evaluate", "audit.record"],
+      "approvalGates": ["module-certification-required"],
+      "expectedOutputs": [
+        "packages/mqtt-esphome/mqtt-esphome.json",
+        "services/api-gateway/src/mqttEsphome.mjs",
+        "apps/web-console MqttEsphomePanel",
+        "infra/azure/fragments/mqtt-adapter.bicep"
+      ]
+    },
+    {
+      "id": "build-lorawan-adapter-local",
+      "moduleId": "lorawan-adapter",
+      "name": "LoRaWAN Adapter Governed Build",
+      "status": "approval_required",
+      "targetEnvironment": "local-docker",
+      "laneId": "lane-connectivity-adapter",
+      "flagId": "flag-lorawan-adapter",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "requiresApproval": true,
+      "requiresCertification": true,
+      "objective": "Create a governed LoRaWAN adapter for constrained command downlinks, telemetry uplinks, gateway health, payload budgets, and P0 safety evidence.",
+      "composeFragments": [
+        {
+          "id": "compose-lorawan-adapter",
+          "serviceName": "lorawan-adapter",
+          "image": "edgecommand/lorawan-adapter:local",
+          "profile": "narrowband",
+          "dependsOn": ["api-gateway"],
+          "ports": [],
+          "environment": ["LORAWAN_NETWORK_SERVER_URL", "LORAWAN_API_KEY", "EDGE_TENANT", "FEATURE_FLAG_LORAWAN_ADAPTER"]
+        }
+      ],
+      "azureFragments": [
+        {
+          "id": "aca-lorawan-adapter",
+          "resourceType": "Microsoft.App/containerApps",
+          "name": "lorawan-adapter",
+          "scale": { "minReplicas": 0, "maxReplicas": 2 },
+          "secretBindings": ["LORAWAN_NETWORK_SERVER_URL", "LORAWAN_API_KEY", "LORAWAN_TENANT_ID"]
+        }
+      ],
+      "migrationHooks": [
+        { "id": "lorawan-device-eui-map", "type": "data_seed", "target": "packages/device-registry/registry.json", "mode": "proposal_only" },
+        { "id": "lorawan-route-policy", "type": "policy_binding", "target": "packages/automation-engine/automation.json", "mode": "proposal_only" }
+      ],
+      "testPacks": [
+        "payload budget enforcement",
+        "P0 downlink approval hold",
+        "gateway outage simulation",
+        "no free text over LoRaWAN"
+      ],
+      "dashboardSurfaces": ["Narrowband SD-WAN", "Connectivity", "Module Marketplace"],
+      "agentTools": ["module.plan", "connectivity.route.evaluate", "narrowband.command.encode", "policy.evaluate", "audit.record"],
+      "approvalGates": ["human-approval-for-high-risk", "module-certification-required", "simulate-before-high-risk"],
+      "expectedOutputs": [
+        "packages/lorawan-adapter/lorawan-adapter.json",
+        "services/api-gateway/src/lorawanAdapter.mjs",
+        "apps/web-console LorawanAdapterPanel",
+        "infra/azure/fragments/lorawan-adapter.bicep"
+      ]
+    },
+    {
+      "id": "build-narrowband-control-plane-azure",
+      "moduleId": "narrowband-control-plane",
+      "name": "Narrowband Control Plane Azure Promotion",
+      "status": "approval_required",
+      "targetEnvironment": "azure-container-apps",
+      "laneId": "lane-azure-promotion",
+      "flagId": "flag-narrowband-control-plane",
+      "risk": "high",
+      "trafficClass": "P0_EMERGENCY",
+      "requiresApproval": true,
+      "requiresCertification": true,
+      "objective": "Prepare the semantic Narrowband SD-WAN control plane for Azure Container Apps with Key Vault, Entra roles, policy gates, and route simulation evidence.",
+      "composeFragments": [],
+      "azureFragments": [
+        {
+          "id": "aca-narrowband-controller",
+          "resourceType": "Microsoft.App/containerApps",
+          "name": "narrowband-controller",
+          "scale": { "minReplicas": 1, "maxReplicas": 5 },
+          "secretBindings": ["EDGE_JWT_AUDIENCE", "AZURE_KEY_VAULT_URL", "LORAWAN_API_KEY"]
+        }
+      ],
+      "migrationHooks": [
+        { "id": "narrowband-route-seed", "type": "route_seed", "target": "packages/module-catalog/catalog.json", "mode": "proposal_only" }
+      ],
+      "testPacks": [
+        "semantic route selection",
+        "bulk payload rejection",
+        "P0 emergency route evidence",
+        "Azure secret binding verification"
+      ],
+      "dashboardSurfaces": ["Narrowband SD-WAN", "Global Command Centre"],
+      "agentTools": ["connectivity.route.evaluate", "narrowband.command.encode", "policy.evaluate", "simulation.run", "audit.record"],
+      "approvalGates": ["human-approval-for-high-risk", "module-certification-required", "azure-promotion-review"],
+      "expectedOutputs": [
+        "infra/azure/fragments/narrowband-controller.bicep",
+        "services/api-gateway/src/narrowbandController.mjs",
+        "apps/web-console NarrowbandControlPlanePanel"
+      ]
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-build-mqtt",
+      "name": "Build MQTT Adapter",
+      "keywords": ["mqtt", "esphome", "adapter", "docker", "sensor", "relay"],
+      "planId": "build-mqtt-esphome-local",
+      "confidence": 0.91,
+      "exampleIntent": "Build the MQTT and ESPHome adapter for local Docker testing."
+    },
+    {
+      "id": "intent-build-lorawan",
+      "name": "Build LoRaWAN Adapter",
+      "keywords": ["lorawan", "narrowband", "gateway", "downlink", "remote"],
+      "planId": "build-lorawan-adapter-local",
+      "confidence": 0.94,
+      "exampleIntent": "Build the LoRaWAN adapter plan for remote emergency downlinks."
+    },
+    {
+      "id": "intent-promote-narrowband",
+      "name": "Promote Narrowband Control Plane",
+      "keywords": ["azure", "narrowband", "sd-wan", "container apps", "promotion"],
+      "planId": "build-narrowband-control-plane-azure",
+      "confidence": 0.9,
+      "exampleIntent": "Prepare the Narrowband SD-WAN control plane for Azure Container Apps."
+    }
+  ],
+  "recentBuildRuns": [
+    {
+      "id": "builder-run-20260510-001",
+      "planId": "build-mqtt-esphome-local",
+      "moduleId": "mqtt-esphome",
+      "status": "ready_to_queue",
+      "actor": "system-preview",
+      "summary": "MQTT/ESPHome adapter build package prepared as a proposal-only plan."
+    }
+  ]
+}

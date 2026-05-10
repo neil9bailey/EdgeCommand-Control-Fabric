@@ -1949,6 +1949,145 @@ export interface ModuleManifestResponse {
   rule: string;
 }
 
+export interface ModuleBuilderSummary {
+  schemaVersion: string;
+  planCount: number;
+  readyToQueue: number;
+  approvalRequired: number;
+  certificationRequired: number;
+  composeFragmentCount: number;
+  azureFragmentCount: number;
+  migrationHookCount: number;
+  verificationCommandCount: number;
+  byStatus: Record<string, number>;
+  byQueueStatus: Record<string, number>;
+  byEnvironment: Record<string, number>;
+  byRisk: Record<string, number>;
+}
+
+export interface ModuleBuildPlanState {
+  id: string;
+  name: string;
+  canQueue: boolean;
+  requiresApproval: boolean;
+}
+
+export interface ModuleBuildFragment {
+  id: string;
+  kind: string;
+  serviceName?: string;
+  image?: string;
+  profile?: string;
+  dependsOn?: string[];
+  ports?: string[];
+  environment?: string[];
+  resourceType?: string;
+  name?: string;
+  scale?: { minReplicas: number; maxReplicas: number };
+  secretBindings?: string[];
+  type?: string;
+  target?: string;
+  mode?: string;
+}
+
+export interface ModuleVerificationCommand {
+  id: string;
+  command: string;
+  required: boolean;
+}
+
+export interface ModuleBuildPlan {
+  id: string;
+  moduleId: string;
+  name: string;
+  status: string;
+  targetEnvironment: string;
+  laneId: string;
+  flagId: string;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  requiresCertification: boolean;
+  objective: string;
+  composeFragments: ModuleBuildFragment[];
+  azureFragments: ModuleBuildFragment[];
+  migrationHooks: ModuleBuildFragment[];
+  testPacks: string[];
+  dashboardSurfaces: string[];
+  agentTools: string[];
+  approvalGates: string[];
+  expectedOutputs: string[];
+  flag?: ModuleFeatureFlag;
+  lane?: ModuleBuildLane | null;
+  state?: ModuleBuildPlanState | null;
+  manifestPreview?: ModuleFlagPreview | null;
+  fragments: ModuleBuildFragment[];
+  requiredVerification: ModuleVerificationCommand[];
+  readiness: {
+    canQueue: boolean;
+    queueStatus: string;
+    approvalRequired: boolean;
+    certificationRequired: boolean;
+    fragmentCount: number;
+    composeFragmentCount: number;
+    azureFragmentCount: number;
+    migrationHookCount: number;
+    verificationCommandCount: number;
+  };
+}
+
+export interface ModuleBuildPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ModuleBuilderResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  plan: ModuleBuildPlan;
+  stages: Array<{ id: string; label: string; status: string }>;
+  fragments: ModuleBuildFragment[];
+  verificationCommands: ModuleVerificationCommand[];
+  summary: {
+    fragmentCount: number;
+    composeFragmentCount: number;
+    azureFragmentCount: number;
+    migrationHookCount: number;
+    verificationCommandCount: number;
+    canQueue: boolean;
+    requiresApproval: boolean;
+    requiresCertification: boolean;
+  };
+  nextActions: string[];
+  event: FabricEvent;
+}
+
+export interface ModuleBuildIntentPreview {
+  intent: string;
+  match: null | { id: string; name: string; planId: string; confidence: number; score: number; source: string };
+  preview: ModuleBuildPreview;
+}
+
+export interface ModuleBuilderResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultPlanId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  summary: ModuleBuilderSummary;
+  buildPlanStates: ModuleBuildPlanState[];
+  fragmentKinds: string[];
+  verificationCommands: ModuleVerificationCommand[];
+  plans: ModuleBuildPlan[];
+  intentRecipes: Array<{ id: string; name: string; keywords: string[]; planId: string; confidence: number; exampleIntent: string }>;
+  recentBuildRuns: Array<{ id: string; planId: string; moduleId: string; status: string; actor: string; summary: string }>;
+  rule: string;
+}
+
 export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
@@ -2016,6 +2155,7 @@ export interface CommandCentreResponse {
     next: string[];
     foundations: string[];
     manifest?: ModuleManifestResponse;
+    builder?: ModuleBuilderResponse;
   };
   devices: CommandCentreDevice[];
   automations: {
@@ -2033,6 +2173,7 @@ export interface CommandCentreResponse {
   energy: EnergyDashboardResponse;
   sensing: SensingDashboardResponse;
   moduleManifest?: ModuleManifestResponse;
+  moduleBuilder?: ModuleBuilderResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

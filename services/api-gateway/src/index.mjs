@@ -127,6 +127,13 @@ import {
   previewModuleIntent,
   summarizeModuleManifest,
 } from "./moduleManifest.mjs";
+import {
+  buildModuleBuilderDashboard,
+  loadModuleBuilder,
+  previewBuildIntent,
+  previewBuildPlan,
+  summarizeModuleBuilder,
+} from "./moduleBuilder.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -149,6 +156,7 @@ const waterManagement = loadWaterManagement();
 const energyManagement = loadEnergyManagement();
 const sensingPresence = loadSensingPresence();
 const moduleManifest = loadModuleManifest();
+const moduleBuilder = loadModuleBuilder();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -176,6 +184,7 @@ function buildOverview() {
   const energySummary = summarizeEnergyManagement(energyManagement, deviceRegistry);
   const sensingSummary = summarizeSensingPresence(sensingPresence, deviceRegistry);
   const moduleManifestSummary = summarizeModuleManifest(moduleManifest, catalog);
+  const moduleBuilderSummary = summarizeModuleBuilder(moduleBuilder, moduleManifest, catalog);
   return {
     ...summary,
     devices: deviceSummary,
@@ -211,6 +220,7 @@ function buildOverview() {
       energyManagement: `${energySummary.enabledProfileCount} energy profiles / ${energySummary.totalSolarWatts}W solar`,
       sensingPresence: `${sensingSummary.occupiedZoneCount} occupied zones / ${sensingSummary.averageCo2Ppm}ppm CO2`,
       moduleManifest: `${moduleManifestSummary.enabled} enabled flags / ${moduleManifestSummary.buildable} buildable`,
+      moduleBuilder: `${moduleBuilderSummary.planCount} build plans / ${moduleBuilderSummary.readyToQueue} queue-ready`,
     },
     links: defaultLinkInventory(),
   };
@@ -261,6 +271,7 @@ app.get("/api/command-centre", (_req, res) => {
     energyManagement,
     sensingPresence,
     moduleManifest,
+    moduleBuilder,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -327,6 +338,62 @@ app.post(
   requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
   (req, res) => {
     res.json(previewModuleIntent({
+      manifest: moduleManifest,
+      catalog,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/module-builder", (_req, res) => {
+  res.json(buildModuleBuilderDashboard({
+    builder: moduleBuilder,
+    manifest: moduleManifest,
+    catalog,
+  }));
+});
+
+app.get("/api/module-builder/plans/:id/preview", (req, res) => {
+  const result = previewBuildPlan({
+    builder: moduleBuilder,
+    manifest: moduleManifest,
+    catalog,
+    planId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "module_build_plan_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/module-builder/plans/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewBuildPlan({
+      builder: moduleBuilder,
+      manifest: moduleManifest,
+      catalog,
+      planId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "module_build_plan_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/module-builder/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewBuildIntent({
+      builder: moduleBuilder,
       manifest: moduleManifest,
       catalog,
       intent: req.body?.intent || "",

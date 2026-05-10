@@ -54,6 +54,7 @@ import {
   fetchEvents,
   fetchKra,
   fetchLighting,
+  fetchModuleBuilder,
   fetchModuleManifest,
   fetchNarrowbandRoutes,
   fetchOverview,
@@ -64,6 +65,8 @@ import {
   previewLightingIntent,
   previewLightingScene,
   previewModuleFlag,
+  previewModuleBuildIntent,
+  previewModuleBuildPlan,
   previewModuleManifestIntent,
   previewClimateIntent,
   previewClimateProfile,
@@ -106,6 +109,9 @@ import type {
   LightingIntentPreview,
   LightingScenePreview,
   ModuleFlagPreview,
+  ModuleBuildIntentPreview,
+  ModuleBuildPreview,
+  ModuleBuilderResponse,
   ModuleCatalog,
   ModuleDefinition,
   ModuleManifestIntentPreview,
@@ -283,6 +289,10 @@ function App() {
   const [moduleFlagPreview, setModuleFlagPreview] = useState<ModuleFlagPreview | null>(null);
   const [moduleIntentPreview, setModuleIntentPreview] = useState<ModuleManifestIntentPreview | null>(null);
   const [moduleLoading, setModuleLoading] = useState<"preview" | "intent" | null>(null);
+  const [moduleBuilder, setModuleBuilder] = useState<ModuleBuilderResponse | null>(null);
+  const [moduleBuildPreview, setModuleBuildPreview] = useState<ModuleBuildPreview | null>(null);
+  const [moduleBuildIntentPreview, setModuleBuildIntentPreview] = useState<ModuleBuildIntentPreview | null>(null);
+  const [moduleBuildLoading, setModuleBuildLoading] = useState<"preview" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -318,6 +328,7 @@ function App() {
     void fetchEnergy().then(setEnergy);
     void fetchSensing().then(setSensing);
     void fetchModuleManifest().then(setModuleManifest);
+    void fetchModuleBuilder().then(setModuleBuilder);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -582,6 +593,26 @@ function App() {
     }
   }
 
+  async function previewBuildPlan(planId: string) {
+    setModuleBuildLoading("preview");
+    try {
+      setModuleBuildPreview(await previewModuleBuildPlan(planId));
+    } finally {
+      setModuleBuildLoading(null);
+    }
+  }
+
+  async function previewBuildFromIntent(intentText: string) {
+    setModuleBuildLoading("intent");
+    try {
+      const result = await previewModuleBuildIntent(intentText);
+      setModuleBuildIntentPreview(result);
+      setModuleBuildPreview(result.preview);
+    } finally {
+      setModuleBuildLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -683,6 +714,7 @@ function App() {
           <Metric label="Energy" value={energy?.summary.totalSolarWatts || commandCentre?.energy.summary.totalSolarWatts || "-"} detail="solar watts" tone="good" />
           <Metric label="Sensing" value={sensing?.summary.occupiedZoneCount ?? commandCentre?.sensing.summary.occupiedZoneCount ?? "-"} detail="occupied zones" tone="good" />
           <Metric label="Flags" value={moduleManifest?.summary.enabled ?? commandCentre?.moduleManifest?.summary.enabled ?? "-"} detail="enabled modules" tone="good" />
+          <Metric label="Builds" value={moduleBuilder?.summary.readyToQueue ?? commandCentre?.moduleBuilder?.summary.readyToQueue ?? "-"} detail="queue-ready" tone="warn" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -764,6 +796,14 @@ function App() {
           loading={moduleLoading}
           onPreview={previewModule}
           onIntentPreview={previewModuleFromIntent}
+        />
+        <ModuleBuilderPanel
+          builder={moduleBuilder || commandCentre?.moduleBuilder || commandCentre?.modules.builder || null}
+          preview={moduleBuildPreview}
+          intentPreview={moduleBuildIntentPreview}
+          loading={moduleBuildLoading}
+          onPreview={previewBuildPlan}
+          onIntentPreview={previewBuildFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -2573,6 +2613,137 @@ function ModuleManifestPanel({
           <div className="manifest-artifacts">
             {(preview?.flag.artifacts || activeFlag?.artifacts || []).slice(0, 8).map((artifact) => (
               <span key={artifact}>{artifact.replace(/_/g, " ")}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ModuleBuilderPanel({
+  builder,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onIntentPreview,
+}: {
+  builder: ModuleBuilderResponse | null;
+  preview: ModuleBuildPreview | null;
+  intentPreview: ModuleBuildIntentPreview | null;
+  loading: "preview" | "intent" | null;
+  onPreview: (planId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const plans = builder?.plans || [];
+  const recipes = builder?.intentRecipes || [];
+  const activePlanId = preview?.plan.id || plans.find((plan) => plan.readiness.canQueue)?.id || plans[0]?.id;
+  const activePlan = plans.find((plan) => plan.id === activePlanId) || plans[0];
+  const activeRecipe = recipes.find((recipe) => recipe.planId === activePlan?.id) || recipes[0];
+  const fragments = preview?.fragments || activePlan?.fragments || [];
+  const verification = preview?.verificationCommands || activePlan?.requiredVerification || builder?.verificationCommands || [];
+
+  return (
+    <section className="module-builder-panel" aria-label="Module builder and IaC fragments">
+      <div className="section-header builder-header">
+        <div>
+          <p className="eyebrow">Module Builder / IaC Fragments</p>
+          <h2>Proposal-Only Build Packages</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${builder?.summary.readyToQueue || 0} queue ready`} />
+          <StatusPill tone="warn" label={`${builder?.summary.composeFragmentCount || 0} compose`} />
+          <StatusPill tone="danger" label={`${builder?.summary.azureFragmentCount || 0} Azure`} />
+        </div>
+      </div>
+
+      <div className="builder-grid">
+        <div className="builder-panel">
+          <div className="section-header compact">
+            <h3>Build Plans</h3>
+            <Boxes size={18} />
+          </div>
+          <div className="builder-plan-list">
+            {plans.map((plan) => (
+              <div className={`builder-plan-row ${plan.id === activePlan?.id ? "active" : ""}`} key={plan.id}>
+                <div>
+                  <strong>{plan.name}</strong>
+                  <span>{plan.targetEnvironment} / {plan.readiness.queueStatus.replace(/_/g, " ")}</span>
+                </div>
+                <button onClick={() => onPreview(plan.id)} disabled={Boolean(loading)}>
+                  <PlayCircle size={15} />
+                  <span>{loading === "preview" && plan.id === activePlan?.id ? "Building" : "Plan"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="builder-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="builder-panel">
+          <div className="section-header compact">
+            <h3>Fragments</h3>
+            <Puzzle size={18} />
+          </div>
+          <div className="builder-fragment-list">
+            {fragments.slice(0, 6).map((fragment) => (
+              <div className="builder-fragment-row" key={`${fragment.kind}-${fragment.id}`}>
+                <div>
+                  <strong>{fragment.serviceName || fragment.name || fragment.id}</strong>
+                  <span>{fragment.kind.replace(/_/g, " ")} / {fragment.profile || fragment.resourceType || fragment.type || "plan"}</span>
+                </div>
+                <StatusPill tone={fragment.kind.includes("azure") ? "warn" : "good"} label={fragment.mode || "proposal"} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="builder-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.plan.name : "Verification"}</h3>
+            <ClipboardCheck size={18} />
+          </div>
+          <div className="builder-check-list">
+            {verification.map((command) => (
+              <div className="builder-check-row" key={command.id}>
+                <div>
+                  <strong>{command.id}</strong>
+                  <span>{command.command}</span>
+                </div>
+                <StatusPill tone={command.required ? "good" : "muted"} label={command.required ? "required" : "optional"} />
+              </div>
+            ))}
+          </div>
+          {intentPreview?.match && (
+            <div className="builder-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.planId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="builder-panel">
+          <div className="section-header compact">
+            <h3>Outputs</h3>
+            <GitBranch size={18} />
+          </div>
+          <div className="builder-output-list">
+            {(preview?.plan.expectedOutputs || activePlan?.expectedOutputs || []).map((output) => (
+              <div className="builder-output-row" key={output}>
+                <strong>{output}</strong>
+                <span>proposal only</span>
+              </div>
+            ))}
+          </div>
+          <div className="builder-gates">
+            {(preview?.plan.approvalGates || activePlan?.approvalGates || []).map((gate) => (
+              <span key={gate}>{gate.replace(/-/g, " ")}</span>
             ))}
           </div>
         </div>

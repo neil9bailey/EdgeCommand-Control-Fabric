@@ -552,10 +552,10 @@ Deliverables:
 
 Acceptance:
 
-- AIP can propose a module enablement plan.
-- KRA can critique the plan.
-- Approved plan can update local composition files.
-- Tests run before module is marked enabled.
+- AIP can propose a module enablement plan. Foundation complete through intent-to-build preview for MQTT, LoRaWAN, and Azure narrowband promotion.
+- KRA can critique the plan. Foundation evidence is now exposed as approval gates, manifest flags, verification commands, and audit-bound build preview events.
+- Approved plan can update local composition files. Deferred to post-certification mutation; E19 foundation is proposal-only and does not mutate files.
+- Tests run before module is marked enabled. Foundation complete as required verification commands attached to every build plan.
 
 ## E20 - Module Marketplace Dashboard
 

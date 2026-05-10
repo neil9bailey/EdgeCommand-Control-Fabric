@@ -413,7 +413,7 @@ Verification:
 
 ### E18 - Module Manifest And Feature Flag Framework
 
-Status: in progress locally.
+Status: complete and pushed to `origin/main`.
 
 Delivered:
 
@@ -427,9 +427,30 @@ Delivered:
 Verification:
 
 - `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/module-manifest`, `/api/module-manifest/flags/:id/preview`, `/api/module-manifest/intent/preview`, and `/api/command-centre`.
+- Browser verification for the Feature Flags panel, MQTT flag, LoRaWAN flag, and clean browser console.
+
+### E19 - Module Builder And IaC Fragment System
+
+Status: in progress locally.
+
+Delivered:
+
+- File-backed Module Builder package with build plan states, fragment kinds, verification commands, compose fragments, Azure Container Apps fragments, migration hooks, test packs, dashboard surfaces, agent tools, approval gates, expected outputs, and recent build run seeds.
+- API gateway module builder service for dashboard data, queue readiness, manifest flag enrichment, build plan preview, and intent-to-build preview.
+- `/api/module-builder`, `/api/module-builder/plans/:id/preview`, and `/api/module-builder/intent/preview` endpoints.
+- Global Command Centre Modules workspace now includes build plan counts and queue-ready posture alongside manifest flag status.
+- Web console Module Builder / IaC Fragments panel showing build plans, proposal-only fragments, required verification, expected outputs, approval gates, and human-intent preview.
+- Tests for builder summary, manifest flag enrichment, MQTT queue-ready build package, LoRaWAN approval-gated build package, and Command Centre compatibility.
+
+Verification:
+
+- `npm test`
 
 ## Next
 
-### E19 - Module Builder And IaC Fragment System
+### E20 - Module Marketplace Dashboard
 
 Status: next planned build slice.

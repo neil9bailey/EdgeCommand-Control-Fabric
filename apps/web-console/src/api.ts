@@ -21,6 +21,9 @@ import type {
   LightingIntentPreview,
   LightingScenePreview,
   ModuleFlagPreview,
+  ModuleBuildIntentPreview,
+  ModuleBuildPreview,
+  ModuleBuilderResponse,
   McpResponse,
   ModuleManifestResponse,
   ModuleManifestIntentPreview,
@@ -202,6 +205,14 @@ export async function fetchSensing(): Promise<SensingDashboardResponse | null> {
 export async function fetchModuleManifest(): Promise<ModuleManifestResponse | null> {
   try {
     return await getJson<ModuleManifestResponse>("/api/module-manifest");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchModuleBuilder(): Promise<ModuleBuilderResponse | null> {
+  try {
+    return await getJson<ModuleBuilderResponse>("/api/module-builder");
   } catch {
     return null;
   }
@@ -420,6 +431,26 @@ export async function previewModuleManifestIntent(intent: string): Promise<Modul
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<ModuleManifestIntentPreview>;
+}
+
+export async function previewModuleBuildPlan(planId: string): Promise<ModuleBuildPreview> {
+  const response = await fetch(`${API_BASE}/api/module-builder/plans/${planId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ModuleBuildPreview>;
+}
+
+export async function previewModuleBuildIntent(intent: string): Promise<ModuleBuildIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/module-builder/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ModuleBuildIntentPreview>;
 }
 
 export async function recordApprovalDecision(

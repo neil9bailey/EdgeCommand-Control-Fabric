@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildKraContextFromEvaluation, evaluateKraContext, loadKraEngine } from "./kraEngine.mjs";
 import { planMcpSession } from "./mcpOrchestrator.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -234,7 +235,17 @@ export function summarizeIntentEngine(engine = loadIntentEngine()) {
   };
 }
 
-export function createIntentSession({ engine = loadIntentEngine(), catalog, mcpOrchestrator, intent, actor = {} }) {
+export function createIntentSession({
+  engine = loadIntentEngine(),
+  kraEngine = loadKraEngine(),
+  catalog,
+  deviceRegistry,
+  automationEngine,
+  eventLedger,
+  mcpOrchestrator,
+  intent,
+  actor = {},
+}) {
   const parsed = frameMatches(engine, intent);
   const rawFrames = parsed.matches.length > 0
     ? parsed.matches.slice(0, 3).map((item) => item.frame)
@@ -249,7 +260,23 @@ export function createIntentSession({ engine = loadIntentEngine(), catalog, mcpO
   const mcpPlan = planMcpSession(mcpOrchestrator, { intent }, actor);
   const sessionConfidence = { confidenceLabel: confidence, confidenceScore: Number(confidenceScore.toFixed(2)) };
   const proposals = buildProposals(matchedFrames, modules, sessionConfidence, mcpPlan);
-  const status = sessionStatusFrom(proposals, confidence, mcpPlan);
+  const fallbackKra = buildKraContext(matchedFrames, proposals, mcpPlan, signals);
+  const kraEvaluation = evaluateKraContext({
+    engine: kraEngine,
+    catalog,
+    deviceRegistry,
+    automationEngine,
+    eventLedger,
+    mcpOrchestrator,
+    intent,
+    mcp: mcpPlan,
+    proposals,
+    actor,
+  });
+  const kraContext = buildKraContextFromEvaluation(kraEvaluation, fallbackKra);
+  const status = kraContext.status === "conflict" || kraContext.status === "blocked"
+    ? "blocked"
+    : sessionStatusFrom(proposals, confidence, mcpPlan);
   const intentClass = matchedFrames[0]?.intentClass || "automation_plan";
 
   const timestamp = new Date().toISOString();
@@ -280,7 +307,8 @@ export function createIntentSession({ engine = loadIntentEngine(), catalog, mcpO
       status,
       proposals,
     },
-    kra: buildKraContext(matchedFrames, proposals, mcpPlan, signals),
+    kra: kraContext,
+    kraEvaluation,
     mcp: {
       sessionId: mcpPlan.sessionId,
       status: mcpPlan.status,

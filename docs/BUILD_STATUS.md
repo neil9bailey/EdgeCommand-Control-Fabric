@@ -198,8 +198,34 @@ Verification:
 - API verification for `/api/intent`, `/api/intent/propose`, and `/api/intent/sessions/:id/decisions`.
 - Browser verification for Generate Plan, proposal cards, KRA critique, MCP tool plan, and Accept decision recording.
 
+### E09 - Knowledge And Risk Agent
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed KRA engine package with critique-only rule packs, evidence source registry, and seed evaluations.
+- API gateway KRA service for source/rule-pack dashboard data and deterministic proposal evaluation.
+- `/api/kra` dashboard contract and `/api/kra/evaluate` protected evaluation endpoint.
+- AIP sessions now include first-class KRA evaluations with findings, evidence pointers, proposal reviews, verdicts, and audit-ready policy events.
+- KRA grounding across safety policies, module catalog, device capabilities, automation rules, MCP tools, narrowband constraints, and audit evidence.
+- Conflict blocker for any proposal that claims direct execution from AIP/KRA output.
+- Global Command Centre Risk workspace and KRA operations dashboard panel in the web console.
+- Tests for KRA loading, leak plus LoRaWAN grounding, direct-execution blocking, module enablement governance, dashboard summary, and command-centre risk integration.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/kra`, `/api/kra/evaluate`, `/api/intent/propose`, and `/api/command-centre`.
+- Browser verification for the Risk workspace, KRA operations panel, Human Intent Workbench KRA findings, and clean browser console.
+
 ## Next
 
-### E09 - Knowledge And Risk Agent
+### E10 - Simulation Lab
 
 Status: next planned build slice.

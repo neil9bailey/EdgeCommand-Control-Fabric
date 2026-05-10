@@ -9,6 +9,7 @@ import type {
   EventLedgerResponse,
   IntentDecisionResponse,
   IntentProposalResponse,
+  KraDashboardResponse,
   McpResponse,
   ModuleCatalog,
   NarrowbandRoutes,
@@ -57,6 +58,14 @@ export async function fetchCommandCentre(): Promise<CommandCentreResponse | null
 export async function fetchMcp(): Promise<McpResponse | null> {
   try {
     return await getJson<McpResponse>("/api/mcp");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchKra(): Promise<KraDashboardResponse | null> {
+  try {
+    return await getJson<KraDashboardResponse>("/api/kra");
   } catch {
     return null;
   }

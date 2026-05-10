@@ -6,6 +6,7 @@ import { loadCatalog } from "../src/catalog.mjs";
 import { buildApprovalQueue, buildCommandCentre, defaultNarrowbandRoutes } from "../src/commandCentre.mjs";
 import { loadDeviceRegistry } from "../src/deviceRegistry.mjs";
 import { loadEventLedger } from "../src/eventLedger.mjs";
+import { loadKraEngine } from "../src/kraEngine.mjs";
 import { loadMcpOrchestrator } from "../src/mcpOrchestrator.mjs";
 
 function commandCentreFixture() {
@@ -16,6 +17,7 @@ function commandCentreFixture() {
     eventLedger: loadEventLedger(),
     automationEngine: loadAutomationEngine(),
     mcpOrchestrator: loadMcpOrchestrator(),
+    kraEngine: loadKraEngine(),
     authStatus: publicAuthStatus(authConfig, {
       provider: "environment",
       keyVaultEnabled: false,
@@ -35,6 +37,7 @@ test("command centre builds all operational workspaces", () => {
     "devices",
     "automations",
     "agents",
+    "risk",
     "connectivity",
     "identity",
     "audit",
@@ -49,10 +52,12 @@ test("command centre action queue includes safety approval and route attention",
 
   assert.ok(commandCentre.actionQueue.some((action) => action.id.startsWith("approval-")));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "agents"));
+  assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "risk"));
   assert.ok(commandCentre.actionQueue.some((action) => action.workspaceId === "connectivity"));
   assert.ok(commandCentre.connectivity.routes.some((route) => route.selectedPath === "lorawan"));
   assert.ok(commandCentre.automations.approvals.every((approval) => approval.status === "pending_approval"));
   assert.equal(commandCentre.agents.summary.toolCount, 10);
+  assert.equal(commandCentre.risk.summary.rulePackCount, 6);
 });
 
 test("shared approval queue and narrowband route helpers stay aligned", () => {

@@ -58,6 +58,7 @@ export interface PlatformOverview {
     deviceRegistry?: string;
     automationEngine?: string;
     intentEngine?: string;
+    riskAgent?: string;
   };
   links: Array<{
     id: string;
@@ -377,7 +378,7 @@ export interface McpResponse {
   summary: McpSummary;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "agents" | "connectivity" | "identity" | "audit";
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "agents" | "risk" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -461,6 +462,7 @@ export interface CommandCentreResponse {
     audit: McpToolCall[];
     summary: McpSummary;
   };
+  risk: KraDashboardResponse;
   connectivity: {
     links: PlatformOverview["links"];
     routes: NarrowbandRoutes["routes"];
@@ -554,6 +556,162 @@ export interface IntentDecisionResponse {
   event: FabricEvent;
 }
 
+export interface KraSummary {
+  schemaVersion: string;
+  sourceCount: number;
+  requiredSourceCount: number;
+  rulePackCount: number;
+  enabledRulePacks: number;
+  blockingRulePacks: number;
+  seedEvaluationCount: number;
+  critiqueOnly: boolean;
+  byRisk: Record<string, number>;
+  policyCount?: number;
+  highRiskDevices?: number;
+  auditEvidenceCount?: number;
+  kraToolCount?: number;
+  moduleCount?: number;
+}
+
+export interface KraEvidenceSource {
+  id: string;
+  name: string;
+  sourceType: string;
+  owner: string;
+  required: boolean;
+  status: string;
+}
+
+export interface KraRulePack {
+  id: string;
+  name: string;
+  risk: "medium" | "high" | "critical" | string;
+  category: string;
+  status: string;
+  blocking: boolean;
+  trigger?: string;
+  capabilities?: string[];
+  proposalTypes?: string[];
+  requires: string[];
+  message: string;
+}
+
+export interface KraSeedEvaluation {
+  id: string;
+  status: string;
+  intentClass: string;
+  summary: string;
+}
+
+export interface KraRecentEvidence {
+  id: string;
+  stream: FabricEvent["stream"];
+  status: string;
+  severity: FabricEvent["severity"];
+  moduleId: string;
+  summary: string;
+  timestamp: string;
+}
+
+export interface KraEvidencePointer {
+  id: string;
+  sourceId: string;
+  type: string;
+  label: string;
+  target: string;
+  reason: string;
+  status: string;
+}
+
+export interface KraFinding {
+  id: string;
+  proposalId: string | null;
+  proposalTitle: string;
+  severity: "info" | "warning" | "high" | "critical" | string;
+  status: string;
+  category: string;
+  rulePackId: string;
+  title: string;
+  detail: string;
+  evidence: string[];
+  requiredActions: string[];
+}
+
+export interface KraProposalReview {
+  proposalId: string;
+  title: string;
+  moduleId: string;
+  risk: string;
+  status: string;
+  severity: string;
+  findingCount: number;
+  blockerCount: number;
+  requiredGates: string[];
+  missingGates: string[];
+  evidencePointers: string[];
+  decision: string;
+}
+
+export interface KraEvaluation {
+  evaluationId: string;
+  createdAt: string;
+  role: string;
+  rule: string;
+  status: string;
+  verdict: string;
+  intent: string;
+  summary: {
+    proposalCount: number;
+    findingCount: number;
+    blockerCount: number;
+    conflictCount: number;
+    missingContextCount: number;
+    requiredReview: boolean;
+    highRiskProposalCount: number;
+    narrowbandFindingCount: number;
+    evidencePointerCount: number;
+    sourcesUsed: string[];
+    byCategory: Record<string, number>;
+    bySeverity: Record<string, number>;
+  };
+  findings: KraFinding[];
+  proposalReviews: KraProposalReview[];
+  evidencePointers: KraEvidencePointer[];
+  grounding: {
+    policies: KraEvidencePointer[];
+    modules: KraEvidencePointer[];
+    capabilities: KraEvidencePointer[];
+    tools: KraEvidencePointer[];
+    events: KraEvidencePointer[];
+  };
+  nextActions: string[];
+  event: FabricEvent;
+}
+
+export interface KraDashboardResponse {
+  engine: {
+    id: string;
+    name: string;
+    mode: string;
+    rule: string;
+    tenant: string;
+    defaultStatus: string;
+  };
+  summary: KraSummary;
+  posture: {
+    status: string;
+    rule: string;
+    sourceHealth: string;
+    executionBoundary: string;
+  };
+  sources: KraEvidenceSource[];
+  rulePacks: KraRulePack[];
+  seedEvaluations: KraSeedEvaluation[];
+  recentEvidence: KraRecentEvidence[];
+  statusModel?: string[];
+  severityModel?: string[];
+}
+
 export interface IntentProposalResponse {
   session_id: string;
   sessionId: string;
@@ -585,7 +743,15 @@ export interface IntentProposalResponse {
     risk_register: string[];
     required_review: boolean;
     frames: string[];
+    evaluationId?: string;
+    verdict?: string;
+    summary?: KraEvaluation["summary"];
+    findings?: KraFinding[];
+    proposalReviews?: KraProposalReview[];
+    evidencePointers?: KraEvidencePointer[];
+    nextActions?: string[];
   };
+  kraEvaluation?: KraEvaluation;
   mcp: {
     sessionId: string;
     status: string;

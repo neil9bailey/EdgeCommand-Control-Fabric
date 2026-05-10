@@ -50,6 +50,12 @@ import {
   recordIntentDecision,
   summarizeIntentEngine,
 } from "./intentEngine.mjs";
+import {
+  buildKraDashboard,
+  evaluateKraContext,
+  loadKraEngine,
+  summarizeKraEngine,
+} from "./kraEngine.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -62,6 +68,7 @@ const eventLedger = loadEventLedger();
 const automationEngine = loadAutomationEngine();
 const mcpOrchestrator = loadMcpOrchestrator();
 const intentEngine = loadIntentEngine();
+const kraEngine = loadKraEngine();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -79,6 +86,7 @@ function buildOverview() {
   const automationSummary = summarizeAutomationEngine(automationEngine);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const intentSummary = summarizeIntentEngine(intentEngine);
+  const kraSummary = summarizeKraEngine(kraEngine);
   return {
     ...summary,
     devices: deviceSummary,
@@ -104,6 +112,7 @@ function buildOverview() {
       automationEngine: `${automationSummary.armedRules} armed rules / ${automationSummary.policyCount} policies`,
       agentMode: `${mcpSummary.enabledTools} MCP tools / ${mcpSummary.approvalRequiredTools} permission gates`,
       intentEngine: `${intentSummary.frameCount} intent frames / propose-only`,
+      riskAgent: `${kraSummary.rulePackCount} KRA rule packs / ${kraSummary.sourceCount} sources`,
     },
     links: defaultLinkInventory(),
   };
@@ -144,6 +153,7 @@ app.get("/api/command-centre", (_req, res) => {
     eventLedger,
     automationEngine,
     mcpOrchestrator,
+    kraEngine,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -364,13 +374,52 @@ app.get("/api/intent/sessions", (_req, res) => {
   res.json(listIntentSeedSessions(intentEngine));
 });
 
+app.get("/api/kra", (_req, res) => {
+  res.json({
+    ...buildKraDashboard({
+      engine: kraEngine,
+      catalog,
+      deviceRegistry,
+      automationEngine,
+      eventLedger,
+      mcpOrchestrator,
+    }),
+    statusModel: kraEngine.statusModel,
+    severityModel: kraEngine.severityModel,
+  });
+});
+
+app.post(
+  "/api/kra/evaluate",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(evaluateKraContext({
+      engine: kraEngine,
+      catalog,
+      deviceRegistry,
+      automationEngine,
+      eventLedger,
+      mcpOrchestrator,
+      session: req.body?.session,
+      proposals: req.body?.proposals,
+      intent: req.body?.intent,
+      mcp: req.body?.mcp,
+      actor: req.auth,
+    }));
+  },
+);
+
 app.post(
   "/api/intent/sessions",
   requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
   (req, res) => {
     res.json(createIntentSession({
       engine: intentEngine,
+      kraEngine,
       catalog,
+      deviceRegistry,
+      automationEngine,
+      eventLedger,
       mcpOrchestrator,
       intent: req.body?.intent || "",
       actor: req.auth,
@@ -438,7 +487,11 @@ app.post(
   (req, res) => {
     res.json(createIntentSession({
       engine: intentEngine,
+      kraEngine,
       catalog,
+      deviceRegistry,
+      automationEngine,
+      eventLedger,
       mcpOrchestrator,
       intent: req.body?.intent || "",
       actor: req.auth,

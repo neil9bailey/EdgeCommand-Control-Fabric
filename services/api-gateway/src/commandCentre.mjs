@@ -1,6 +1,7 @@
 import { summarizeAutomationEngine, evaluateAutomation, findScenario } from "./automationEngine.mjs";
 import { summarizeDeviceRegistry } from "./deviceRegistry.mjs";
 import { filterEvents, summarizeEventLedger } from "./eventLedger.mjs";
+import { buildKraDashboard, summarizeKraEngine } from "./kraEngine.mjs";
 import { summarizeMcpOrchestrator } from "./mcpOrchestrator.mjs";
 
 function titleFromId(value) {
@@ -104,7 +105,7 @@ export function buildApprovalQueue(automationEngine, deviceRegistry) {
   };
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, approvalSummary, mcpSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, approvalSummary, mcpSummary, kraSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -160,6 +161,18 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
       ],
     },
     {
+      id: "risk",
+      label: "Risk",
+      headline: `${kraSummary.enabledRulePacks} KRA packs enabled`,
+      detail: `${kraSummary.sourceCount} evidence sources, ${kraSummary.blockingRulePacks} blocking boundary`,
+      status: kraSummary.blockingRulePacks > 0 ? "governed" : "ready",
+      metrics: [
+        { label: "Sources", value: kraSummary.sourceCount },
+        { label: "Rules", value: kraSummary.rulePackCount },
+        { label: "Seeds", value: kraSummary.seedEvaluationCount },
+      ],
+    },
+    {
       id: "connectivity",
       label: "Connectivity",
       headline: `${links.length} paths scored`,
@@ -198,7 +211,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestrator }) {
+function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestrator, kraDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -249,6 +262,19 @@ function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestr
       evidence: [event.stream, event.actor.displayName],
     }));
 
+  const kraActions = (kraDashboard?.seedEvaluations || [])
+    .filter((evaluation) => evaluation.status !== "ok")
+    .map((evaluation) => ({
+      id: `kra-${evaluation.id}`,
+      priority: evaluation.status === "conflict" ? "P0_EMERGENCY" : "P2_CONTROL",
+      workspaceId: "risk",
+      title: titleFromId(evaluation.id),
+      owner: "kra-agent",
+      status: evaluation.status,
+      detail: evaluation.summary,
+      evidence: [evaluation.intentClass, "critique-only"],
+    }));
+
   const toolsById = new Map((mcpOrchestrator?.tools || []).map((tool) => [tool.id, tool]));
   const mcpActions = (mcpOrchestrator?.toolCalls || [])
     .filter((call) => call.status === "requires_permission")
@@ -266,14 +292,23 @@ function buildActionQueue({ approvals, devices, routes, auditEvents, mcpOrchestr
       };
     });
 
-  return [...approvalActions, ...mcpActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 10);
+  return [...approvalActions, ...mcpActions, ...kraActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 10);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, authStatus }) {
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
+  const kraSummary = summarizeKraEngine(kraEngine);
+  const kraDashboard = buildKraDashboard({
+    engine: kraEngine,
+    catalog,
+    deviceRegistry,
+    automationEngine,
+    eventLedger,
+    mcpOrchestrator,
+  });
   const approvalQueue = buildApprovalQueue(automationEngine, deviceRegistry);
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
@@ -285,6 +320,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     automationSummary,
     approvalSummary: approvalQueue.summary,
     mcpSummary,
+    kraSummary,
     links,
     routes: narrowbandRoutes.routes,
     authStatus,
@@ -333,6 +369,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       routes: narrowbandRoutes.routes,
       auditEvents,
       mcpOrchestrator,
+      kraDashboard,
     }),
     modules: {
       byState: catalog.modules.reduce((acc, module) => {
@@ -360,6 +397,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       audit: mcpOrchestrator.toolCalls || [],
       summary: mcpSummary,
     },
+    risk: kraDashboard,
     connectivity: {
       links,
       routes: narrowbandRoutes.routes,

@@ -1,0 +1,160 @@
+{
+  "schemaVersion": "0.1.0",
+  "engine": {
+    "id": "edgecommand-kra-engine",
+    "name": "Knowledge And Risk Agent",
+    "mode": "deterministic-local",
+    "rule": "critique-only",
+    "tenant": "vendorlogic.io",
+    "defaultStatus": "needs_review"
+  },
+  "statusModel": [
+    "ok",
+    "needs_review",
+    "missing_context",
+    "conflict",
+    "blocked"
+  ],
+  "severityModel": [
+    "info",
+    "warning",
+    "high",
+    "critical"
+  ],
+  "evidenceSources": [
+    {
+      "id": "policy-definitions",
+      "name": "Safety Policy Definitions",
+      "sourceType": "policy",
+      "owner": "safety-policy",
+      "required": true,
+      "status": "ready"
+    },
+    {
+      "id": "device-registry",
+      "name": "Device Registry And Capability Risk",
+      "sourceType": "registry",
+      "owner": "device-registry",
+      "required": true,
+      "status": "ready"
+    },
+    {
+      "id": "automation-rules",
+      "name": "Automation Rules And Scenes",
+      "sourceType": "automation",
+      "owner": "automation-engine",
+      "required": true,
+      "status": "ready"
+    },
+    {
+      "id": "narrowband-constraints",
+      "name": "Semantic Narrowband Constraints",
+      "sourceType": "connectivity",
+      "owner": "narrowband-control-plane",
+      "required": true,
+      "status": "ready"
+    },
+    {
+      "id": "audit-ledger",
+      "name": "Audit And Policy Evidence",
+      "sourceType": "audit",
+      "owner": "audit-ledger",
+      "required": true,
+      "status": "ready"
+    },
+    {
+      "id": "mcp-tool-plan",
+      "name": "MCP Tool Permission Plan",
+      "sourceType": "agent",
+      "owner": "mcp-orchestrator",
+      "required": true,
+      "status": "ready"
+    }
+  ],
+  "rulePacks": [
+    {
+      "id": "aip-execution-boundary",
+      "name": "AIP Execution Boundary",
+      "risk": "critical",
+      "category": "agent_governance",
+      "status": "enabled",
+      "blocking": true,
+      "trigger": "proposal_can_execute",
+      "requires": ["propose_only", "separate_command_path", "audit_record"],
+      "message": "AIP and KRA outputs must remain proposals or critiques; execution is always a separate policy-gated command path."
+    },
+    {
+      "id": "physical-safety-grounding",
+      "name": "Physical Safety Grounding",
+      "risk": "high",
+      "category": "physical_safety",
+      "status": "enabled",
+      "blocking": false,
+      "capabilities": ["water_valve", "lock", "gate", "battery", "ev_charger"],
+      "requires": ["simulation", "human_approval", "signed_command", "policy_evidence"],
+      "message": "Physical actuation requires policy evidence, simulation, human approval, and signed command separation."
+    },
+    {
+      "id": "narrowband-command-safety",
+      "name": "Narrowband Command Safety",
+      "risk": "high",
+      "category": "connectivity",
+      "status": "enabled",
+      "blocking": false,
+      "capabilities": ["link", "traffic_class", "route_plan", "encode", "payload_budget"],
+      "requires": ["payload_budget", "ttl", "ack_required", "approval_for_p0"],
+      "message": "Constrained links may carry compact signed semantic commands and telemetry deltas only."
+    },
+    {
+      "id": "module-certification-boundary",
+      "name": "Module Certification Boundary",
+      "risk": "high",
+      "category": "module_governance",
+      "status": "enabled",
+      "blocking": false,
+      "proposalTypes": ["module_plan", "module_enablement"],
+      "requires": ["dependency_check", "tests", "kra_review", "certification", "human_approval"],
+      "message": "Module build or enablement must remain planned until dependencies, tests, certification, and approval are present."
+    },
+    {
+      "id": "existing-rule-overlap-review",
+      "name": "Existing Rule Overlap Review",
+      "risk": "medium",
+      "category": "automation_conflict",
+      "status": "enabled",
+      "blocking": false,
+      "requires": ["rule_overlap_check", "loop_check", "operator_review"],
+      "message": "New automation proposals must be compared with armed rules before enablement."
+    },
+    {
+      "id": "grounding-completeness",
+      "name": "Grounding Completeness",
+      "risk": "medium",
+      "category": "grounding",
+      "status": "enabled",
+      "blocking": false,
+      "requires": ["source_pointer", "policy_pointer", "audit_pointer"],
+      "message": "Every critique should cite enough source material for an operator to understand the decision."
+    }
+  ],
+  "seedEvaluations": [
+    {
+      "id": "kra-eval-leak-fallback",
+      "status": "needs_review",
+      "intentClass": "automation_rule",
+      "summary": "Leak response proposal grounded against physical safety, existing water rules, and narrowband command safety."
+    },
+    {
+      "id": "kra-eval-module-enable",
+      "status": "needs_review",
+      "intentClass": "module_plan",
+      "summary": "MQTT and ESPHome module enablement held for dependency, test, certification, and approval evidence."
+    },
+    {
+      "id": "kra-eval-boundary-violation",
+      "status": "conflict",
+      "intentClass": "security_plan",
+      "summary": "Any agent proposal claiming direct execution is blocked by the AIP execution boundary."
+    }
+  ]
+}

@@ -21,7 +21,8 @@ Current status:
 - E06 web console and global command centre hardening is complete.
 - E07 MCP orchestrator foundation is complete.
 - E08 Automation Intent Partner foundation is complete.
-- E09 Knowledge and Risk Agent is the next active build slice.
+- E09 Knowledge and Risk Agent foundation is complete.
+- E10 Simulation Lab is the next active build slice.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -57,6 +58,7 @@ Local URLs:
 - Command centre API: http://localhost:3101/api/command-centre
 - MCP orchestrator API: http://localhost:3101/api/mcp
 - Intent engine API: http://localhost:3101/api/intent
+- KRA engine API: http://localhost:3101/api/kra
 
 Docker Desktop target:
 

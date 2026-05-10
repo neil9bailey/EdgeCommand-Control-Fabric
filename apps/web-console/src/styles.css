@@ -333,7 +333,7 @@ h3 {
 
 .workspace-tabs {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 1px;
   background: var(--line);
 }
@@ -496,6 +496,10 @@ h3 {
 
 .agent-ops-table .ops-row {
   grid-template-columns: minmax(170px, 1.35fr) minmax(128px, 0.9fr) minmax(72px, 0.55fr) minmax(86px, 0.65fr) minmax(78px, 0.55fr);
+}
+
+.risk-ops-table .ops-row {
+  grid-template-columns: minmax(188px, 1.4fr) minmax(120px, 0.8fr) minmax(72px, 0.55fr) minmax(84px, 0.65fr) minmax(74px, 0.55fr);
 }
 
 .connectivity-ops-table .ops-row {
@@ -873,6 +877,104 @@ h3 {
   border-left: 4px solid var(--amber);
   border-radius: 0 8px 8px 0;
   background: #fff8ec;
+}
+
+.kra-ops {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.kra-header {
+  background:
+    linear-gradient(90deg, rgba(37, 35, 33, 0.1), rgba(45, 111, 143, 0.12)),
+    #fff8ec;
+}
+
+.kra-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+}
+
+.kra-panel {
+  min-height: 258px;
+  padding: 14px;
+  background: rgba(255, 253, 246, 0.98);
+}
+
+.kra-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.source-list,
+.rule-pack-list,
+.evidence-list,
+.kra-finding-list {
+  display: grid;
+  gap: 8px;
+}
+
+.source-row,
+.rule-pack-row,
+.evidence-row,
+.kra-finding-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.source-row strong,
+.source-row span,
+.rule-pack-row strong,
+.rule-pack-row span,
+.evidence-row strong,
+.evidence-row span,
+.kra-finding-row strong,
+.kra-finding-row span {
+  display: block;
+  min-width: 0;
+}
+
+.source-row strong,
+.rule-pack-row strong,
+.evidence-row strong,
+.kra-finding-row strong {
+  font-size: 12px;
+}
+
+.source-row span,
+.rule-pack-row span,
+.evidence-row span,
+.kra-finding-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.rule-pack-row,
+.kra-finding-row {
+  align-items: flex-start;
+}
+
+.kra-finding-list {
+  margin-top: 4px;
+}
+
+.kra-finding-row {
+  border-left: 4px solid var(--red);
+  border-radius: 0 8px 8px 0;
 }
 
 .main-grid {
@@ -1650,6 +1752,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .kra-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .workspace-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1686,8 +1792,9 @@ h3 {
   }
 
   .command-band,
-  .event-grid,
-  .automation-grid,
+    .event-grid,
+    .automation-grid,
+    .kra-grid,
     .dashboard-grid,
     .proposal-grid,
     .intent-session-strip,

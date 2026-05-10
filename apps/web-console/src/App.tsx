@@ -45,6 +45,7 @@ import {
   fetchCommandCentre,
   fetchDevices,
   fetchEvents,
+  fetchKra,
   fetchNarrowbandRoutes,
   fetchOverview,
   proposeIntent,
@@ -65,6 +66,7 @@ import type {
   FabricEvent,
   IntentDecisionResponse,
   IntentProposalResponse,
+  KraDashboardResponse,
   ModuleCatalog,
   ModuleDefinition,
   NarrowbandRoutes,
@@ -108,6 +110,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   devices: Gauge,
   automations: Settings2,
   agents: GitBranch,
+  risk: Shield,
   connectivity: RadioTower,
   identity: Shield,
   audit: Activity,
@@ -190,6 +193,7 @@ function App() {
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [automations, setAutomations] = useState<AutomationResponse | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
+  const [kra, setKra] = useState<KraDashboardResponse | null>(null);
   const [automationEvaluation, setAutomationEvaluation] = useState<AutomationEvaluation | null>(null);
   const [automationLoading, setAutomationLoading] = useState(false);
   const [commandCentre, setCommandCentre] = useState<CommandCentreResponse | null>(null);
@@ -212,6 +216,7 @@ function App() {
     void fetchEvents().then(setEventLedger);
     void fetchAutomations().then(setAutomations);
     void fetchApprovals().then(setApprovals);
+    void fetchKra().then(setKra);
     void fetchCommandCentre().then(setCommandCentre);
   }, []);
 
@@ -336,6 +341,7 @@ function App() {
           <Metric label="Audit" value={eventLedger?.summary.auditRequired || overview?.events?.auditRequired || "-"} detail="durable gates" tone="warn" />
           <Metric label="Rules" value={automations?.summary.armedRules || overview?.automation?.armedRules || "-"} detail="armed automations" tone="good" />
           <Metric label="Policy" value={automations?.summary.policyCount || overview?.automation?.policyCount || "-"} detail="safety packs" tone="danger" />
+          <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
           <Metric label="Approvals" value={approvals?.summary.pending || eventLedger?.summary.pendingApprovals || overview?.commandCentre.pendingApprovals || 4} detail="pending gates" tone="warn" />
           <Metric
@@ -360,6 +366,7 @@ function App() {
           loading={automationLoading}
           onRunScenario={runScenario}
         />
+        <KraOpsPanel kra={kra || commandCentre?.risk || null} />
 
         <section className="main-grid">
           <div className="module-browser" aria-label="Module list">
@@ -645,6 +652,57 @@ function CommandCentreWorkspaceView({
     );
   }
 
+  if (activeWorkspace === "risk") {
+    return (
+      <div className="ops-workspace risk-workspace">
+        <div className="state-rack risk-state-rack">
+          <div>
+            <span>Rule Packs</span>
+            <strong>{commandCentre.risk.summary.rulePackCount}</strong>
+          </div>
+          <div>
+            <span>Evidence Sources</span>
+            <strong>{commandCentre.risk.summary.sourceCount}</strong>
+          </div>
+          <div>
+            <span>Blocking Boundaries</span>
+            <strong>{commandCentre.risk.summary.blockingRulePacks}</strong>
+          </div>
+          <div>
+            <span>Audit Evidence</span>
+            <strong>{commandCentre.risk.summary.auditEvidenceCount || 0}</strong>
+          </div>
+        </div>
+        <div className="ops-table risk-ops-table">
+          <div className="ops-row ops-head">
+            <span>Rule Pack</span>
+            <span>Category</span>
+            <span>Risk</span>
+            <span>Boundary</span>
+            <span>Status</span>
+          </div>
+          {commandCentre.risk.rulePacks.map((pack) => (
+            <div className="ops-row" key={pack.id}>
+              <strong>{pack.name}</strong>
+              <span>{pack.category.replace(/_/g, " ")}</span>
+              <StatusPill tone={pack.risk === "critical" || pack.risk === "high" ? "danger" : "warn"} label={pack.risk} />
+              <StatusPill tone={pack.blocking ? "danger" : "warn"} label={pack.blocking ? "blocking" : "review"} />
+              <span>{pack.status}</span>
+            </div>
+          ))}
+        </div>
+        <div className="agent-session-strip">
+          {commandCentre.risk.seedEvaluations.map((evaluation) => (
+            <div key={evaluation.id}>
+              <strong>{evaluation.summary}</strong>
+              <span>{evaluation.intentClass.replace(/_/g, " ")} / {evaluation.status.replace(/_/g, " ")}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (activeWorkspace === "connectivity") {
     return (
       <div className="ops-table connectivity-ops-table">
@@ -857,6 +915,100 @@ function AutomationOpsPanel({
                 <span>Run a drill scenario to generate command plans.</span>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function KraOpsPanel({ kra }: { kra: KraDashboardResponse | null }) {
+  const sources = kra?.sources || [];
+  const rulePacks = kra?.rulePacks || [];
+  const evidence = kra?.recentEvidence || [];
+
+  return (
+    <section className="kra-ops" aria-label="Knowledge and risk agent">
+      <div className="section-header kra-header">
+        <div>
+          <p className="eyebrow">Knowledge And Risk Agent</p>
+          <h2>Grounding And Risk Review</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone={kra?.posture.executionBoundary === "no_agent_direct_execution" ? "good" : "danger"} label={kra?.posture.executionBoundary.replace(/_/g, " ") || "loading"} />
+          <StatusPill tone={kra?.summary.blockingRulePacks ? "danger" : "good"} label={`${kra?.summary.blockingRulePacks || 0} blocking`} />
+          <StatusPill tone="warn" label={`${kra?.summary.enabledRulePacks || 0} packs`} />
+        </div>
+      </div>
+
+      <div className="kra-grid">
+        <div className="kra-panel kra-posture-panel">
+          <div className="section-header compact">
+            <h3>Posture</h3>
+            <Shield size={18} />
+          </div>
+          <div className="identity-facts kra-facts">
+            <div><span>Status</span><strong>{kra?.posture.status || "loading"}</strong></div>
+            <div><span>Sources</span><strong>{kra?.summary.sourceCount || 0}</strong></div>
+            <div><span>Policies</span><strong>{kra?.summary.policyCount || 0}</strong></div>
+            <div><span>Evidence</span><strong>{kra?.summary.auditEvidenceCount || 0}</strong></div>
+          </div>
+        </div>
+
+        <div className="kra-panel">
+          <div className="section-header compact">
+            <h3>Evidence Sources</h3>
+            <Layers3 size={18} />
+          </div>
+          <div className="source-list">
+            {sources.map((source) => (
+              <div className="source-row" key={source.id}>
+                <div>
+                  <strong>{source.name}</strong>
+                  <span>{source.owner} / {source.sourceType}</span>
+                </div>
+                <StatusPill tone={source.status === "ready" ? "good" : "warn"} label={source.required ? "required" : source.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="kra-panel">
+          <div className="section-header compact">
+            <h3>Rule Packs</h3>
+            <ClipboardCheck size={18} />
+          </div>
+          <div className="rule-pack-list">
+            {rulePacks.map((pack) => (
+              <div className="rule-pack-row" key={pack.id}>
+                <div>
+                  <strong>{pack.name}</strong>
+                  <span>{pack.message}</span>
+                </div>
+                <div className="tool-plan-meta">
+                  <StatusPill tone={pack.risk === "critical" || pack.risk === "high" ? "danger" : "warn"} label={pack.risk} />
+                  <StatusPill tone={pack.blocking ? "danger" : "good"} label={pack.blocking ? "block" : "review"} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="kra-panel">
+          <div className="section-header compact">
+            <h3>Recent Evidence</h3>
+            <Activity size={18} />
+          </div>
+          <div className="evidence-list">
+            {evidence.map((item) => (
+              <div className="evidence-row" key={item.id}>
+                <div>
+                  <strong>{item.summary}</strong>
+                  <span>{formatTime(item.timestamp)} / {item.moduleId.replace(/-/g, " ")}</span>
+                </div>
+                <StatusPill tone={severityTone(item.severity)} label={item.status.replace(/_/g, " ")} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1278,6 +1430,16 @@ function IntentWorkbench({
                 {proposal.kra.grounding_pointers.map((pointer, index) => <span key={`${pointer}-${index}`}>{pointer}</span>)}
                 {proposal.kra.frames.map((frame) => <span key={frame}>{frame}</span>)}
               </div>
+              {proposal.kra.findings && proposal.kra.findings.length > 0 && (
+                <div className="kra-finding-list">
+                  {proposal.kra.findings.slice(0, 5).map((finding) => (
+                    <div className="kra-finding-row" key={finding.id}>
+                      <strong>{finding.title}</strong>
+                      <span>{finding.detail}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="proposal-column mcp-column">

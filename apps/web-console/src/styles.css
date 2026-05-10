@@ -333,7 +333,7 @@ h3 {
 
 .workspace-tabs {
   display: grid;
-  grid-template-columns: repeat(11, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 1px;
   background: var(--line);
 }
@@ -496,6 +496,10 @@ h3 {
 
 .lighting-ops-table .ops-row {
   grid-template-columns: minmax(168px, 1.35fr) minmax(92px, 0.7fr) minmax(82px, 0.65fr) minmax(104px, 0.75fr) minmax(84px, 0.65fr);
+}
+
+.climate-ops-table .ops-row {
+  grid-template-columns: minmax(168px, 1.35fr) minmax(92px, 0.7fr) minmax(82px, 0.65fr) minmax(104px, 0.75fr) minmax(96px, 0.7fr);
 }
 
 .approval-ops-table .ops-row {
@@ -1049,6 +1053,174 @@ h3 {
 }
 
 .lighting-intent-result span {
+  font-size: 11px;
+}
+
+.climate-hvac-panel {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.climate-header {
+  background:
+    linear-gradient(90deg, rgba(45, 111, 143, 0.14), rgba(31, 122, 92, 0.1)),
+    #fff8ec;
+}
+
+.climate-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.9fr 1.1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.climate-panel {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(255, 253, 246, 0.98);
+}
+
+.climate-profile-list,
+.climate-zone-list,
+.climate-command-list,
+.climate-policy-list {
+  display: grid;
+  gap: 8px;
+}
+
+.climate-profile-row,
+.climate-zone-row,
+.climate-command-row,
+.climate-policy-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.climate-profile-row.active {
+  box-shadow: inset 4px 0 0 var(--blue);
+}
+
+.climate-policy-row.schedule {
+  border-left: 4px solid var(--green);
+  border-radius: 0 8px 8px 0;
+}
+
+.climate-profile-row strong,
+.climate-profile-row span,
+.climate-zone-row strong,
+.climate-zone-row span,
+.climate-command-row strong,
+.climate-command-row span,
+.climate-policy-row strong,
+.climate-policy-row span {
+  display: block;
+  min-width: 0;
+}
+
+.climate-profile-row strong,
+.climate-zone-row strong,
+.climate-command-row strong,
+.climate-policy-row strong {
+  font-size: 12px;
+}
+
+.climate-profile-row span,
+.climate-zone-row span,
+.climate-command-row span,
+.climate-policy-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.climate-profile-actions,
+.climate-intent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.climate-profile-actions button,
+.climate-intent-actions button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff8ec;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.climate-profile-actions button:nth-child(2) {
+  background: var(--coal);
+}
+
+.climate-profile-actions button:disabled,
+.climate-intent-actions button:disabled {
+  opacity: 0.62;
+  cursor: progress;
+}
+
+.climate-intent-actions {
+  margin-top: 10px;
+}
+
+.climate-intent-actions button:first-child {
+  flex: 1 1 180px;
+}
+
+.climate-intent-actions .guard {
+  background: var(--amber);
+}
+
+.climate-intent-actions span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.climate-intent-result {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #a9cfda;
+  border-radius: 8px;
+  background: var(--blue-soft);
+  color: #204c61;
+}
+
+.climate-intent-result strong,
+.climate-intent-result span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.climate-intent-result strong {
+  font-size: 12px;
+}
+
+.climate-intent-result span {
   font-size: 11px;
 }
 
@@ -2163,6 +2335,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .climate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .approval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2214,6 +2390,7 @@ h3 {
     .event-grid,
     .automation-grid,
     .lighting-grid,
+    .climate-grid,
     .approval-grid,
     .simulation-grid,
     .kra-grid,

@@ -61,6 +61,7 @@ export interface PlatformOverview {
     riskAgent?: string;
     simulationLab?: string;
     lightingScenes?: string;
+    climateHvac?: string;
   };
   links: Array<{
     id: string;
@@ -889,7 +890,225 @@ export interface LightingDashboardResponse {
   rule: string;
 }
 
-export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
+export interface ClimateSummary {
+  schemaVersion: string;
+  zoneCount: number;
+  controllableZoneCount: number;
+  onlineThermostatCount: number;
+  profileCount: number;
+  enabledProfileCount: number;
+  scheduleCount: number;
+  enabledScheduleCount: number;
+  policyCount: number;
+  intentRecipeCount: number;
+  recentRunCount: number;
+  averageTemperatureC: number;
+  averageSetpointC: number;
+  byMode: Record<string, number>;
+  byAdapter: Record<string, number>;
+}
+
+export interface ClimateZone {
+  id: string;
+  siteId: string;
+  zoneId: string;
+  name: string;
+  thermostatDeviceId: string;
+  sensorDeviceIds: string[];
+  occupancyMode: string;
+  comfortBand: {
+    heatMinC: number;
+    heatMaxC: number;
+    coolMinC: number;
+    coolMaxC: number;
+  };
+  ecoSetpointC: number;
+  awaySetpointC: number;
+  frostSetpointC: number;
+  priority: string;
+  controllable?: boolean;
+  thermostat?: null | {
+    id: string;
+    name: string;
+    status: string;
+    adapter: string;
+    capabilities: string[];
+    observedState: Record<string, string | number | boolean>;
+    desiredState: Record<string, string | number | boolean>;
+  };
+  sensors?: Array<{
+    id: string;
+    name: string;
+    status: string;
+    adapter: string;
+    observedState: Record<string, string | number | boolean>;
+  }>;
+}
+
+export interface ClimateProfile {
+  id: string;
+  name: string;
+  mode: string;
+  status: string;
+  trafficClass: string;
+  requiresApproval: boolean;
+  policies: string[];
+  zoneTargets: Array<{
+    zoneId: string;
+    setpointC: number;
+    mode: string;
+    holdMinutes: number;
+  }>;
+  commandProfile: {
+    encodedBytes: number;
+    ackRequired: boolean;
+    ttlSeconds: number;
+  };
+}
+
+export interface ClimateSchedule {
+  id: string;
+  name: string;
+  profileId: string;
+  status: string;
+  time: string;
+  days: string[];
+}
+
+export interface ClimatePolicy {
+  id: string;
+  name: string;
+  risk: string;
+  scope: string[];
+  requiresApproval: boolean;
+  requiresAudit: boolean;
+  minHeatC?: number;
+  maxHeatC?: number;
+  minCoolC?: number;
+  maxCoolC?: number;
+  minHumidity?: number;
+  maxHumidity?: number;
+  message: string;
+}
+
+export interface ClimateIntentRecipe {
+  id: string;
+  name: string;
+  keywords: string[];
+  profileId: string;
+  confidence: number;
+  exampleIntent: string;
+}
+
+export interface ClimateProfileRun {
+  id: string;
+  profileId: string;
+  status: string;
+  actor: string;
+  commandCount: number;
+  summary: string;
+}
+
+export interface ClimateCommand {
+  id: string;
+  profileId: string;
+  zoneId: string;
+  deviceId: string | null;
+  deviceName: string;
+  type: string;
+  moduleId: string;
+  capability: string;
+  desiredState: Record<string, string | number | boolean>;
+  observedState: Record<string, string | number | boolean>;
+  trafficClass: string;
+  selectedPath: string;
+  encodedBytes: number;
+  ackRequired: boolean;
+  status: string;
+  canExecute: boolean;
+  policyDecision: string;
+  policyReasons: string[];
+}
+
+export interface ClimatePreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ClimateDashboardResponse["service"];
+  profile: {
+    id: string;
+    name: string;
+    mode: string;
+    status: string;
+    trafficClass: string;
+    requiresApproval: boolean;
+  };
+  actor: {
+    subject: string;
+    name: string;
+    roles: string[];
+  };
+  status: string;
+  summary: {
+    commandCount: number;
+    readyCount: number;
+    blockedCount: number;
+    zoneCount: number;
+    encodedBytes: number;
+  };
+  policy: {
+    result: string;
+    canApply: boolean;
+    requiresApproval: boolean;
+    policies: Array<{ id: string; name: string; risk: string; message: string }>;
+    criteria: Array<{ id: string; label: string; passed: boolean }>;
+  };
+  commands: ClimateCommand[];
+  nextActions: string[];
+  event: FabricEvent;
+  applyAttempted?: boolean;
+}
+
+export interface ClimateIntentPreview {
+  intent: string;
+  match: {
+    id: string;
+    name: string;
+    profileId: string;
+    confidence: number;
+    score: number;
+  };
+  preview: ClimatePreview;
+}
+
+export interface ClimateDashboardResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultZoneId: string;
+    rule: string;
+  };
+  featureModule: {
+    moduleId: string;
+    state: string;
+    buildStrategy: string;
+    enabledBy: string[];
+    buildArtifacts: string[];
+  };
+  summary: ClimateSummary;
+  zones: ClimateZone[];
+  profiles: ClimateProfile[];
+  schedules: ClimateSchedule[];
+  policies: ClimatePolicy[];
+  intentRecipes: ClimateIntentRecipe[];
+  recentProfileRuns: ClimateProfileRun[];
+  rule: string;
+}
+
+export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
   label: string;
@@ -966,6 +1185,7 @@ export interface CommandCentreResponse {
     summary: AutomationSummary;
   };
   lighting: LightingDashboardResponse;
+  climate: ClimateDashboardResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

@@ -138,6 +138,37 @@
       ]
     },
     {
+      "id": "climate-comfort-control",
+      "name": "Climate Comfort Control",
+      "intentClass": "comfort_schedule",
+      "keywords": ["climate", "hvac", "thermostat", "temperature", "heating", "cooling", "setpoint", "setpoints", "comfort", "comfortable", "safe", "eco", "frost", "warm"],
+      "siteHints": ["home", "hall", "living", "bedroom", "utility"],
+      "targetModules": ["climate-hvac", "energy-optimization", "audit-ledger"],
+      "targetCapabilities": ["thermostat", "temperature", "humidity", "hvac_mode"],
+      "proposalTemplates": [
+        {
+          "type": "comfort_profile_preview",
+          "title": "Climate comfort profile preview",
+          "status": "needs_review",
+          "risk": "medium",
+          "requiredGates": ["safe_setpoint_range", "manual_override_check", "audit_record"],
+          "requiredTools": ["device.search", "climate.profile.preview", "policy.evaluate", "audit.record"],
+          "impact": "Prepare thermostat setpoints, holds, mode changes, and comfort evidence without adapter execution.",
+          "rollbackPath": "Existing thermostat schedule remains unchanged until the operator applies the simulated command plan."
+        },
+        {
+          "type": "setpoint_apply",
+          "title": "Safe climate setpoint apply",
+          "status": "needs_review",
+          "risk": "medium",
+          "requiredGates": ["safe_setpoint_range", "operator_review", "audit_record"],
+          "requiredTools": ["climate.setpoint.apply", "policy.evaluate", "audit.record"],
+          "impact": "Apply safe medium-risk thermostat setpoints through the climate command boundary after review.",
+          "rollbackPath": "Previous schedule can be replayed from the audit record or replaced by manual thermostat control."
+        }
+      ]
+    },
+    {
       "id": "energy-reserve",
       "name": "Energy Reserve Protection",
       "intentClass": "optimization_plan",
@@ -201,6 +232,13 @@
       "intentClass": "scene_control",
       "confidence": "high",
       "summary": "Warm evening lighting scene with manual override and audit evidence."
+    },
+    {
+      "id": "intent-session-climate-evening",
+      "status": "needs_review",
+      "intentClass": "comfort_schedule",
+      "confidence": "high",
+      "summary": "Evening climate comfort profile with safe setpoint and audit evidence."
     }
   ]
 }

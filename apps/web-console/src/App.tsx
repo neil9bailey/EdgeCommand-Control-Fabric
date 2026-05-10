@@ -38,7 +38,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  applyClimateProfile,
   applyLightingScene,
+  fetchClimate,
   fetchApprovals,
   fetchAuthStatus,
   fetchAutomations,
@@ -53,6 +55,9 @@ import {
   fetchSimulationLab,
   previewLightingIntent,
   previewLightingScene,
+  previewClimateIntent,
+  previewClimateProfile,
+  previewClimateSetpoint,
   proposeIntent,
   recordApprovalDecision,
   recordIntentDecision,
@@ -65,6 +70,9 @@ import type {
   ApprovalQueueResponse,
   AutomationEvaluation,
   AutomationResponse,
+  ClimateDashboardResponse,
+  ClimateIntentPreview,
+  ClimatePreview,
   CommandCentreResponse,
   CommandCentreWorkspaceId,
   DeviceDefinition,
@@ -123,6 +131,7 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
   devices: Gauge,
   automations: Settings2,
   lighting: Lightbulb,
+  climate: Thermometer,
   agents: GitBranch,
   approvals: ClipboardCheck,
   risk: Shield,
@@ -212,6 +221,10 @@ function App() {
   const [lightingPreview, setLightingPreview] = useState<LightingScenePreview | null>(null);
   const [lightingIntentPreview, setLightingIntentPreview] = useState<LightingIntentPreview | null>(null);
   const [lightingLoading, setLightingLoading] = useState<"preview" | "apply" | "intent" | null>(null);
+  const [climate, setClimate] = useState<ClimateDashboardResponse | null>(null);
+  const [climatePreview, setClimatePreview] = useState<ClimatePreview | null>(null);
+  const [climateIntentPreview, setClimateIntentPreview] = useState<ClimateIntentPreview | null>(null);
+  const [climateLoading, setClimateLoading] = useState<"preview" | "apply" | "intent" | "unsafe" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -241,6 +254,7 @@ function App() {
     void fetchEvents().then(setEventLedger);
     void fetchAutomations().then(setAutomations);
     void fetchLighting().then(setLighting);
+    void fetchClimate().then(setClimate);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -328,6 +342,44 @@ function App() {
       setLightingPreview(result.preview);
     } finally {
       setLightingLoading(null);
+    }
+  }
+
+  async function previewClimate(profileId: string) {
+    setClimateLoading("preview");
+    try {
+      setClimatePreview(await previewClimateProfile(profileId));
+    } finally {
+      setClimateLoading(null);
+    }
+  }
+
+  async function applyClimate(profileId: string) {
+    setClimateLoading("apply");
+    try {
+      setClimatePreview(await applyClimateProfile(profileId));
+    } finally {
+      setClimateLoading(null);
+    }
+  }
+
+  async function previewClimateUnsafe(zoneId: string) {
+    setClimateLoading("unsafe");
+    try {
+      setClimatePreview(await previewClimateSetpoint(zoneId, 29, "heat", 60));
+    } finally {
+      setClimateLoading(null);
+    }
+  }
+
+  async function previewClimateFromIntent(intentText: string) {
+    setClimateLoading("intent");
+    try {
+      const result = await previewClimateIntent(intentText);
+      setClimateIntentPreview(result);
+      setClimatePreview(result.preview);
+    } finally {
+      setClimateLoading(null);
     }
   }
 
@@ -426,6 +478,7 @@ function App() {
           <Metric label="Rules" value={automations?.summary.armedRules || overview?.automation?.armedRules || "-"} detail="armed automations" tone="good" />
           <Metric label="Policy" value={automations?.summary.policyCount || overview?.automation?.policyCount || "-"} detail="safety packs" tone="danger" />
           <Metric label="Lighting" value={lighting?.summary.enabledSceneCount || commandCentre?.lighting.summary.enabledSceneCount || "-"} detail="enabled scenes" tone="good" />
+          <Metric label="Climate" value={climate?.summary.enabledProfileCount || commandCentre?.climate.summary.enabledProfileCount || "-"} detail="comfort profiles" tone="warn" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -453,6 +506,16 @@ function App() {
           onPreview={previewScene}
           onApply={applyScene}
           onIntentPreview={previewSceneIntent}
+        />
+        <ClimateHvacPanel
+          climate={climate || commandCentre?.climate || null}
+          preview={climatePreview}
+          intentPreview={climateIntentPreview}
+          loading={climateLoading}
+          onPreview={previewClimate}
+          onApply={applyClimate}
+          onUnsafePreview={previewClimateUnsafe}
+          onIntentPreview={previewClimateFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -752,6 +815,57 @@ function CommandCentreWorkspaceView({
             <div key={zone.id}>
               <strong>{zone.name}</strong>
               <span>{zone.onlineFixtures || 0}/{zone.fixtureIds.length} fixture(s) / {zone.circadianBand.replace(/-/g, " ")}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (activeWorkspace === "climate") {
+    return (
+      <div className="ops-workspace climate-workspace">
+        <div className="state-rack climate-state-rack">
+          <div>
+            <span>Profiles</span>
+            <strong>{commandCentre.climate.summary.enabledProfileCount}</strong>
+          </div>
+          <div>
+            <span>Thermostats</span>
+            <strong>{commandCentre.climate.summary.onlineThermostatCount}/{commandCentre.climate.summary.controllableZoneCount}</strong>
+          </div>
+          <div>
+            <span>Setpoint</span>
+            <strong>{commandCentre.climate.summary.averageSetpointC}C</strong>
+          </div>
+          <div>
+            <span>Policies</span>
+            <strong>{commandCentre.climate.summary.policyCount}</strong>
+          </div>
+        </div>
+        <div className="ops-table climate-ops-table">
+          <div className="ops-row ops-head">
+            <span>Profile</span>
+            <span>Mode</span>
+            <span>Targets</span>
+            <span>Traffic</span>
+            <span>Gate</span>
+          </div>
+          {commandCentre.climate.profiles.map((profile) => (
+            <div className="ops-row" key={profile.id}>
+              <strong>{profile.name}</strong>
+              <span>{profile.mode}</span>
+              <span>{profile.zoneTargets.length} zones</span>
+              <StatusPill tone={trafficTone(profile.trafficClass)} label={profile.trafficClass} />
+              <StatusPill tone={profile.requiresApproval ? "warn" : "good"} label={profile.requiresApproval ? "approval" : "range checked"} />
+            </div>
+          ))}
+        </div>
+        <div className="agent-session-strip">
+          {commandCentre.climate.zones.map((zone) => (
+            <div key={zone.id}>
+              <strong>{zone.name}</strong>
+              <span>{zone.controllable ? "controllable" : "sensor only"} / {zone.occupancyMode.replace(/-/g, " ")}</span>
             </div>
           ))}
         </div>
@@ -1221,6 +1335,185 @@ function LightingScenesPanel({
             ))}
             {schedules.slice(0, 3).map((schedule) => (
               <div className="lighting-policy-row schedule" key={schedule.id}>
+                <div>
+                  <strong>{schedule.name}</strong>
+                  <span>{schedule.time} / {schedule.days.length} day(s)</span>
+                </div>
+                <StatusPill tone={schedule.status === "enabled" ? "good" : "muted"} label={schedule.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ClimateHvacPanel({
+  climate,
+  preview,
+  intentPreview,
+  loading,
+  onPreview,
+  onApply,
+  onUnsafePreview,
+  onIntentPreview,
+}: {
+  climate: ClimateDashboardResponse | null;
+  preview: ClimatePreview | null;
+  intentPreview: ClimateIntentPreview | null;
+  loading: "preview" | "apply" | "intent" | "unsafe" | null;
+  onPreview: (profileId: string) => void;
+  onApply: (profileId: string) => void;
+  onUnsafePreview: (zoneId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const profiles = climate?.profiles || [];
+  const zones = climate?.zones || [];
+  const schedules = climate?.schedules || [];
+  const policies = climate?.policies || [];
+  const recipes = climate?.intentRecipes || [];
+  const activeProfileId = preview?.profile.id.replace(/^ad-hoc-/, "") || profiles[0]?.id;
+  const activeProfile = profiles.find((profile) => profile.id === activeProfileId) || profiles[0];
+  const activeRecipe = recipes.find((recipe) => recipe.profileId === activeProfile?.id) || recipes[0];
+  const controllableZone = zones.find((zone) => zone.controllable) || zones[0];
+
+  return (
+    <section className="climate-hvac-panel" aria-label="Climate and HVAC">
+      <div className="section-header climate-header">
+        <div>
+          <p className="eyebrow">Climate And HVAC</p>
+          <h2>Comfort Command Surface</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone="good" label={`${climate?.summary.enabledProfileCount || 0} profiles`} />
+          <StatusPill tone={climate?.summary.onlineThermostatCount === climate?.summary.controllableZoneCount ? "good" : "warn"} label={`${climate?.summary.onlineThermostatCount || 0}/${climate?.summary.controllableZoneCount || 0} thermostats`} />
+          <StatusPill tone={preview?.status === "blocked" ? "danger" : preview?.status === "executed_simulated" ? "good" : "neutral"} label={preview?.status.replace(/_/g, " ") || "ready"} />
+        </div>
+      </div>
+
+      <div className="climate-grid">
+        <div className="climate-panel profile-picker-panel">
+          <div className="section-header compact">
+            <h3>Profiles</h3>
+            <Thermometer size={18} />
+          </div>
+          <div className="climate-profile-list">
+            {profiles.map((profile) => (
+              <div className={`climate-profile-row ${profile.id === activeProfile?.id ? "active" : ""}`} key={profile.id}>
+                <div>
+                  <strong>{profile.name}</strong>
+                  <span>{profile.mode} / {profile.zoneTargets.length} target(s)</span>
+                </div>
+                <div className="climate-profile-actions">
+                  <button onClick={() => onPreview(profile.id)} disabled={Boolean(loading)}>
+                    <PlayCircle size={15} />
+                    <span>{loading === "preview" && profile.id === activeProfile?.id ? "Previewing" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onApply(profile.id)} disabled={Boolean(loading)}>
+                    <CheckCircle2 size={15} />
+                    <span>{loading === "apply" && profile.id === activeProfile?.id ? "Applying" : "Apply"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="climate-intent-actions">
+            {activeRecipe && (
+              <button onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+                <Bot size={16} />
+                <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+              </button>
+            )}
+            {controllableZone && (
+              <button className="guard" onClick={() => onUnsafePreview(controllableZone.id)} disabled={Boolean(loading)}>
+                <Shield size={16} />
+                <span>{loading === "unsafe" ? "Checking" : "Guard"}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="climate-panel">
+          <div className="section-header compact">
+            <h3>Zones</h3>
+            <Home size={18} />
+          </div>
+          <div className="climate-zone-list">
+            {zones.map((zone) => {
+              const state = zone.thermostat?.observedState || {};
+              return (
+                <div className="climate-zone-row" key={zone.id}>
+                  <div>
+                    <strong>{zone.name}</strong>
+                    <span>{state.temperatureC ?? "-"}C / set {state.setpointC ?? "-"}C / {zone.occupancyMode}</span>
+                  </div>
+                  <StatusPill tone={zone.controllable ? "good" : "warn"} label={zone.controllable ? "control" : "sensor"} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="climate-panel climate-command-panel">
+          <div className="section-header compact">
+            <h3>{preview ? preview.profile.name : "Command Plan"}</h3>
+            <Settings2 size={18} />
+          </div>
+          <div className="climate-command-list">
+            {(preview?.commands || []).slice(0, 5).map((command) => (
+              <div className="climate-command-row" key={command.id}>
+                <div>
+                  <strong>{command.deviceName}</strong>
+                  <span>{command.desiredState.setpointC}C / {command.desiredState.mode} / {command.encodedBytes} bytes</span>
+                </div>
+                <StatusPill tone={command.canExecute ? "good" : "danger"} label={command.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+            {!preview && (
+              <div className="event-empty">
+                <Activity size={18} />
+                <span>Preview a profile to generate thermostat command plans.</span>
+              </div>
+            )}
+          </div>
+          {intentPreview && (
+            <div className="climate-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {intentPreview.match.profileId.replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="climate-panel">
+          <div className="section-header compact">
+            <h3>Policy And Schedule</h3>
+            <Shield size={18} />
+          </div>
+          <div className="climate-policy-list">
+            {preview ? (
+              preview.policy.criteria.slice(0, 5).map((item) => (
+                <div className="climate-policy-row" key={item.id}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <span>{item.id.replace(/_/g, " ")}</span>
+                  </div>
+                  <StatusPill tone={item.passed ? "good" : "danger"} label={item.passed ? "pass" : "hold"} />
+                </div>
+              ))
+            ) : (
+              policies.slice(0, 4).map((policy) => (
+                <div className="climate-policy-row" key={policy.id}>
+                  <div>
+                    <strong>{policy.name}</strong>
+                    <span>{policy.message}</span>
+                  </div>
+                  <StatusPill tone={policy.risk === "medium" ? "warn" : "good"} label={policy.risk} />
+                </div>
+              ))
+            )}
+            {schedules.slice(0, 3).map((schedule) => (
+              <div className="climate-policy-row schedule" key={schedule.id}>
                 <div>
                   <strong>{schedule.name}</strong>
                   <span>{schedule.time} / {schedule.days.length} day(s)</span>

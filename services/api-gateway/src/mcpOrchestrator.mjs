@@ -13,6 +13,8 @@ const ROLE_SCOPES = {
     "automation:rule:compile",
     "lighting:scene:preview",
     "lighting:scene:apply",
+    "climate:profile:preview",
+    "climate:setpoint:apply",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -26,6 +28,8 @@ const ROLE_SCOPES = {
     "automation:rule:compile",
     "lighting:scene:preview",
     "lighting:scene:apply",
+    "climate:profile:preview",
+    "climate:setpoint:apply",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -39,6 +43,8 @@ const ROLE_SCOPES = {
     "device:command:propose",
     "lighting:scene:preview",
     "lighting:scene:apply",
+    "climate:profile:preview",
+    "climate:setpoint:apply",
     "policy:evaluate",
     "simulation:run",
     "connectivity:route:evaluate",
@@ -133,6 +139,10 @@ function inferToolIdsFromIntent(orchestrator, intent = "") {
   if (/light|lighting|scene|dim|bright|warm|evening|night path|away presence|cooking/.test(text)) {
     tools.add("lighting.scene.preview");
     tools.add("lighting.scene.apply");
+  }
+  if (/climate|hvac|thermostat|temperature|heating|cooling|setpoint|comfort|eco|frost/.test(text)) {
+    tools.add("climate.profile.preview");
+    tools.add("climate.setpoint.apply");
   }
 
   const registered = toolMap(orchestrator);
@@ -297,6 +307,12 @@ function deterministicToolResult(tool, input = {}) {
   }
   if (tool.id === "lighting.scene.apply") {
     return { applyStatus: "simulated", sceneId: input.sceneId || "scene-evening-wind-down", execution: "simulated_command_plan" };
+  }
+  if (tool.id === "climate.profile.preview") {
+    return { previewStatus: "ready", profileId: input.profileId || "profile-evening-comfort", commandCount: 3, execution: "not_executed" };
+  }
+  if (tool.id === "climate.setpoint.apply") {
+    return { applyStatus: "simulated", zoneId: input.zoneId || "climate-zone-hall", setpointC: input.setpointC || 20, execution: "simulated_command_plan" };
   }
   if (tool.id === "policy.evaluate") {
     return { decision: "needs_review", requiredGates: ["simulation", "approval"], policy: "physical-safety-approval" };

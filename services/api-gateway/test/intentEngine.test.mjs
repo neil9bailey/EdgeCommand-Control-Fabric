@@ -24,11 +24,11 @@ test("intent engine loads deterministic AIP frames and seed sessions", () => {
   assert.equal(engine.engine.tenant, "vendorlogic.io");
   assert.equal(engine.engine.rule, "propose-only");
   assert.equal(summary.schemaVersion, "0.1.0");
-  assert.equal(summary.frameCount, 6);
-  assert.equal(summary.seedSessionCount, 3);
+  assert.equal(summary.frameCount, 7);
+  assert.equal(summary.seedSessionCount, 4);
   assert.equal(summary.proposeOnly, true);
   assert.ok(summary.highRiskFrames >= 4);
-  assert.equal(seeds.sessions.length, 3);
+  assert.equal(seeds.sessions.length, 4);
 });
 
 test("AIP proposes leak response and LoRaWAN fallback without execution", () => {
@@ -89,6 +89,24 @@ test("AIP proposes lighting scene plans through MCP without direct fixture mutat
   assert.ok(session.aip.proposals.some((proposal) => proposal.type === "scene_apply"));
   assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "lighting.scene.preview" && tool.status === "ready"));
   assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "lighting.scene.apply" && tool.status === "ready"));
+  assert.ok(session.aip.proposals.every((proposal) => proposal.canExecute === false));
+});
+
+test("AIP proposes climate comfort plans through MCP without direct thermostat mutation", () => {
+  const session = createIntentSession({
+    engine: loadIntentEngine(),
+    catalog: loadCatalog(),
+    mcpOrchestrator: loadMcpOrchestrator(),
+    intent: "Make the house warm and comfortable for the evening with safe thermostat setpoints.",
+    actor: operator,
+  });
+
+  assert.equal(session.intent.class, "comfort_schedule");
+  assert.ok(session.intent.extractedSignals.targetModules.includes("climate-hvac"));
+  assert.ok(session.aip.proposals.some((proposal) => proposal.type === "comfort_profile_preview"));
+  assert.ok(session.aip.proposals.some((proposal) => proposal.type === "setpoint_apply"));
+  assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "climate.profile.preview" && tool.status === "ready"));
+  assert.ok(session.mcp.toolPlans.some((tool) => tool.toolId === "climate.setpoint.apply" && tool.status === "ready"));
   assert.ok(session.aip.proposals.every((proposal) => proposal.canExecute === false));
 });
 

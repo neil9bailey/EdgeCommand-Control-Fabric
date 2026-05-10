@@ -3,6 +3,7 @@ import {
   buildApprovalDashboard,
   buildApprovalQueue as buildWorkflowApprovalQueue,
 } from "./approvalWorkflow.mjs";
+import { buildClimateDashboard, summarizeClimateHvac } from "./climateHvac.mjs";
 import { summarizeDeviceRegistry } from "./deviceRegistry.mjs";
 import { filterEvents, summarizeEventLedger } from "./eventLedger.mjs";
 import { buildKraDashboard, summarizeKraEngine } from "./kraEngine.mjs";
@@ -84,7 +85,7 @@ export function buildApprovalQueue(automationEngine, deviceRegistry, simulationL
   });
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -137,6 +138,18 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
         { label: "Zones", value: lightingSummary.zoneCount },
         { label: "Fixtures", value: lightingSummary.fixtureCount },
         { label: "Recipes", value: lightingSummary.intentRecipeCount },
+      ],
+    },
+    {
+      id: "climate",
+      label: "Climate",
+      headline: `${climateSummary.enabledProfileCount} profiles enabled`,
+      detail: `${climateSummary.onlineThermostatCount}/${climateSummary.controllableZoneCount} thermostats online, ${climateSummary.enabledScheduleCount} schedules enabled`,
+      status: climateSummary.onlineThermostatCount === climateSummary.controllableZoneCount ? "ready" : "attention",
+      metrics: [
+        { label: "Zones", value: climateSummary.zoneCount },
+        { label: "Setpoint", value: `${climateSummary.averageSetpointC}C` },
+        { label: "Policies", value: climateSummary.policyCount },
       ],
     },
     {
@@ -226,7 +239,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, lightingDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
+function buildActionQueue({ approvals, lightingDashboard, climateDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -250,6 +263,20 @@ function buildActionQueue({ approvals, lightingDashboard, devices, routes, audit
       status: "ready",
       detail: `${scene.mode} mode / ${scene.zoneTargets.length} zone target(s)`,
       evidence: [...scene.policies, scene.requiresApproval ? "approval-required" : "low-risk"],
+    }));
+
+  const climateActions = (climateDashboard?.profiles || [])
+    .filter((profile) => profile.status === "enabled")
+    .slice(0, 3)
+    .map((profile) => ({
+      id: `climate-${profile.id}`,
+      priority: profile.trafficClass,
+      workspaceId: "climate",
+      title: `${profile.name} profile ready`,
+      owner: "Climate And HVAC",
+      status: "ready",
+      detail: `${profile.mode} mode / ${profile.zoneTargets.length} zone target(s)`,
+      evidence: [...profile.policies, profile.requiresApproval ? "approval-required" : "policy-gated"],
     }));
 
   const deviceActions = devices
@@ -334,14 +361,15 @@ function buildActionQueue({ approvals, lightingDashboard, devices, routes, audit
       };
     });
 
-  return [...approvalActions, ...lightingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 14);
+  return [...approvalActions, ...lightingActions, ...climateActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions, ...routeActions, ...auditActions].slice(0, 20);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, authStatus }) {
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
   const lightingSummary = summarizeLightingScenes(lightingScenes, deviceRegistry);
+  const climateSummary = summarizeClimateHvac(climateHvac, deviceRegistry);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
@@ -373,6 +401,10 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     lighting: lightingScenes,
     deviceRegistry,
   });
+  const climateDashboard = buildClimateDashboard({
+    climate: climateHvac,
+    deviceRegistry,
+  });
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
   const auditEvents = filterEvents(eventLedger, { auditRequired: "true", limit: 8 });
@@ -382,6 +414,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     eventSummary,
     automationSummary,
     lightingSummary,
+    climateSummary,
     approvalSummary: approvalQueue.summary,
     mcpSummary,
     kraSummary,
@@ -431,6 +464,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     actionQueue: buildActionQueue({
       approvals: approvalQueue.approvals,
       lightingDashboard,
+      climateDashboard,
       devices,
       routes: narrowbandRoutes.routes,
       auditEvents,
@@ -457,6 +491,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       summary: automationSummary,
     },
     lighting: lightingDashboard,
+    climate: climateDashboard,
     approvals: approvalQueue,
     agents: {
       orchestrator: mcpOrchestrator.orchestrator,

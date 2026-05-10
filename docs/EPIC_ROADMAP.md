@@ -410,6 +410,8 @@ Acceptance:
 
 ## E13 - Climate And HVAC
 
+Status: complete in E13 foundation slice.
+
 Objective:
 
 Manage comfort, setpoints, schedules, and energy-aware HVAC controls.
@@ -427,6 +429,7 @@ Acceptance:
 - Simulated climate zones can be controlled.
 - Policies prevent unsafe setpoints.
 - AIP can propose a comfort schedule.
+- Climate profile preview and setpoint apply are exposed through MCP tools, API endpoints, and the web console.
 
 ## E14 - Security And Access
 

@@ -77,6 +77,16 @@ import {
   previewLightingScene,
   summarizeLightingScenes,
 } from "./lightingScenes.mjs";
+import {
+  applyClimateProfile,
+  applyClimateSetpoint,
+  buildClimateDashboard,
+  loadClimateHvac,
+  previewClimateIntent,
+  previewClimateProfile,
+  previewClimateSetpoint,
+  summarizeClimateHvac,
+} from "./climateHvac.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -93,6 +103,7 @@ const kraEngine = loadKraEngine();
 const simulationLab = loadSimulationLab();
 const approvalWorkflow = loadApprovalWorkflow();
 const lightingScenes = loadLightingScenes();
+const climateHvac = loadClimateHvac();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -114,6 +125,7 @@ function buildOverview() {
   const simulationSummary = summarizeSimulationLab(simulationLab);
   const approvalSummary = summarizeApprovalWorkflow(approvalWorkflow);
   const lightingSummary = summarizeLightingScenes(lightingScenes, deviceRegistry);
+  const climateSummary = summarizeClimateHvac(climateHvac, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -143,6 +155,7 @@ function buildOverview() {
       simulationLab: `${simulationSummary.scenarioCount} labs / ${simulationSummary.variantCount} variants`,
       approvalWorkflow: `${approvalSummary.policyRuleCount} policies / ${approvalSummary.decisionCount} decisions`,
       lightingScenes: `${lightingSummary.enabledSceneCount} enabled scenes / ${lightingSummary.onlineFixtureCount} online fixtures`,
+      climateHvac: `${climateSummary.enabledProfileCount} enabled profiles / ${climateSummary.onlineThermostatCount} online thermostats`,
     },
     links: defaultLinkInventory(),
   };
@@ -187,6 +200,7 @@ app.get("/api/command-centre", (_req, res) => {
     simulationLab,
     approvalWorkflow,
     lightingScenes,
+    climateHvac,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -371,6 +385,118 @@ app.post(
   (req, res) => {
     res.json(previewLightingIntent({
       lighting: lightingScenes,
+      deviceRegistry,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/climate", (_req, res) => {
+  res.json(buildClimateDashboard({
+    climate: climateHvac,
+    deviceRegistry,
+  }));
+});
+
+app.get("/api/climate/profiles/:id/preview", (req, res) => {
+  const result = previewClimateProfile({
+    climate: climateHvac,
+    deviceRegistry,
+    profileId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "climate_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/climate/profiles/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewClimateProfile({
+      climate: climateHvac,
+      deviceRegistry,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "climate_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/climate/profiles/:id/apply",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = applyClimateProfile({
+      climate: climateHvac,
+      deviceRegistry,
+      profileId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "climate_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.status === "blocked" ? 409 : 200).json(result);
+  },
+);
+
+app.post(
+  "/api/climate/zones/:id/setpoint/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewClimateSetpoint({
+      climate: climateHvac,
+      deviceRegistry,
+      zoneId: req.params.id,
+      setpointC: req.body?.setpointC,
+      mode: req.body?.mode || "heat",
+      holdMinutes: req.body?.holdMinutes || 60,
+      actor: req.auth,
+    });
+    if (result.error === "climate_zone_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/climate/zones/:id/setpoint/apply",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = applyClimateSetpoint({
+      climate: climateHvac,
+      deviceRegistry,
+      zoneId: req.params.id,
+      setpointC: req.body?.setpointC,
+      mode: req.body?.mode || "heat",
+      holdMinutes: req.body?.holdMinutes || 60,
+      actor: req.auth,
+    });
+    if (result.error === "climate_zone_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.status === "blocked" ? 409 : 200).json(result);
+  },
+);
+
+app.post(
+  "/api/climate/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewClimateIntent({
+      climate: climateHvac,
       deviceRegistry,
       intent: req.body?.intent || "",
       actor: req.auth,

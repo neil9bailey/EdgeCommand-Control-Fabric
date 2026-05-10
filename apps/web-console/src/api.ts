@@ -5,6 +5,9 @@ import type {
   ApprovalQueueResponse,
   AutomationEvaluation,
   AutomationResponse,
+  ClimateDashboardResponse,
+  ClimateIntentPreview,
+  ClimatePreview,
   CommandCentreResponse,
   DeviceRegistryResponse,
   EventLedgerResponse,
@@ -141,6 +144,14 @@ export async function fetchLighting(): Promise<LightingDashboardResponse | null>
   }
 }
 
+export async function fetchClimate(): Promise<ClimateDashboardResponse | null> {
+  try {
+    return await getJson<ClimateDashboardResponse>("/api/climate");
+  } catch {
+    return null;
+  }
+}
+
 export async function previewLightingScene(sceneId: string): Promise<LightingScenePreview> {
   const response = await fetch(`${API_BASE}/api/lighting/scenes/${sceneId}/preview`, {
     method: "POST",
@@ -169,6 +180,51 @@ export async function previewLightingIntent(intent: string): Promise<LightingInt
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<LightingIntentPreview>;
+}
+
+export async function previewClimateProfile(profileId: string): Promise<ClimatePreview> {
+  const response = await fetch(`${API_BASE}/api/climate/profiles/${profileId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ClimatePreview>;
+}
+
+export async function applyClimateProfile(profileId: string): Promise<ClimatePreview> {
+  const response = await fetch(`${API_BASE}/api/climate/profiles/${profileId}/apply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ClimatePreview>;
+}
+
+export async function previewClimateSetpoint(
+  zoneId: string,
+  setpointC: number,
+  mode = "heat",
+  holdMinutes = 60,
+): Promise<ClimatePreview> {
+  const response = await fetch(`${API_BASE}/api/climate/zones/${zoneId}/setpoint/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ setpointC, mode, holdMinutes }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ClimatePreview>;
+}
+
+export async function previewClimateIntent(intent: string): Promise<ClimateIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/climate/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json() as Promise<ClimateIntentPreview>;
 }
 
 export async function recordApprovalDecision(

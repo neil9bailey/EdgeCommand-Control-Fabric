@@ -298,8 +298,33 @@ Verification:
 - API verification for `/api/lighting`, `/api/lighting/scenes/:id/preview`, `/api/lighting/scenes/:id/apply`, `/api/lighting/intent/preview`, and `/api/command-centre`.
 - Browser verification for the Lighting workspace, Lighting And Scenes panel, scene preview, simulated scene apply, intent recipe matching, and clean browser console.
 
+### E13 - Climate And HVAC
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed Climate And HVAC package with climate zones, comfort profiles, schedules, safe setpoint policies, humidity guardrails, intent recipes, feature-module metadata, and recent run seeds.
+- Expanded device registry with bedroom zone, climate capabilities, thermostat devices, humidity/temperature state, and a utility-room sensor zone.
+- API gateway climate service for dashboard data, profile preview, simulated profile apply, safe/unsafe setpoint preview/apply, and intent-to-profile preview.
+- `/api/climate`, `/api/climate/profiles/:id/preview`, `/api/climate/profiles/:id/apply`, `/api/climate/zones/:id/setpoint/preview`, `/api/climate/zones/:id/setpoint/apply`, and `/api/climate/intent/preview` endpoints.
+- MCP orchestrator climate profile preview and setpoint apply tools, medium-risk permissions, deterministic tool execution, and AIP climate comfort frame.
+- Global Command Centre Climate workspace and Climate And HVAC dashboard panel in the web console.
+- Tests for climate package loading, dashboard enrichment, safe profile preview, simulated apply, unsafe setpoint blocking, intent recipe matching, MCP climate tools, AIP climate proposals, and command-centre climate integration.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- `npm run health`
+- API verification for `/api/climate`, `/api/climate/profiles/:id/preview`, `/api/climate/profiles/:id/apply`, `/api/climate/zones/:id/setpoint/preview`, `/api/climate/intent/preview`, and `/api/command-centre`.
+- Browser verification for the Climate workspace, Climate And HVAC panel, comfort profile preview, simulated profile apply, unsafe setpoint guard, intent recipe matching, and clean browser console.
+
 ## Next
 
-### E13 - Climate And HVAC
+### E14 - Security And Access
 
 Status: next planned build slice.

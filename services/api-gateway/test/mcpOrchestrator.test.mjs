@@ -28,12 +28,13 @@ test("MCP orchestrator loads registered tools, agents, sessions, and audit", () 
 
   assert.equal(orchestrator.orchestrator.tenant, "vendorlogic.io");
   assert.equal(summary.schemaVersion, "0.1.0");
-  assert.equal(summary.toolCount, 12);
-  assert.equal(summary.enabledTools, 12);
+  assert.equal(summary.toolCount, 14);
+  assert.equal(summary.enabledTools, 14);
   assert.equal(summary.agentCount, 5);
   assert.equal(summary.approvalRequiredTools, 4);
   assert.equal(summary.highRiskTools, 4);
   assert.equal(summary.byModule["lighting-scenes"], 2);
+  assert.equal(summary.byModule["climate-hvac"], 2);
   assert.equal(summary.byModule["mcp-orchestrator"], undefined);
 });
 
@@ -94,6 +95,31 @@ test("MCP execution simulates lighting scene apply", () => {
   assert.equal(result.canExecute, true);
   assert.equal(result.result.applyStatus, "simulated");
   assert.equal(result.event.moduleId, "lighting-scenes");
+});
+
+test("MCP session planning supports medium-risk climate comfort tools", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const plan = planMcpSession(orchestrator, {
+    intent: "Make the house warm with a climate comfort profile.",
+  }, operator);
+
+  assert.equal(plan.status, "planned");
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "climate.profile.preview" && tool.status === "ready"));
+  assert.ok(plan.toolPlans.some((tool) => tool.toolId === "climate.setpoint.apply" && tool.status === "ready"));
+  assert.equal(plan.requiresPermissionCount, 0);
+});
+
+test("MCP execution simulates climate setpoint apply", () => {
+  const orchestrator = loadMcpOrchestrator();
+  const result = executeMcpTool(orchestrator, {
+    toolId: "climate.setpoint.apply",
+    input: { zoneId: "climate-zone-hall", setpointC: 20 },
+  }, operator);
+
+  assert.equal(result.status, "completed");
+  assert.equal(result.canExecute, true);
+  assert.equal(result.result.applyStatus, "simulated");
+  assert.equal(result.event.moduleId, "climate-hvac");
 });
 
 test("MCP execution requires explicit permission for high-risk tools", () => {

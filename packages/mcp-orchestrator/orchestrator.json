@@ -14,6 +14,8 @@
     { "id": "automation:rule:compile", "name": "Compile Automation Rule", "risk": "high" },
     { "id": "lighting:scene:preview", "name": "Preview Lighting Scene", "risk": "low" },
     { "id": "lighting:scene:apply", "name": "Apply Lighting Scene", "risk": "low" },
+    { "id": "climate:profile:preview", "name": "Preview Climate Profile", "risk": "medium" },
+    { "id": "climate:setpoint:apply", "name": "Apply Climate Setpoint", "risk": "medium" },
     { "id": "policy:evaluate", "name": "Evaluate Safety Policy", "risk": "medium" },
     { "id": "simulation:run", "name": "Run Simulation", "risk": "medium" },
     { "id": "connectivity:route:evaluate", "name": "Evaluate Connectivity Route", "risk": "medium" },
@@ -28,7 +30,7 @@
       "name": "Automation Intent Partner",
       "rule": "propose-only",
       "status": "enabled",
-      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "module.plan"]
+      "tools": ["device.search", "automation.rule.compile", "lighting.scene.preview", "lighting.scene.apply", "climate.profile.preview", "climate.setpoint.apply", "module.plan"]
     },
     {
       "id": "kra-agent",
@@ -134,6 +136,36 @@
       "requiresApproval": false,
       "auditRequired": true,
       "inputHints": ["sceneId", "reason", "sourceIntent"]
+    },
+    {
+      "id": "climate.profile.preview",
+      "name": "Climate Profile Preview",
+      "agentId": "aip-agent",
+      "moduleId": "climate-hvac",
+      "description": "Preview climate profile and setpoint commands with safe range, humidity, manual override, and audit evidence.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["climate:profile:preview"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["profileId", "intent", "zoneId"]
+    },
+    {
+      "id": "climate.setpoint.apply",
+      "name": "Climate Setpoint Apply",
+      "agentId": "aip-agent",
+      "moduleId": "climate-hvac",
+      "description": "Apply a safe medium-risk climate setpoint through the simulated command boundary.",
+      "status": "enabled",
+      "risk": "medium",
+      "trafficClass": "P2_CONTROL",
+      "scopes": ["climate:setpoint:apply"],
+      "allowedRoles": ["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"],
+      "requiresApproval": false,
+      "auditRequired": true,
+      "inputHints": ["zoneId", "setpointC", "mode", "holdMinutes"]
     },
     {
       "id": "policy.evaluate",
@@ -273,6 +305,14 @@
       "actor": "operator-local",
       "intent": "Set a warm evening lighting scene and record the simulated scene command plan.",
       "requestedTools": ["device.search", "lighting.scene.preview", "lighting.scene.apply", "policy.evaluate", "audit.record"]
+    },
+    {
+      "id": "mcp-session-climate-comfort",
+      "name": "Climate Comfort Planning",
+      "status": "planned",
+      "actor": "operator-local",
+      "intent": "Make the house warm and comfortable for the evening while keeping safe setpoint limits.",
+      "requestedTools": ["device.search", "climate.profile.preview", "climate.setpoint.apply", "policy.evaluate", "audit.record"]
     }
   ],
   "toolCalls": [
@@ -315,6 +355,16 @@
       "status": "completed",
       "decision": "allowed",
       "summary": "Generated a warm evening lighting scene preview with manual override checks."
+    },
+    {
+      "id": "toolcall-20260510-005",
+      "sessionId": "mcp-session-climate-comfort",
+      "toolId": "climate.profile.preview",
+      "timestamp": "2026-05-10T05:18:10Z",
+      "actor": "operator-local",
+      "status": "completed",
+      "decision": "allowed",
+      "summary": "Generated an evening climate comfort preview with safe setpoint checks."
     }
   ]
 }

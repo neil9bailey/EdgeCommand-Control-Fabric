@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "climate-hvac-service",
+    "name": "Climate And HVAC",
+    "moduleId": "climate-hvac",
+    "mode": "deterministic-local",
+    "executionBoundary": "simulated-climate-command-plan-only",
+    "defaultZoneId": "climate-zone-hall",
+    "rule": "Climate commands may plan safe medium-risk setpoint changes locally; real adapters execute only after range, manual override, schedule, and audit checks."
+  },
+  "featureModule": {
+    "moduleId": "climate-hvac",
+    "state": "foundation",
+    "buildStrategy": "feature-manifest-plus-service-plus-dashboard",
+    "enabledBy": ["human_intent", "module_marketplace", "operator_dashboard"],
+    "buildArtifacts": [
+      "packages/climate-hvac/climate-hvac.json",
+      "services/api-gateway/src/climateHvac.mjs",
+      "apps/web-console ClimateHvacPanel",
+      "api contracts and tests"
+    ]
+  },
+  "policies": [
+    {
+      "id": "safe-setpoint-range",
+      "name": "Safe Setpoint Range",
+      "risk": "medium",
+      "scope": ["thermostat", "temperature", "hvac_mode"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "minHeatC": 16,
+      "maxHeatC": 23,
+      "minCoolC": 18,
+      "maxCoolC": 26,
+      "message": "Setpoints outside safe heat/cool ranges are blocked before adapter execution."
+    },
+    {
+      "id": "manual-override-first",
+      "name": "Manual Override First",
+      "risk": "medium",
+      "scope": ["thermostat", "hvac_mode"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "message": "A thermostat with manual override active is held out of the command plan."
+    },
+    {
+      "id": "humidity-comfort-guard",
+      "name": "Humidity Comfort Guard",
+      "risk": "low",
+      "scope": ["humidity", "comfort_band"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "minHumidity": 35,
+      "maxHumidity": 60,
+      "message": "Humidity outside the comfort band is surfaced as evidence before mode changes."
+    },
+    {
+      "id": "energy-reserve-eco",
+      "name": "Energy Reserve Eco",
+      "risk": "medium",
+      "scope": ["eco_mode", "battery", "tariff"],
+      "requiresApproval": false,
+      "requiresAudit": true,
+      "message": "Eco adjustments are preferred during reserve or tariff pressure unless comfort bounds would be breached."
+    }
+  ],
+  "zones": [
+    {
+      "id": "climate-zone-hall",
+      "siteId": "home-hq",
+      "zoneId": "hall",
+      "name": "Hall Comfort Core",
+      "thermostatDeviceId": "dev-thermostat-hall-01",
+      "sensorDeviceIds": ["dev-thermostat-hall-01"],
+      "occupancyMode": "circulation",
+      "comfortBand": { "heatMinC": 19, "heatMaxC": 21.5, "coolMinC": 22, "coolMaxC": 24.5 },
+      "ecoSetpointC": 18,
+      "awaySetpointC": 16.5,
+      "frostSetpointC": 7,
+      "priority": "primary"
+    },
+    {
+      "id": "climate-zone-living",
+      "siteId": "home-hq",
+      "zoneId": "living-room",
+      "name": "Living Room",
+      "thermostatDeviceId": "dev-thermostat-living-01",
+      "sensorDeviceIds": ["dev-thermostat-living-01"],
+      "occupancyMode": "occupied",
+      "comfortBand": { "heatMinC": 19.5, "heatMaxC": 22, "coolMinC": 22, "coolMaxC": 25 },
+      "ecoSetpointC": 18.5,
+      "awaySetpointC": 16.5,
+      "frostSetpointC": 7,
+      "priority": "comfort"
+    },
+    {
+      "id": "climate-zone-bedroom",
+      "siteId": "home-hq",
+      "zoneId": "bedroom",
+      "name": "Bedroom",
+      "thermostatDeviceId": "dev-thermostat-bedroom-01",
+      "sensorDeviceIds": ["dev-thermostat-bedroom-01"],
+      "occupancyMode": "sleep",
+      "comfortBand": { "heatMinC": 17.5, "heatMaxC": 20, "coolMinC": 20, "coolMaxC": 23 },
+      "ecoSetpointC": 17,
+      "awaySetpointC": 16,
+      "frostSetpointC": 7,
+      "priority": "sleep"
+    },
+    {
+      "id": "climate-zone-utility",
+      "siteId": "home-hq",
+      "zoneId": "utility-room",
+      "name": "Utility Room",
+      "thermostatDeviceId": "dev-temp-utility-01",
+      "sensorDeviceIds": ["dev-temp-utility-01"],
+      "occupancyMode": "plant",
+      "comfortBand": { "heatMinC": 15, "heatMaxC": 19, "coolMinC": 22, "coolMaxC": 26 },
+      "ecoSetpointC": 15,
+      "awaySetpointC": 12,
+      "frostSetpointC": 6,
+      "priority": "plant"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "profile-comfort-morning",
+      "name": "Comfort Morning",
+      "mode": "heat",
+      "status": "enabled",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["safe-setpoint-range", "manual-override-first", "humidity-comfort-guard"],
+      "zoneTargets": [
+        { "zoneId": "climate-zone-hall", "setpointC": 20.5, "mode": "heat", "holdMinutes": 120 },
+        { "zoneId": "climate-zone-living", "setpointC": 21, "mode": "heat", "holdMinutes": 150 },
+        { "zoneId": "climate-zone-bedroom", "setpointC": 19, "mode": "heat", "holdMinutes": 90 }
+      ],
+      "commandProfile": { "encodedBytes": 84, "ackRequired": true, "ttlSeconds": 240 }
+    },
+    {
+      "id": "profile-evening-comfort",
+      "name": "Evening Comfort",
+      "mode": "heat",
+      "status": "enabled",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["safe-setpoint-range", "manual-override-first", "humidity-comfort-guard"],
+      "zoneTargets": [
+        { "zoneId": "climate-zone-hall", "setpointC": 20, "mode": "heat", "holdMinutes": 180 },
+        { "zoneId": "climate-zone-living", "setpointC": 21.5, "mode": "heat", "holdMinutes": 180 },
+        { "zoneId": "climate-zone-bedroom", "setpointC": 18.5, "mode": "heat", "holdMinutes": 180 }
+      ],
+      "commandProfile": { "encodedBytes": 78, "ackRequired": true, "ttlSeconds": 240 }
+    },
+    {
+      "id": "profile-eco-hold",
+      "name": "Eco Hold",
+      "mode": "eco",
+      "status": "enabled",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["safe-setpoint-range", "manual-override-first", "energy-reserve-eco"],
+      "zoneTargets": [
+        { "zoneId": "climate-zone-hall", "setpointC": 18, "mode": "heat", "holdMinutes": 240 },
+        { "zoneId": "climate-zone-living", "setpointC": 18.5, "mode": "heat", "holdMinutes": 240 },
+        { "zoneId": "climate-zone-bedroom", "setpointC": 17, "mode": "heat", "holdMinutes": 240 },
+        { "zoneId": "climate-zone-utility", "setpointC": 15, "mode": "heat", "holdMinutes": 240 }
+      ],
+      "commandProfile": { "encodedBytes": 92, "ackRequired": true, "ttlSeconds": 300 }
+    },
+    {
+      "id": "profile-away-frost-safe",
+      "name": "Away Frost Safe",
+      "mode": "away",
+      "status": "enabled",
+      "trafficClass": "P2_CONTROL",
+      "requiresApproval": false,
+      "policies": ["safe-setpoint-range", "manual-override-first", "energy-reserve-eco"],
+      "zoneTargets": [
+        { "zoneId": "climate-zone-hall", "setpointC": 16.5, "mode": "heat", "holdMinutes": 720 },
+        { "zoneId": "climate-zone-living", "setpointC": 16.5, "mode": "heat", "holdMinutes": 720 },
+        { "zoneId": "climate-zone-bedroom", "setpointC": 16, "mode": "heat", "holdMinutes": 720 },
+        { "zoneId": "climate-zone-utility", "setpointC": 12, "mode": "heat", "holdMinutes": 720 }
+      ],
+      "commandProfile": { "encodedBytes": 94, "ackRequired": true, "ttlSeconds": 600 }
+    }
+  ],
+  "schedules": [
+    {
+      "id": "schedule-comfort-morning",
+      "name": "Morning Comfort",
+      "profileId": "profile-comfort-morning",
+      "status": "enabled",
+      "time": "06:30",
+      "days": ["mon", "tue", "wed", "thu", "fri"]
+    },
+    {
+      "id": "schedule-evening-comfort",
+      "name": "Evening Comfort",
+      "profileId": "profile-evening-comfort",
+      "status": "enabled",
+      "time": "17:45",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    },
+    {
+      "id": "schedule-eco-hold",
+      "name": "Eco Hold Tariff Window",
+      "profileId": "profile-eco-hold",
+      "status": "draft",
+      "time": "tariff:peak-price",
+      "days": ["mon", "tue", "wed", "thu", "fri"]
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-evening-comfort",
+      "name": "Warm evening comfort",
+      "keywords": ["warm", "evening", "comfort", "living"],
+      "profileId": "profile-evening-comfort",
+      "confidence": 0.9,
+      "exampleIntent": "Make the house warm and comfortable for the evening."
+    },
+    {
+      "id": "intent-eco-hold",
+      "name": "Eco temperature hold",
+      "keywords": ["eco", "save", "tariff", "energy", "reserve"],
+      "profileId": "profile-eco-hold",
+      "confidence": 0.86,
+      "exampleIntent": "Use an eco heating hold during expensive tariff hours."
+    },
+    {
+      "id": "intent-away-frost-safe",
+      "name": "Away frost safe",
+      "keywords": ["away", "holiday", "frost", "protect"],
+      "profileId": "profile-away-frost-safe",
+      "confidence": 0.84,
+      "exampleIntent": "Put the house into away frost protection mode."
+    }
+  ],
+  "recentProfileRuns": [
+    {
+      "id": "climate-run-20260510-001",
+      "profileId": "profile-evening-comfort",
+      "status": "simulated",
+      "actor": "system-preview",
+      "commandCount": 3,
+      "summary": "Evening Comfort preview generated three safe setpoint command plan items."
+    }
+  ]
+}

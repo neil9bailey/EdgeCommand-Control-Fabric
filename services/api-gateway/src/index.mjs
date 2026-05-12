@@ -176,6 +176,16 @@ import {
   previewZigbeeReporting,
   summarizeZigbeeAdapter,
 } from "./zigbeeAdapter.mjs";
+import {
+  buildZwaveDashboard,
+  executeZwaveCommand,
+  loadZwaveAdapter,
+  previewZwaveCommand,
+  previewZwaveExclusion,
+  previewZwaveInclusion,
+  previewZwaveIntent,
+  summarizeZwaveAdapter,
+} from "./zwaveAdapter.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -204,6 +214,7 @@ const moduleCertification = loadModuleCertification();
 const mqttEsphome = loadMqttEsphome();
 const matterThread = loadMatterThread();
 const zigbeeAdapter = loadZigbeeAdapter();
+const zwaveAdapter = loadZwaveAdapter();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -237,6 +248,7 @@ function buildOverview() {
   const mqttEsphomeSummary = summarizeMqttEsphome(mqttEsphome, deviceRegistry);
   const matterThreadSummary = summarizeMatterThread(matterThread, deviceRegistry);
   const zigbeeSummary = summarizeZigbeeAdapter(zigbeeAdapter, deviceRegistry);
+  const zwaveSummary = summarizeZwaveAdapter(zwaveAdapter, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -278,6 +290,7 @@ function buildOverview() {
       mqttEsphome: `${mqttEsphomeSummary.mappedDeviceCount} mapped devices / ${mqttEsphomeSummary.publishableMappings} publishable`,
       matterThread: `${matterThreadSummary.bindingCount} bindings / ${matterThreadSummary.healthyThreadNetworks} healthy Thread network`,
       zigbee: `${zigbeeSummary.bindingCount} bindings / ${zigbeeSummary.healthyRoutes} healthy mesh routes`,
+      zwave: `${zwaveSummary.bindingCount} bindings / ${zwaveSummary.secureNodeCount} secure node`,
     },
     links: defaultLinkInventory(),
   };
@@ -334,6 +347,7 @@ app.get("/api/command-centre", (_req, res) => {
     mqttEsphome,
     matterThread,
     zigbeeAdapter,
+    zwaveAdapter,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -922,6 +936,141 @@ app.post(
   (req, res) => {
     res.json(previewZigbeeIntent({
       adapter: zigbeeAdapter,
+      deviceRegistry,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/zwave", (_req, res) => {
+  res.json(buildZwaveDashboard({
+    adapter: zwaveAdapter,
+    deviceRegistry,
+    catalog,
+  }));
+});
+
+app.get("/api/zwave/inclusion/:id/preview", (req, res) => {
+  const result = previewZwaveInclusion({
+    adapter: zwaveAdapter,
+    deviceRegistry,
+    inclusionId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "zwave_inclusion_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/zwave/inclusion/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewZwaveInclusion({
+      adapter: zwaveAdapter,
+      deviceRegistry,
+      inclusionId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "zwave_inclusion_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.get("/api/zwave/exclusion/:id/preview", (req, res) => {
+  const result = previewZwaveExclusion({
+    adapter: zwaveAdapter,
+    deviceRegistry,
+    exclusionId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "zwave_exclusion_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/zwave/exclusion/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewZwaveExclusion({
+      adapter: zwaveAdapter,
+      deviceRegistry,
+      exclusionId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "zwave_exclusion_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.get("/api/zwave/commands/:id/preview", (req, res) => {
+  const result = previewZwaveCommand({
+    adapter: zwaveAdapter,
+    deviceRegistry,
+    commandId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "zwave_command_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/zwave/commands/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewZwaveCommand({
+      adapter: zwaveAdapter,
+      deviceRegistry,
+      commandId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "zwave_command_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/zwave/commands/:id/execute",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = executeZwaveCommand({
+      adapter: zwaveAdapter,
+      deviceRegistry,
+      commandId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "zwave_command_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.summary?.canExecute ? 200 : 409).json(result);
+  },
+);
+
+app.post(
+  "/api/zwave/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewZwaveIntent({
+      adapter: zwaveAdapter,
       deviceRegistry,
       intent: req.body?.intent || "",
       actor: req.auth,

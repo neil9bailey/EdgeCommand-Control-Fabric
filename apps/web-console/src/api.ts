@@ -43,6 +43,10 @@ import type {
   ZigbeePermitJoinPreview,
   ZigbeeReportingPreview,
   ZigbeeResponse,
+  ZwaveCommandPreview,
+  ZwaveIntentPreview,
+  ZwaveLifecyclePreview,
+  ZwaveResponse,
   McpResponse,
   ModuleManifestResponse,
   ModuleManifestIntentPreview,
@@ -272,6 +276,14 @@ export async function fetchMatterThread(): Promise<MatterThreadResponse | null> 
 export async function fetchZigbee(): Promise<ZigbeeResponse | null> {
   try {
     return await getJson<ZigbeeResponse>("/api/zigbee");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchZwave(): Promise<ZwaveResponse | null> {
+  try {
+    return await getJson<ZwaveResponse>("/api/zwave");
   } catch {
     return null;
   }
@@ -680,6 +692,56 @@ export async function previewZigbeeIntent(intent: string): Promise<ZigbeeIntentP
   });
   if (!response.ok) throw new Error(`Zigbee intent preview failed: ${response.status}`);
   return response.json() as Promise<ZigbeeIntentPreview>;
+}
+
+export async function previewZwaveCommand(commandId: string): Promise<ZwaveCommandPreview> {
+  const response = await fetch(`${API_BASE}/api/zwave/commands/${commandId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Z-Wave command preview failed: ${response.status}`);
+  return response.json() as Promise<ZwaveCommandPreview>;
+}
+
+export async function executeZwaveCommand(commandId: string): Promise<ZwaveCommandPreview> {
+  const response = await fetch(`${API_BASE}/api/zwave/commands/${commandId}/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Z-Wave command execute failed: ${response.status}`);
+  return response.json() as Promise<ZwaveCommandPreview>;
+}
+
+export async function previewZwaveInclusion(inclusionId: string): Promise<ZwaveLifecyclePreview> {
+  const response = await fetch(`${API_BASE}/api/zwave/inclusion/${inclusionId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Z-Wave inclusion preview failed: ${response.status}`);
+  return response.json() as Promise<ZwaveLifecyclePreview>;
+}
+
+export async function previewZwaveExclusion(exclusionId: string): Promise<ZwaveLifecyclePreview> {
+  const response = await fetch(`${API_BASE}/api/zwave/exclusion/${exclusionId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Z-Wave exclusion preview failed: ${response.status}`);
+  return response.json() as Promise<ZwaveLifecyclePreview>;
+}
+
+export async function previewZwaveIntent(intent: string): Promise<ZwaveIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/zwave/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Z-Wave intent preview failed: ${response.status}`);
+  return response.json() as Promise<ZwaveIntentPreview>;
 }
 
 export async function recordApprovalDecision(

@@ -37,6 +37,7 @@ Current status:
 - E22 MQTT and ESPHome Adapter foundation is complete.
 - E23 Matter and Thread Adapter foundation is complete.
 - E24 Zigbee Adapter foundation is complete.
+- E25 Z-Wave Adapter foundation is complete.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:
@@ -88,6 +89,7 @@ Local URLs:
 - MQTT and ESPHome adapter API: http://localhost:3101/api/mqtt-esphome
 - Matter and Thread adapter API: http://localhost:3101/api/matter-thread
 - Zigbee adapter API: http://localhost:3101/api/zigbee
+- Z-Wave adapter API: http://localhost:3101/api/zwave
 
 Docker Desktop target:
 

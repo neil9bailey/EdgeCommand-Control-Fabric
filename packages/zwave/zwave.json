@@ -1,0 +1,204 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "zwave-adapter-service",
+    "name": "Z-Wave Adapter",
+    "moduleId": "zwave",
+    "mode": "deterministic-local",
+    "executionBoundary": "secure-inclusion-command-preview-only",
+    "defaultInclusionId": "include-front-lock-s2",
+    "defaultExclusionId": "exclude-front-lock",
+    "defaultCommandId": "cmd-zwave-front-lock-secure",
+    "rule": "Z-Wave operations are normalized, policy checked, audit-bound, and simulated in this foundation slice; no physical inclusion, exclusion, key grant, or node command is performed."
+  },
+  "featureModule": {
+    "moduleId": "zwave",
+    "state": "foundation",
+    "buildStrategy": "zwave-js-contract-plus-secure-command-policy",
+    "enabledBy": ["module_marketplace", "human_intent", "operator_dashboard", "zwave_adapter_agent"],
+    "buildArtifacts": [
+      "packages/zwave/zwave.json",
+      "services/api-gateway/src/zwaveAdapter.mjs",
+      "apps/web-console ZwaveAdapterPanel",
+      "api contracts and tests"
+    ]
+  },
+  "controller": {
+    "id": "zwave-controller-home-hq-01",
+    "name": "Home HQ Z-Wave Controller",
+    "siteId": "home-hq",
+    "zoneId": "front-entrance",
+    "driver": "zwave-js-compatible",
+    "transport": "usb-over-docker-host",
+    "homeId": "0xECF02501",
+    "region": "EU",
+    "status": "online",
+    "s2KeyRefs": ["ZWAVE_S2_ACCESS_CONTROL_KEY", "ZWAVE_S2_AUTHENTICATED_KEY", "ZWAVE_S2_UNAUTHENTICATED_KEY"],
+    "lastSeen": "2026-05-12T05:00:05Z"
+  },
+  "nodeBindings": [
+    {
+      "id": "zwave-front-door-lock",
+      "deviceId": "dev-front-lock-01",
+      "nodeId": 12,
+      "homeId": "0xECF02501",
+      "endpoint": 0,
+      "genericClass": "entry_control",
+      "specificClass": "secure_keypad_door_lock",
+      "commandClasses": ["door_lock", "user_code", "battery", "notification", "supervision", "security_2"],
+      "securityClass": "S2_AccessControl",
+      "interviewStatus": "complete",
+      "risk": "high",
+      "trafficClass": "P1_SECURITY"
+    }
+  ],
+  "signalSamples": [
+    {
+      "id": "signal-front-lock",
+      "bindingId": "zwave-front-door-lock",
+      "nodeId": 12,
+      "status": "healthy",
+      "routeChanges": 1,
+      "rssi": -61,
+      "lastWorkingRoute": "controller -> node 12",
+      "roundTripMs": 94,
+      "batteryPercent": 84,
+      "lastSeenMinutes": 2
+    }
+  ],
+  "inclusionProfiles": [
+    {
+      "id": "include-front-lock-s2",
+      "name": "Include Front Door Lock With S2",
+      "controllerId": "zwave-controller-home-hq-01",
+      "deviceId": "dev-front-lock-01",
+      "mode": "secure_inclusion",
+      "securityClassRequired": "S2_AccessControl",
+      "durationSeconds": 90,
+      "requiresApproval": true,
+      "status": "approval_required",
+      "checklist": ["controller_online", "s2_key_refs_present", "dsk_verified", "approval_record_attached", "audit_event_required"]
+    }
+  ],
+  "exclusionProfiles": [
+    {
+      "id": "exclude-front-lock",
+      "name": "Exclude Front Door Lock",
+      "controllerId": "zwave-controller-home-hq-01",
+      "deviceId": "dev-front-lock-01",
+      "mode": "exclude_node",
+      "durationSeconds": 60,
+      "requiresApproval": true,
+      "status": "approval_required",
+      "checklist": ["controller_online", "device_identified", "approval_record_attached", "audit_event_required"]
+    }
+  ],
+  "commandProfiles": [
+    {
+      "id": "cmd-zwave-front-lock-secure",
+      "name": "Secure Front Door Lock",
+      "bindingId": "zwave-front-door-lock",
+      "deviceId": "dev-front-lock-01",
+      "commandClass": "door_lock",
+      "command": "set",
+      "desiredState": { "locked": true },
+      "requiresApproval": true,
+      "trafficClass": "P1_SECURITY"
+    },
+    {
+      "id": "cmd-zwave-front-lock-status",
+      "name": "Read Front Door Lock Status",
+      "bindingId": "zwave-front-door-lock",
+      "deviceId": "dev-front-lock-01",
+      "commandClass": "door_lock",
+      "command": "get",
+      "desiredState": { "query": "lock_state" },
+      "requiresApproval": false,
+      "trafficClass": "P3_TELEMETRY"
+    },
+    {
+      "id": "cmd-zwave-front-lock-unlock",
+      "name": "Unlock Front Door Lock",
+      "bindingId": "zwave-front-door-lock",
+      "deviceId": "dev-front-lock-01",
+      "commandClass": "door_lock",
+      "command": "set",
+      "desiredState": { "locked": false },
+      "requiresApproval": true,
+      "trafficClass": "P1_SECURITY"
+    }
+  ],
+  "healthSamples": [
+    {
+      "id": "health-zwave-home-hq",
+      "controllerId": "zwave-controller-home-hq-01",
+      "status": "healthy",
+      "includedNodes": 1,
+      "secureNodes": 1,
+      "sleepingNodes": 0,
+      "averageRoundTripMs": 94,
+      "lowBatteryNodes": 0,
+      "failedNodes": 0
+    }
+  ],
+  "policies": [
+    {
+      "id": "zwave-s2-required",
+      "name": "Z-Wave S2 Required",
+      "risk": "high",
+      "requiresApproval": true,
+      "message": "Locks and access-control devices require S2 Access Control inclusion and approval evidence."
+    },
+    {
+      "id": "zwave-lock-command-approval",
+      "name": "Z-Wave Lock Command Approval",
+      "risk": "high",
+      "requiresApproval": true,
+      "message": "Lock and unlock commands require human approval before runtime execution."
+    },
+    {
+      "id": "zwave-signal-supervision",
+      "name": "Z-Wave Signal Supervision",
+      "risk": "medium",
+      "requiresApproval": false,
+      "message": "Secure command previews include signal, supervision, and battery health evidence."
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-zwave-lock-status",
+      "name": "Z-Wave Lock Status",
+      "keywords": ["zwave", "z-wave", "front", "door", "lock", "status"],
+      "commandId": "cmd-zwave-front-lock-status",
+      "confidence": 0.92,
+      "exampleIntent": "Check the front door lock status using Z-Wave."
+    },
+    {
+      "id": "intent-zwave-secure-lock",
+      "name": "Z-Wave Secure Lock",
+      "keywords": ["zwave", "z-wave", "secure", "lock", "front", "door"],
+      "commandId": "cmd-zwave-front-lock-secure",
+      "confidence": 0.9,
+      "exampleIntent": "Secure the front door lock using Z-Wave."
+    },
+    {
+      "id": "intent-zwave-include-lock",
+      "name": "Z-Wave Lock Inclusion",
+      "keywords": ["zwave", "z-wave", "include", "inclusion", "pair", "lock", "s2"],
+      "inclusionId": "include-front-lock-s2",
+      "confidence": 0.88,
+      "exampleIntent": "Preview S2 inclusion for the front door lock."
+    }
+  ],
+  "recentZwaveRuns": [
+    {
+      "id": "zwave-run-20260512-001",
+      "commandId": "cmd-zwave-front-lock-status",
+      "bindingId": "zwave-front-door-lock",
+      "status": "command_previewed",
+      "actor": "system-preview",
+      "summary": "Front door lock status query normalized without controller mutation."
+    }
+  ]
+}

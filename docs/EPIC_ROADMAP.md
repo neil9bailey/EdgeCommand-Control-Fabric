@@ -676,8 +676,8 @@ Deliverables:
 
 Acceptance:
 
-- Z-Wave devices can be modeled.
-- Locks and sensors follow high-risk policy rules.
+- Z-Wave devices can be modeled. Foundation complete through registry-backed secure node bindings, controller health, signal supervision, lifecycle profiles, and simulated Z-Wave command frames.
+- Locks and sensors follow high-risk policy rules. Foundation complete through S2 Access Control requirements, approval-gated lock/inclusion/exclusion operations, and low-risk status query separation.
 
 ## E26 - BLE, RF, IR, And Wired Protocol Adapters
 

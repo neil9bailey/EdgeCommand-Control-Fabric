@@ -2870,6 +2870,177 @@ export interface ZigbeeResponse {
   rule: string;
 }
 
+export interface ZwaveSummary {
+  schemaVersion: string;
+  controllerStatus: string;
+  bindingCount: number;
+  zwaveRegistryDevices: number;
+  onlineZwaveDevices: number;
+  secureNodeCount: number;
+  lockNodeCount: number;
+  inclusionProfileCount: number;
+  exclusionProfileCount: number;
+  commandProfileCount: number;
+  approvalRequiredCommands: number;
+  commandableBindings: number;
+  lowBatteryNodes: number;
+  averageRoundTripMs: number;
+  bySecurity: Record<string, number>;
+  byRisk: Record<string, number>;
+}
+
+export interface ZwaveController {
+  id: string;
+  name: string;
+  siteId: string;
+  zoneId: string;
+  driver: string;
+  transport: string;
+  homeId: string;
+  region: string;
+  status: string;
+  s2KeyRefs: string[];
+  lastSeen: string;
+}
+
+export interface ZwaveSignalSample {
+  id: string;
+  bindingId: string;
+  nodeId: number;
+  status: string;
+  routeChanges: number;
+  rssi: number;
+  lastWorkingRoute: string;
+  roundTripMs: number;
+  batteryPercent: number;
+  lastSeenMinutes: number;
+  binding?: ZwaveNodeBinding | null;
+}
+
+export interface ZwaveNodeBinding {
+  id: string;
+  deviceId: string;
+  nodeId: number;
+  homeId: string;
+  endpoint: number;
+  genericClass: string;
+  specificClass: string;
+  commandClasses: string[];
+  securityClass: string;
+  interviewStatus: string;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  device?: DeviceDefinition | null;
+  signal?: ZwaveSignalSample | null;
+  readiness: {
+    deviceKnown: boolean;
+    deviceOnline: boolean;
+    controllerOnline: boolean;
+    interviewComplete: boolean;
+    s2Ready: boolean;
+    signalHealthy: boolean;
+    batteryOk: boolean;
+    canCommand: boolean;
+    registryCapabilities: string[];
+  };
+}
+
+export interface ZwaveLifecycleProfile {
+  id: string;
+  name: string;
+  controllerId: string;
+  deviceId: string;
+  mode: string;
+  securityClassRequired?: string;
+  durationSeconds: number;
+  requiresApproval: boolean;
+  status: string;
+  checklist: string[];
+  device?: DeviceDefinition | null;
+}
+
+export interface ZwaveCommandProfile {
+  id: string;
+  name: string;
+  bindingId: string;
+  deviceId: string;
+  commandClass: string;
+  command: string;
+  desiredState: Record<string, string | number | boolean>;
+  requiresApproval: boolean;
+  trafficClass: string;
+  binding?: ZwaveNodeBinding | null;
+  device?: DeviceDefinition | null;
+}
+
+export interface ZwaveCommandPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ZwaveResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  command: ZwaveCommandProfile;
+  binding: ZwaveNodeBinding | null;
+  device: DeviceDefinition | null;
+  controller: ZwaveController;
+  frame: { nodeId: number | null; endpoint: number | null; commandClass: string; command: string; desiredState: Record<string, string | number | boolean>; securityClass: string | null; supervised: boolean; simulated: boolean };
+  summary: { canExecute: boolean; requiresApproval: boolean; approvalSatisfied: boolean; deviceOnline: boolean; s2Ready: boolean; signalHealthy: boolean };
+  policy: { result: string; rules: Array<{ id: string; name: string; risk: string; requiresApproval: boolean; message: string }> };
+  nextActions: string[];
+  event: FabricEvent;
+  executeAttempted?: boolean;
+}
+
+export interface ZwaveLifecyclePreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ZwaveResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  profile: ZwaveLifecycleProfile;
+  device: DeviceDefinition | null;
+  controller: ZwaveController;
+  checklist: Array<{ id: string; label: string; passed: boolean }>;
+  summary: { deviceKnown: boolean; controllerOnline: boolean; requiresApproval: boolean; approvalSatisfied: boolean; durationSeconds: number; canRun: boolean };
+  nextActions: string[];
+}
+
+export interface ZwaveIntentPreview {
+  intent: string;
+  match: null | { id: string; name: string; commandId: string | null; inclusionId: string | null; confidence: number; score: number };
+  preview: ZwaveCommandPreview | ZwaveLifecyclePreview;
+}
+
+export interface ZwaveResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultInclusionId: string;
+    defaultExclusionId: string;
+    defaultCommandId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  controller: ZwaveController;
+  module: ModuleDefinition | null;
+  summary: ZwaveSummary;
+  nodeBindings: ZwaveNodeBinding[];
+  signalSamples: ZwaveSignalSample[];
+  inclusionProfiles: ZwaveLifecycleProfile[];
+  exclusionProfiles: ZwaveLifecycleProfile[];
+  commandProfiles: ZwaveCommandProfile[];
+  healthSamples: Array<{ id: string; controllerId: string; status: string; includedNodes: number; secureNodes: number; sleepingNodes: number; averageRoundTripMs: number; lowBatteryNodes: number; failedNodes: number }>;
+  policies: Array<{ id: string; name: string; risk: string; requiresApproval: boolean; message: string }>;
+  intentRecipes: Array<{ id: string; name: string; keywords: string[]; commandId?: string; inclusionId?: string; confidence: number; exampleIntent: string }>;
+  recentZwaveRuns: Array<{ id: string; commandId: string; bindingId: string; status: string; actor: string; summary: string }>;
+  rule: string;
+}
+
 export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
@@ -2943,6 +3114,7 @@ export interface CommandCentreResponse {
     mqttEsphome?: MqttEsphomeResponse;
     matterThread?: MatterThreadResponse;
     zigbee?: ZigbeeResponse;
+    zwave?: ZwaveResponse;
   };
   devices: CommandCentreDevice[];
   automations: {
@@ -2966,6 +3138,7 @@ export interface CommandCentreResponse {
   mqttEsphome?: MqttEsphomeResponse;
   matterThread?: MatterThreadResponse;
   zigbee?: ZigbeeResponse;
+  zwave?: ZwaveResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

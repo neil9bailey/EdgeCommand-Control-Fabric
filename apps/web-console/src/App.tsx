@@ -67,6 +67,7 @@ import {
   fetchSensing,
   fetchWater,
   fetchZigbee,
+  fetchZwave,
   previewLightingIntent,
   previewLightingScene,
   previewModuleFlag,
@@ -87,9 +88,14 @@ import {
   previewZigbeeIntent,
   previewZigbeePermitJoin,
   previewZigbeeReporting,
+  previewZwaveCommand,
+  previewZwaveExclusion,
+  previewZwaveInclusion,
+  previewZwaveIntent,
   publishMqttCommand,
   executeMatterCommand,
   executeZigbeeCommand,
+  executeZwaveCommand,
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
@@ -157,6 +163,10 @@ import type {
   ZigbeePermitJoinPreview,
   ZigbeeReportingPreview,
   ZigbeeResponse,
+  ZwaveCommandPreview,
+  ZwaveIntentPreview,
+  ZwaveLifecyclePreview,
+  ZwaveResponse,
   NarrowbandRoutes,
   PlatformOverview,
   SimulationLabResponse,
@@ -358,6 +368,12 @@ function App() {
   const [zigbeeReportingPreview, setZigbeeReportingPreview] = useState<ZigbeeReportingPreview | null>(null);
   const [zigbeeIntentPreview, setZigbeeIntentPreview] = useState<ZigbeeIntentPreview | null>(null);
   const [zigbeeLoading, setZigbeeLoading] = useState<"preview" | "execute" | "permit" | "reporting" | "intent" | null>(null);
+  const [zwave, setZwave] = useState<ZwaveResponse | null>(null);
+  const [zwavePreview, setZwavePreview] = useState<ZwaveCommandPreview | null>(null);
+  const [zwaveInclusionPreview, setZwaveInclusionPreview] = useState<ZwaveLifecyclePreview | null>(null);
+  const [zwaveExclusionPreview, setZwaveExclusionPreview] = useState<ZwaveLifecyclePreview | null>(null);
+  const [zwaveIntentPreview, setZwaveIntentPreview] = useState<ZwaveIntentPreview | null>(null);
+  const [zwaveLoading, setZwaveLoading] = useState<"preview" | "execute" | "include" | "exclude" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -399,6 +415,7 @@ function App() {
     void fetchMqttEsphome().then(setMqttEsphome);
     void fetchMatterThread().then(setMatterThread);
     void fetchZigbee().then(setZigbee);
+    void fetchZwave().then(setZwave);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -849,6 +866,54 @@ function App() {
     }
   }
 
+  async function previewZwave(commandId: string) {
+    setZwaveLoading("preview");
+    try {
+      setZwavePreview(await previewZwaveCommand(commandId));
+    } finally {
+      setZwaveLoading(null);
+    }
+  }
+
+  async function executeZwave(commandId: string) {
+    setZwaveLoading("execute");
+    try {
+      setZwavePreview(await executeZwaveCommand(commandId));
+    } finally {
+      setZwaveLoading(null);
+    }
+  }
+
+  async function previewZwaveInclusionProfile(inclusionId: string) {
+    setZwaveLoading("include");
+    try {
+      setZwaveInclusionPreview(await previewZwaveInclusion(inclusionId));
+    } finally {
+      setZwaveLoading(null);
+    }
+  }
+
+  async function previewZwaveExclusionProfile(exclusionId: string) {
+    setZwaveLoading("exclude");
+    try {
+      setZwaveExclusionPreview(await previewZwaveExclusion(exclusionId));
+    } finally {
+      setZwaveLoading(null);
+    }
+  }
+
+  async function previewZwaveFromIntent(intentText: string) {
+    setZwaveLoading("intent");
+    try {
+      const result = await previewZwaveIntent(intentText);
+      setZwaveIntentPreview(result);
+      if ("command" in result.preview) setZwavePreview(result.preview);
+      if ("checklist" in result.preview) setZwaveInclusionPreview(result.preview);
+    } finally {
+      setZwaveLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -956,6 +1021,7 @@ function App() {
           <Metric label="MQTT" value={mqttEsphome?.summary.mappedDeviceCount ?? commandCentre?.mqttEsphome?.summary.mappedDeviceCount ?? "-"} detail="mapped devices" tone="good" />
           <Metric label="Matter" value={matterThread?.summary.bindingCount ?? commandCentre?.matterThread?.summary.bindingCount ?? "-"} detail="fabric bindings" tone="good" />
           <Metric label="Zigbee" value={zigbee?.summary.bindingCount ?? commandCentre?.zigbee?.summary.bindingCount ?? "-"} detail="mesh bindings" tone="good" />
+          <Metric label="Z-Wave" value={zwave?.summary.secureNodeCount ?? commandCentre?.zwave?.summary.secureNodeCount ?? "-"} detail="secure nodes" tone="danger" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -1096,6 +1162,19 @@ function App() {
           onPermitJoinPreview={previewZigbeePermitJoinProfile}
           onReportingPreview={previewZigbeeReportingProfile}
           onIntentPreview={previewZigbeeFromIntent}
+        />
+        <ZwaveAdapterPanel
+          adapter={zwave || commandCentre?.zwave || commandCentre?.modules.zwave || null}
+          preview={zwavePreview}
+          inclusionPreview={zwaveInclusionPreview}
+          exclusionPreview={zwaveExclusionPreview}
+          intentPreview={zwaveIntentPreview}
+          loading={zwaveLoading}
+          onPreview={previewZwave}
+          onExecute={executeZwave}
+          onInclusionPreview={previewZwaveInclusionProfile}
+          onExclusionPreview={previewZwaveExclusionProfile}
+          onIntentPreview={previewZwaveFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -3923,6 +4002,206 @@ function ZigbeeAdapterPanel({
             <div className="zigbee-intent-result">
               <strong>{intentPreview.match.name}</strong>
               <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {(intentPreview.match.commandId || intentPreview.match.reportingId || intentPreview.match.permitJoinId || "zigbee").replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ZwaveAdapterPanel({
+  adapter,
+  preview,
+  inclusionPreview,
+  exclusionPreview,
+  intentPreview,
+  loading,
+  onPreview,
+  onExecute,
+  onInclusionPreview,
+  onExclusionPreview,
+  onIntentPreview,
+}: {
+  adapter: ZwaveResponse | null;
+  preview: ZwaveCommandPreview | null;
+  inclusionPreview: ZwaveLifecyclePreview | null;
+  exclusionPreview: ZwaveLifecyclePreview | null;
+  intentPreview: ZwaveIntentPreview | null;
+  loading: "preview" | "execute" | "include" | "exclude" | "intent" | null;
+  onPreview: (commandId: string) => void;
+  onExecute: (commandId: string) => void;
+  onInclusionPreview: (inclusionId: string) => void;
+  onExclusionPreview: (exclusionId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const bindings = adapter?.nodeBindings || [];
+  const commands = adapter?.commandProfiles || [];
+  const inclusions = adapter?.inclusionProfiles || [];
+  const exclusions = adapter?.exclusionProfiles || [];
+  const signals = adapter?.signalSamples || [];
+  const recipes = adapter?.intentRecipes || [];
+  const activeCommandId = preview?.command.id || commands.find((command) => !command.requiresApproval)?.id || commands[0]?.id;
+  const activeInclusionId = inclusionPreview?.profile.id || inclusions[0]?.id;
+  const activeExclusionId = exclusionPreview?.profile.id || exclusions[0]?.id;
+  const activeRecipe = recipes.find((recipe) => recipe.commandId === activeCommandId || recipe.inclusionId === activeInclusionId) || recipes[0];
+  const activeBinding = preview?.binding || bindings[0] || null;
+
+  return (
+    <section className="zwave-panel" aria-label="Z-Wave adapter">
+      <div className="section-header zwave-header">
+        <div>
+          <p className="eyebrow">Z-Wave Adapter</p>
+          <h2>S2 Access Control And Supervised Lock Commands</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone={adapter?.summary.controllerStatus === "online" ? "good" : "warn"} label={adapter?.summary.controllerStatus || "offline"} />
+          <StatusPill tone="danger" label={`${adapter?.summary.lockNodeCount || 0} lock nodes`} />
+          <StatusPill tone="good" label={`${adapter?.summary.secureNodeCount || 0} S2 secure`} />
+        </div>
+      </div>
+
+      <div className="zwave-grid">
+        <div className="zwave-card controller">
+          <div className="section-header compact">
+            <h3>Controller</h3>
+            <Shield size={18} />
+          </div>
+          <div className="zwave-controller-card">
+            <strong>{adapter?.controller.name || "Z-Wave controller"}</strong>
+            <span>{adapter?.controller.region || "region"} / {adapter?.controller.driver || "driver pending"}</span>
+            <span>{adapter?.controller.homeId || "no home id"} / {adapter?.controller.s2KeyRefs.length || 0} S2 key refs</span>
+          </div>
+          {[...inclusions, ...exclusions].map((profile) => (
+            <div className={`zwave-lifecycle-row ${profile.id === activeInclusionId || profile.id === activeExclusionId ? "active" : ""}`} key={profile.id}>
+              <div>
+                <strong>{profile.name}</strong>
+                <span>{profile.mode.replace(/_/g, " ")} / {profile.durationSeconds}s</span>
+              </div>
+              <button onClick={() => profile.mode.includes("exclude") ? onExclusionPreview(profile.id) : onInclusionPreview(profile.id)} disabled={Boolean(loading)}>
+                <ClipboardCheck size={14} />
+                <span>{loading === "include" || loading === "exclude" ? "Checking" : "Preview"}</span>
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="zwave-card">
+          <div className="section-header compact">
+            <h3>Secure Nodes</h3>
+            <LockKeyhole size={18} />
+          </div>
+          <div className="zwave-node-list">
+            {bindings.map((binding) => (
+              <div className={`zwave-node-row ${binding.id === activeBinding?.id ? "active" : ""}`} key={binding.id}>
+                <div>
+                  <strong>{binding.device?.name || binding.deviceId}</strong>
+                  <span>node {binding.nodeId} / {binding.securityClass} / {binding.interviewStatus}</span>
+                </div>
+                <StatusPill tone={binding.risk === "high" ? "danger" : binding.readiness.canCommand ? "good" : "warn"} label={binding.readiness.s2Ready ? "S2" : "hold"} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="zwave-card">
+          <div className="section-header compact">
+            <h3>Signal</h3>
+            <Activity size={18} />
+          </div>
+          <div className="zwave-signal-list">
+            {signals.map((signal) => (
+              <div className="zwave-signal-row" key={signal.id}>
+                <div>
+                  <strong>Node {signal.nodeId}</strong>
+                  <span>{signal.lastWorkingRoute} / RSSI {signal.rssi}</span>
+                </div>
+                <div className="zwave-signal-score">
+                  <strong>{signal.roundTripMs}</strong>
+                  <span>ms</span>
+                </div>
+                <StatusPill tone={signal.status === "healthy" ? "good" : "warn"} label={`${signal.batteryPercent}%`} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="zwave-card">
+          <div className="section-header compact">
+            <h3>Commands</h3>
+            <PlayCircle size={18} />
+          </div>
+          <div className="zwave-command-list">
+            {commands.map((command) => (
+              <div className={`zwave-command-row ${command.id === activeCommandId ? "active" : ""}`} key={command.id}>
+                <div>
+                  <strong>{command.name}</strong>
+                  <span>{command.commandClass} / {command.command}</span>
+                </div>
+                <div className="zwave-command-actions">
+                  <button onClick={() => onPreview(command.id)} disabled={Boolean(loading)}>
+                    <Search size={14} />
+                    <span>{loading === "preview" && command.id === activeCommandId ? "Checking" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onExecute(command.id)} disabled={Boolean(loading) || command.requiresApproval}>
+                    <RadioTower size={14} />
+                    <span>{loading === "execute" && command.id === activeCommandId ? "Sending" : "Sim"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="zwave-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="zwave-card zwave-wide">
+          <div className="section-header compact">
+            <h3>{preview ? preview.command.name : "Supervised Frame Preview"}</h3>
+            <Wifi size={18} />
+          </div>
+          {preview ? (
+            <div className="zwave-preview-card">
+              <div>
+                <span>Status</span>
+                <strong>{preview.status.replace(/_/g, " ")}</strong>
+              </div>
+              <div>
+                <span>Node</span>
+                <strong>{preview.frame.nodeId || "none"}</strong>
+              </div>
+              <div>
+                <span>Security</span>
+                <strong>{preview.frame.securityClass || "none"} / {preview.frame.supervised ? "supervised" : "unsupervised"}</strong>
+              </div>
+              <div>
+                <span>Desired</span>
+                <strong>{JSON.stringify(preview.frame.desiredState)}</strong>
+              </div>
+              <div className="zwave-next-actions">
+                {preview.nextActions.map((action) => <span key={action}>{action.replace(/_/g, " ")}</span>)}
+              </div>
+            </div>
+          ) : (
+            <div className="zwave-empty-preview">
+              <strong>{adapter?.controller.name || "Z-Wave controller"}</strong>
+              <span>{adapter?.summary.commandableBindings || 0} commandable / {adapter?.summary.averageRoundTripMs || 0}ms average supervision / {adapter?.summary.lowBatteryNodes || 0} low battery</span>
+            </div>
+          )}
+          {(inclusionPreview || exclusionPreview) && (
+            <div className="zwave-lifecycle-preview">
+              <strong>{(inclusionPreview || exclusionPreview)?.profile.name}</strong>
+              <span>{(inclusionPreview || exclusionPreview)?.status.replace(/_/g, " ")} / {(inclusionPreview || exclusionPreview)?.summary.durationSeconds}s / approval {(inclusionPreview || exclusionPreview)?.summary.approvalSatisfied ? "ready" : "needed"}</span>
+            </div>
+          )}
+          {intentPreview?.match && (
+            <div className="zwave-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {(intentPreview.match.commandId || intentPreview.match.inclusionId || "zwave").replace(/-/g, " ")}</span>
             </div>
           )}
         </div>

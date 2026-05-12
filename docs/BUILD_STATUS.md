@@ -576,4 +576,29 @@ Verification:
 
 ### E25 - Z-Wave Adapter
 
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed Z-Wave adapter package with controller metadata, S2 key references, secure node bindings, signal samples, inclusion profiles, exclusion profiles, command profiles, policies, health samples, intent recipes, and recent run seeds.
+- API gateway Z-Wave service for controller health, registry-backed secure node bindings, inclusion preview, exclusion preview, command preview, simulated supervised command execution, and intent-to-command/inclusion routing.
+- `/api/zwave`, `/api/zwave/inclusion/:id/preview`, `/api/zwave/exclusion/:id/preview`, `/api/zwave/commands/:id/preview`, `/api/zwave/commands/:id/execute`, and `/api/zwave/intent/preview` endpoints.
+- Global Command Centre Modules workspace now includes Z-Wave secure-node posture and S2-ready adapter actions.
+- Web console Z-Wave Adapter panel showing controller state, S2 key refs, secure nodes, signal supervision, inclusion/exclusion previews, lock command previews, simulated frames, and intent routing.
+- Tests for secure node summary, dashboard enrichment, non-mutating status query, approval-gated lock commands, simulated execution, approval-gated inclusion/exclusion, and natural-language Z-Wave routing.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/zwave`, `/api/zwave/commands/:id/preview`, `/api/zwave/commands/:id/execute`, `/api/zwave/inclusion/:id/preview`, `/api/zwave/exclusion/:id/preview`, and `/api/command-centre`.
+- Browser verification for the Z-Wave Adapter panel, S2 Access Control And Supervised Lock Commands, Front Door Lock, Secure Nodes, Supervised Frame Preview, Z-Wave metric, and clean browser console.
+
+## Next
+
+### E26 - BLE, RF, IR, And Wired Protocol Adapters
+
 Status: next planned build slice.

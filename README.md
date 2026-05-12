@@ -1,6 +1,6 @@
 # EdgeCommand Control Fabric
 
-This workspace contains the blueprint for a modular, agentic, Azure-ready home automation platform with local Docker Desktop development and a first-of-kind Semantic Narrowband SD-WAN architecture for LoRaWAN-class remote control.
+This workspace contains the blueprint for a modular, agentic, Azure-ready control fabric that scales from residential automation to commercial, industrial, enterprise, utilities, and critical infrastructure operations, with local Docker Desktop development and a first-of-kind Semantic Narrowband SD-WAN architecture for LoRaWAN-class remote control.
 
 Start here:
 

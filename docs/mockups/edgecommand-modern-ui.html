@@ -567,14 +567,14 @@
       <div class="intent-box">
         <label for="intent">Human intent</label>
         <div class="intent-row">
-          <input id="intent" value="Make the home safe for overnight" />
+          <input id="intent" value="Put Site Alpha into protected overnight mode" />
           <button class="icon-btn" title="Preview intent">↗</button>
         </div>
       </div>
 
       <nav class="nav" aria-label="Primary">
         <button class="active" data-page="overview"><span>⌂</span><span>Overview</span><em>live</em></button>
-        <button data-page="home"><span>◇</span><span>Home Ops</span><em>6</em></button>
+        <button data-page="operations"><span>◇</span><span>Site Ops</span><em>6</em></button>
         <button data-page="connectivity"><span>⌁</span><span>Connectivity</span><em>5</em></button>
         <button data-page="agents"><span>✦</span><span>Agents</span><em>AI</em></button>
         <button data-page="approvals"><span>✓</span><span>Approvals</span><em>4</em></button>
@@ -636,7 +636,7 @@
                 <span class="pill">human friendly</span>
               </div>
               <div class="module-grid">
-                <div class="module-tile"><span class="pill good">ready</span><strong>Home Operations</strong><span>Lighting, climate, water, energy, sensing, and security.</span></div>
+                <div class="module-tile"><span class="pill good">ready</span><strong>Site Operations</strong><span>Residential, commercial, utility, plant, energy, sensing, and security.</span></div>
                 <div class="module-tile"><span class="pill">live</span><strong>Connectivity Fabric</strong><span>MQTT, Matter, Zigbee, Z-Wave, narrowband routes.</span></div>
                 <div class="module-tile"><span class="pill warn">review</span><strong>Approval Queue</strong><span>High-risk actions separated from everyday telemetry.</span></div>
                 <div class="module-tile"><span class="pill">AI</span><strong>Agents And Intent</strong><span>AIP proposals, KRA critique, MCP sessions, evidence.</span></div>
@@ -664,7 +664,7 @@
         </div>
       </section>
 
-      <section class="page" id="home">
+      <section class="page" id="operations">
         <div class="stack">
           <div class="workspace-tabs">
             <button class="active">Lighting</button><button>Climate</button><button>Security</button><button>Water</button><button>Energy</button><button>Sensing</button>
@@ -675,14 +675,14 @@
             <div class="metric good"><span>Water</span><strong>3</strong><span>safe profiles</span></div>
           </div>
           <div class="panel">
-            <div class="panel-head"><h3>Home Operations Table</h3><span class="pill">dense but calm</span></div>
+            <div class="panel-head"><h3>Site Operations Table</h3><span class="pill">dense but calm</span></div>
             <div class="table-card">
               <table>
                 <thead><tr><th>Area</th><th>Status</th><th>Last Action</th><th>Next Step</th></tr></thead>
                 <tbody>
-                  <tr><td>Kitchen Lighting</td><td><span class="pill good">ready</span></td><td>Scene previewed</td><td>Open lighting page</td></tr>
-                  <tr><td>Main Water Valve</td><td><span class="pill danger">approval</span></td><td>Leak drill simulated</td><td>Review evidence</td></tr>
-                  <tr><td>Home Battery</td><td><span class="pill warn">governed</span></td><td>Reserve protected</td><td>Open energy plan</td></tr>
+                  <tr><td>Building Lighting</td><td><span class="pill good">ready</span></td><td>Scene previewed</td><td>Open lighting page</td></tr>
+                  <tr><td>Water Valve Group</td><td><span class="pill danger">approval</span></td><td>Leak drill simulated</td><td>Review evidence</td></tr>
+                  <tr><td>Critical Energy Asset</td><td><span class="pill warn">governed</span></td><td>Reserve protected</td><td>Open energy plan</td></tr>
                 </tbody>
               </table>
             </div>
@@ -715,7 +715,7 @@
       <section class="page" id="agents">
         <div class="stack">
           <div class="flow">
-            <div class="flow-step"><span class="pill">intent</span><strong>Human asks</strong><span>“Secure the house overnight.”</span></div>
+            <div class="flow-step"><span class="pill">intent</span><strong>Human asks</strong><span>“Secure the operational site overnight.”</span></div>
             <div class="flow-step"><span class="pill">AIP</span><strong>Plan proposal</strong><span>Creates preview-only actions and evidence.</span></div>
             <div class="flow-step"><span class="pill warn">KRA</span><strong>Risk critique</strong><span>Blocks direct execution claims.</span></div>
             <div class="flow-step"><span class="pill good">MCP</span><strong>Tool session</strong><span>Runs approved previews only.</span></div>
@@ -781,7 +781,7 @@
   <script>
     const titles = {
       overview: ["Overview", "A quieter command surface with pages for work, not one endless scroll."],
-      home: ["Home Operations", "Daily automation areas grouped by task, not by implementation detail."],
+      operations: ["Site Operations", "Residential, commercial, industrial, utility, and estate operations grouped by task."],
       connectivity: ["Connectivity Fabric", "Adapters become focused pages with their own controls and logs."],
       agents: ["Agents And Intent", "AIP, KRA, and MCP workflows separated from device controls."],
       approvals: ["Approvals", "Human decisions and high-risk evidence in one deliberate queue."],

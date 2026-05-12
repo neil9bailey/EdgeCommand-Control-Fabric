@@ -7,7 +7,7 @@ The current console has outgrown a single-page dashboard. Every completed epic a
 ## Proposed Structure
 
 - Overview: posture, key metrics, intent entry, urgent activity.
-- Home Operations: lighting, climate, security, water, energy, sensing.
+- Site Operations: residential, commercial, industrial, utility, estate, water, energy, facilities, security, and sensing operations.
 - Connectivity Fabric: MQTT, Matter/Thread, Zigbee, Z-Wave, future BLE/RF/IR, vendor cloud.
 - Agents And Intent: AIP proposals, KRA critiques, MCP tool sessions.
 - Approvals: all high-risk human decisions and evidence.
@@ -21,6 +21,7 @@ The current console has outgrown a single-page dashboard. Every completed epic a
 - Layout: focused pages, sticky left navigation, compact metrics, dedicated right-side activity stream.
 - Text handling: fixed table layout, wrapped cells, button labels constrained, no overflowing pills.
 - Events and logs: removed from general panels and placed into dedicated activity/log sections.
+- Product framing: not limited to residential home automation; the same control fabric should scale from simple homes to commercial buildings, industrial sites, estates, utilities, water, telecom, transport, and managed-service operations.
 
 ## Mockup
 

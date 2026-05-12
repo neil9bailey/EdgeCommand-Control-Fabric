@@ -4,13 +4,13 @@ Working title: **EdgeCommand Control Fabric**
 
 Date: 2026-05-10
 
-This document defines the target product, architecture, module model, agent model, narrowband SD-WAN concept, dashboards, services, and build strategy for a modular home automation platform that can control and automate IP-connected devices, bridge non-IP sensor networks, and operate across constrained remote links.
+This document defines the target product, architecture, module model, agent model, narrowband SD-WAN concept, dashboards, services, and build strategy for a modular control fabric that can scale from residential automation to commercial, industrial, enterprise, utilities, and critical infrastructure operations, control and automate IP-connected devices, bridge non-IP sensor networks, and operate across constrained remote links.
 
 The DIIaC reference product is treated as read-only inspiration. The pattern to reuse is conceptual: a human-intent partner proposes actions, a research/risk agent critiques and grounds them, governed dashboards make system health visible, and high-risk changes require explicit human approval.
 
 ## Product Ambition
 
-Build the most capable local-first and cloud-extendable home automation platform available:
+Build the most capable local-first and cloud-extendable automation and control fabric available:
 
 - Control IP, mesh, wired, cloud, RF/IR, and sensor-based devices through modular adapters.
 - Turn natural language into safe, auditable automation through MCP-style agents.
@@ -18,7 +18,7 @@ Build the most capable local-first and cloud-extendable home automation platform
 - Introduce a first-of-kind **Semantic Narrowband SD-WAN** that routes automation intent and telemetry over broadband, LTE, NB-IoT, LTE-M, and LoRaWAN-class links.
 - Make every major capability a clean feature module that can be requested by a human, planned by agents, built through IaC, deployed locally, validated, and then promoted to Azure.
 
-This should not be "another smart home dashboard." It should be a governed automation operating system for homes, estates, buildings, remote assets, and future IoT environments.
+This should not be "another smart home dashboard." It should be a governed automation operating system for homes, estates, buildings, industrial sites, utilities, critical infrastructure, remote assets, and future IoT environments.
 
 ## Core Design Principles
 
@@ -538,7 +538,7 @@ Purpose:
 - Module health.
 - Recent audit events.
 
-### Home Operations Dashboard
+### Site Operations Dashboard
 
 - Rooms/zones.
 - Device state.
@@ -765,4 +765,3 @@ Start narrow, prove the loop, then widen:
 11. Add real LoRaWAN network server integration.
 12. Add NB-IoT/LTE-M integration.
 13. Productize vertical modules.
-

@@ -12,11 +12,13 @@ EdgeCommand Control Fabric
 
 ### Product Category
 
-Governed, agentic, modular home and IoT automation platform with local-first control, Azure-hosted operations, and semantic narrowband SD-WAN.
+Governed, agentic, modular control fabric for residential, commercial, industrial, enterprise, utilities, and critical infrastructure operations with local-first control, Azure-hosted operations, and semantic narrowband SD-WAN.
 
 ### Primary Users
 
-- Homeowner/operator.
+- Residential owner/operator.
+- Commercial, industrial, and estate operator.
+- Utility and critical infrastructure operations team.
 - Professional installer.
 - Estate manager.
 - Security operator.
@@ -44,7 +46,7 @@ Say what you want the environment to do, let agents propose a safe plan, validat
 - Semantic Narrowband SD-WAN for LoRaWAN-class constrained control.
 - Feature modules that include service, UI, policy, tests, IaC, and agent tools.
 - Simulation-before-actuation safety workflow.
-- Enterprise-grade audit and identity controls for home/IoT automation.
+- Enterprise-grade audit and identity controls for residential, commercial, industrial, utility, and IoT automation.
 - Local-first execution with Azure operations.
 
 ### Core Risks
@@ -227,4 +229,3 @@ This scenario touches device registry, water module, automation engine, AIP, KRA
 - AIP proposal shows rollback/manual override path.
 - Narrowband simulator carries emergency ack during broadband outage.
 - Dashboard shows leak event, command, ack, and audit trail.
-

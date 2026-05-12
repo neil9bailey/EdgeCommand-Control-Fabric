@@ -1,0 +1,338 @@
+{
+  "schemaVersion": "0.1.0",
+  "tenant": "vendorlogic.io",
+  "service": {
+    "id": "zigbee-adapter-service",
+    "name": "Zigbee Adapter",
+    "moduleId": "zigbee",
+    "mode": "deterministic-local",
+    "executionBoundary": "mesh-join-report-command-preview-only",
+    "defaultPermitJoinId": "permit-utility-sensors",
+    "defaultCommandId": "cmd-zigbee-living-floor-wash-dim",
+    "defaultReportingId": "report-utility-leak",
+    "rule": "Zigbee operations are normalized, policy checked, audit-bound, and simulated in this foundation slice; no physical permit-join, bind/report change, or coordinator command is performed."
+  },
+  "featureModule": {
+    "moduleId": "zigbee",
+    "state": "foundation",
+    "buildStrategy": "coordinator-contract-plus-mesh-health",
+    "enabledBy": ["module_marketplace", "human_intent", "operator_dashboard", "zigbee_adapter_agent"],
+    "buildArtifacts": [
+      "packages/zigbee/zigbee.json",
+      "services/api-gateway/src/zigbeeAdapter.mjs",
+      "apps/web-console ZigbeeAdapterPanel",
+      "api contracts and tests"
+    ]
+  },
+  "coordinator": {
+    "id": "zigbee-coordinator-home-hq-01",
+    "name": "Home HQ Zigbee Coordinator",
+    "siteId": "home-hq",
+    "zoneId": "utility-room",
+    "driver": "zigbee2mqtt-compatible",
+    "transport": "tcp-over-docker-bridge",
+    "networkPanId": "0xEC24",
+    "extendedPanId": "ECF0000000000024",
+    "channel": 15,
+    "status": "online",
+    "networkKeyRef": "ZIGBEE_NETWORK_KEY",
+    "permitJoin": false,
+    "lastSeen": "2026-05-12T05:00:04Z"
+  },
+  "meshRoutes": [
+    {
+      "id": "route-utility-leak",
+      "deviceId": "dev-leak-utility-01",
+      "parentIeee": "0x00124b0024aa0001",
+      "depth": 1,
+      "lqi": 214,
+      "rssi": -62,
+      "role": "end_device",
+      "batteryPercent": 91,
+      "lastSeenMinutes": 2,
+      "status": "healthy"
+    },
+    {
+      "id": "route-living-floor-wash",
+      "deviceId": "dev-light-living-01",
+      "parentIeee": "0x00124b0024aa0001",
+      "depth": 0,
+      "lqi": 238,
+      "rssi": -48,
+      "role": "router",
+      "batteryPercent": null,
+      "lastSeenMinutes": 1,
+      "status": "healthy"
+    },
+    {
+      "id": "route-utility-temperature",
+      "deviceId": "dev-temp-utility-01",
+      "parentIeee": "0x00158d0009bb1002",
+      "depth": 2,
+      "lqi": 181,
+      "rssi": -67,
+      "role": "end_device",
+      "batteryPercent": 88,
+      "lastSeenMinutes": 3,
+      "status": "healthy"
+    },
+    {
+      "id": "route-hall-occupancy",
+      "deviceId": "dev-occupancy-hall-01",
+      "parentIeee": "0x00158d0009bb1003",
+      "depth": 2,
+      "lqi": 156,
+      "rssi": -72,
+      "role": "end_device",
+      "batteryPercent": 89,
+      "lastSeenMinutes": 5,
+      "status": "watch"
+    },
+    {
+      "id": "route-living-air-quality",
+      "deviceId": "dev-air-quality-living-01",
+      "parentIeee": "0x00124b0024aa0001",
+      "depth": 1,
+      "lqi": 205,
+      "rssi": -59,
+      "role": "router",
+      "batteryPercent": null,
+      "lastSeenMinutes": 1,
+      "status": "healthy"
+    }
+  ],
+  "deviceBindings": [
+    {
+      "id": "zigbee-utility-leak",
+      "deviceId": "dev-leak-utility-01",
+      "ieeeAddress": "0x00158d0009aa0001",
+      "networkAddress": "0x421A",
+      "endpoint": 1,
+      "deviceType": "ias_water_sensor",
+      "clusters": ["ias_zone", "power_configuration", "basic"],
+      "capability": "leak_sensor",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY"
+    },
+    {
+      "id": "zigbee-living-floor-wash",
+      "deviceId": "dev-light-living-01",
+      "ieeeAddress": "0x00124b0024aa0001",
+      "networkAddress": "0x1201",
+      "endpoint": 11,
+      "deviceType": "dimmable_light",
+      "clusters": ["gen_on_off", "gen_level_ctrl", "lighting_color_ctrl"],
+      "capability": "light",
+      "risk": "low",
+      "trafficClass": "P2_CONTROL"
+    },
+    {
+      "id": "zigbee-utility-temperature",
+      "deviceId": "dev-temp-utility-01",
+      "ieeeAddress": "0x00158d0009bb1002",
+      "networkAddress": "0x4A02",
+      "endpoint": 1,
+      "deviceType": "temperature_humidity_sensor",
+      "clusters": ["ms_temperature_measurement", "ms_relative_humidity", "power_configuration"],
+      "capability": "temperature",
+      "risk": "low",
+      "trafficClass": "P3_TELEMETRY"
+    },
+    {
+      "id": "zigbee-hall-occupancy",
+      "deviceId": "dev-occupancy-hall-01",
+      "ieeeAddress": "0x00158d0009bb1003",
+      "networkAddress": "0x4A03",
+      "endpoint": 1,
+      "deviceType": "occupancy_sensor",
+      "clusters": ["ms_occupancy_sensing", "power_configuration", "basic"],
+      "capability": "occupancy",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY"
+    },
+    {
+      "id": "zigbee-living-air-quality",
+      "deviceId": "dev-air-quality-living-01",
+      "ieeeAddress": "0x00124b0024aa0002",
+      "networkAddress": "0x1202",
+      "endpoint": 1,
+      "deviceType": "environmental_sensor",
+      "clusters": ["ms_co2", "pm25_measurement", "voc_measurement", "basic"],
+      "capability": "air_quality",
+      "risk": "medium",
+      "trafficClass": "P3_TELEMETRY"
+    }
+  ],
+  "permitJoinProfiles": [
+    {
+      "id": "permit-utility-sensors",
+      "name": "Utility Sensor Maintenance Window",
+      "siteId": "home-hq",
+      "coordinatorId": "zigbee-coordinator-home-hq-01",
+      "durationSeconds": 120,
+      "allowedManufacturers": ["Simulated", "Aqara", "IKEA", "Sonoff"],
+      "allowedDeviceTypes": ["ias_water_sensor", "temperature_humidity_sensor", "occupancy_sensor"],
+      "requiresApproval": false,
+      "status": "ready",
+      "checklist": ["coordinator_online", "network_key_in_key_vault", "device_allowlist_declared", "audit_event_required"]
+    },
+    {
+      "id": "permit-whole-home-router",
+      "name": "Whole Home Router Join",
+      "siteId": "home-hq",
+      "coordinatorId": "zigbee-coordinator-home-hq-01",
+      "durationSeconds": 60,
+      "allowedManufacturers": ["IKEA", "Sonoff"],
+      "allowedDeviceTypes": ["router", "dimmable_light"],
+      "requiresApproval": true,
+      "status": "approval_required",
+      "checklist": ["coordinator_online", "router-placement-reviewed", "approval_record_attached", "audit_event_required"]
+    }
+  ],
+  "reportingProfiles": [
+    {
+      "id": "report-utility-leak",
+      "name": "Utility Leak Sensor Reporting",
+      "bindingId": "zigbee-utility-leak",
+      "deviceId": "dev-leak-utility-01",
+      "cluster": "ias_zone",
+      "attribute": "zone_status",
+      "minIntervalSeconds": 5,
+      "maxIntervalSeconds": 300,
+      "reportableChange": 1,
+      "status": "ready"
+    },
+    {
+      "id": "report-utility-temperature",
+      "name": "Utility Temperature Reporting",
+      "bindingId": "zigbee-utility-temperature",
+      "deviceId": "dev-temp-utility-01",
+      "cluster": "ms_temperature_measurement",
+      "attribute": "measured_value",
+      "minIntervalSeconds": 30,
+      "maxIntervalSeconds": 600,
+      "reportableChange": 25,
+      "status": "ready"
+    },
+    {
+      "id": "report-hall-occupancy",
+      "name": "Hall Occupancy Reporting Watch",
+      "bindingId": "zigbee-hall-occupancy",
+      "deviceId": "dev-occupancy-hall-01",
+      "cluster": "ms_occupancy_sensing",
+      "attribute": "occupancy",
+      "minIntervalSeconds": 5,
+      "maxIntervalSeconds": 420,
+      "reportableChange": 1,
+      "status": "watch"
+    }
+  ],
+  "commandProfiles": [
+    {
+      "id": "cmd-zigbee-living-floor-wash-dim",
+      "name": "Dim Living Floor Wash",
+      "bindingId": "zigbee-living-floor-wash",
+      "deviceId": "dev-light-living-01",
+      "cluster": "gen_level_ctrl",
+      "command": "move_to_level_with_on_off",
+      "desiredState": { "on": true, "brightness": 42, "colorTemperatureK": 2800 },
+      "requiresApproval": false,
+      "trafficClass": "P2_CONTROL"
+    },
+    {
+      "id": "cmd-zigbee-living-floor-wash-off",
+      "name": "Turn Living Floor Wash Off",
+      "bindingId": "zigbee-living-floor-wash",
+      "deviceId": "dev-light-living-01",
+      "cluster": "gen_on_off",
+      "command": "off",
+      "desiredState": { "on": false, "brightness": 0 },
+      "requiresApproval": false,
+      "trafficClass": "P2_CONTROL"
+    },
+    {
+      "id": "cmd-zigbee-permit-router-join",
+      "name": "Permit Router Join",
+      "bindingId": null,
+      "deviceId": null,
+      "permitJoinId": "permit-whole-home-router",
+      "cluster": "coordinator",
+      "command": "permit_join",
+      "desiredState": { "permitJoin": true, "durationSeconds": 60 },
+      "requiresApproval": true,
+      "trafficClass": "P2_CONTROL"
+    }
+  ],
+  "healthSamples": [
+    {
+      "id": "health-zigbee-home-hq",
+      "coordinatorId": "zigbee-coordinator-home-hq-01",
+      "status": "healthy",
+      "pairedDevices": 5,
+      "healthyRoutes": 4,
+      "watchRoutes": 1,
+      "averageLqi": 199,
+      "lowBatteryDevices": 0,
+      "staleDevices": 0
+    }
+  ],
+  "policies": [
+    {
+      "id": "zigbee-permit-join-window",
+      "name": "Permit Join Window",
+      "risk": "medium",
+      "requiresApproval": false,
+      "message": "Permit join is time-boxed and allowlist constrained."
+    },
+    {
+      "id": "zigbee-router-join-approval",
+      "name": "Router Join Approval",
+      "risk": "high",
+      "requiresApproval": true,
+      "message": "Router or whole-home permit join changes require human approval before runtime execution."
+    },
+    {
+      "id": "zigbee-battery-route-health",
+      "name": "Battery Route Health",
+      "risk": "medium",
+      "requiresApproval": false,
+      "message": "Battery sensors require route, last-seen, and battery monitoring before automation dependency."
+    }
+  ],
+  "intentRecipes": [
+    {
+      "id": "intent-zigbee-living-light",
+      "name": "Zigbee Living Lighting",
+      "keywords": ["zigbee", "living", "floor", "wash", "dim", "light"],
+      "commandId": "cmd-zigbee-living-floor-wash-dim",
+      "confidence": 0.91,
+      "exampleIntent": "Dim the living floor wash using Zigbee."
+    },
+    {
+      "id": "intent-zigbee-utility-reporting",
+      "name": "Zigbee Utility Leak Reporting",
+      "keywords": ["zigbee", "leak", "utility", "reporting", "sensor"],
+      "reportingId": "report-utility-leak",
+      "confidence": 0.9,
+      "exampleIntent": "Preview Zigbee reporting for the utility leak sensor."
+    },
+    {
+      "id": "intent-zigbee-permit-join",
+      "name": "Zigbee Permit Join",
+      "keywords": ["zigbee", "permit", "join", "pair", "router"],
+      "permitJoinId": "permit-whole-home-router",
+      "confidence": 0.88,
+      "exampleIntent": "Open a Zigbee permit join window for a router."
+    }
+  ],
+  "recentZigbeeRuns": [
+    {
+      "id": "zigbee-run-20260512-001",
+      "commandId": "cmd-zigbee-living-floor-wash-dim",
+      "bindingId": "zigbee-living-floor-wash",
+      "status": "command_previewed",
+      "actor": "system-preview",
+      "summary": "Living Floor Wash Zigbee command normalized without coordinator mutation."
+    }
+  ]
+}

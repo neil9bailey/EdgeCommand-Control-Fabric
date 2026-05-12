@@ -38,6 +38,11 @@ import type {
   MatterCommandPreview,
   MatterThreadIntentPreview,
   MatterThreadResponse,
+  ZigbeeCommandPreview,
+  ZigbeeIntentPreview,
+  ZigbeePermitJoinPreview,
+  ZigbeeReportingPreview,
+  ZigbeeResponse,
   McpResponse,
   ModuleManifestResponse,
   ModuleManifestIntentPreview,
@@ -259,6 +264,14 @@ export async function fetchMqttEsphome(): Promise<MqttEsphomeResponse | null> {
 export async function fetchMatterThread(): Promise<MatterThreadResponse | null> {
   try {
     return await getJson<MatterThreadResponse>("/api/matter-thread");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchZigbee(): Promise<ZigbeeResponse | null> {
+  try {
+    return await getJson<ZigbeeResponse>("/api/zigbee");
   } catch {
     return null;
   }
@@ -617,6 +630,56 @@ export async function previewMatterIntent(intent: string): Promise<MatterThreadI
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<MatterThreadIntentPreview>;
+}
+
+export async function previewZigbeeCommand(commandId: string): Promise<ZigbeeCommandPreview> {
+  const response = await fetch(`${API_BASE}/api/zigbee/commands/${commandId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Zigbee command preview failed: ${response.status}`);
+  return response.json() as Promise<ZigbeeCommandPreview>;
+}
+
+export async function executeZigbeeCommand(commandId: string): Promise<ZigbeeCommandPreview> {
+  const response = await fetch(`${API_BASE}/api/zigbee/commands/${commandId}/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Zigbee command execute failed: ${response.status}`);
+  return response.json() as Promise<ZigbeeCommandPreview>;
+}
+
+export async function previewZigbeePermitJoin(permitJoinId: string): Promise<ZigbeePermitJoinPreview> {
+  const response = await fetch(`${API_BASE}/api/zigbee/permit-join/${permitJoinId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Zigbee permit join preview failed: ${response.status}`);
+  return response.json() as Promise<ZigbeePermitJoinPreview>;
+}
+
+export async function previewZigbeeReporting(reportingId: string): Promise<ZigbeeReportingPreview> {
+  const response = await fetch(`${API_BASE}/api/zigbee/reporting/${reportingId}/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) throw new Error(`Zigbee reporting preview failed: ${response.status}`);
+  return response.json() as Promise<ZigbeeReportingPreview>;
+}
+
+export async function previewZigbeeIntent(intent: string): Promise<ZigbeeIntentPreview> {
+  const response = await fetch(`${API_BASE}/api/zigbee/intent/preview`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent }),
+  });
+  if (!response.ok) throw new Error(`Zigbee intent preview failed: ${response.status}`);
+  return response.json() as Promise<ZigbeeIntentPreview>;
 }
 
 export async function recordApprovalDecision(

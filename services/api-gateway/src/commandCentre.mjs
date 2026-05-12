@@ -19,6 +19,7 @@ import { buildModuleManifestDashboard, loadModuleManifest, summarizeModuleManife
 import { buildModuleMarketplaceDashboard, loadModuleMarketplace, summarizeModuleMarketplace } from "./moduleMarketplace.mjs";
 import { buildMqttEsphomeDashboard, loadMqttEsphome, summarizeMqttEsphome } from "./mqttEsphome.mjs";
 import { buildMatterThreadDashboard, loadMatterThread, summarizeMatterThread } from "./matterThread.mjs";
+import { buildZigbeeDashboard, loadZigbeeAdapter, summarizeZigbeeAdapter } from "./zigbeeAdapter.mjs";
 import {
   buildSimulationDashboard,
   summarizeSimulationLab,
@@ -95,7 +96,7 @@ export function buildApprovalQueue(automationEngine, deviceRegistry, simulationL
   });
 }
 
-function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, waterSummary, energySummary, sensingSummary, moduleManifestSummary, moduleBuilderSummary, moduleMarketplaceSummary, moduleCertificationSummary, mqttEsphomeSummary, matterThreadSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
+function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSummary, lightingSummary, climateSummary, securitySummary, waterSummary, energySummary, sensingSummary, moduleManifestSummary, moduleBuilderSummary, moduleMarketplaceSummary, moduleCertificationSummary, mqttEsphomeSummary, matterThreadSummary, zigbeeSummary, approvalSummary, mcpSummary, kraSummary, simulationSummary, links, routes, authStatus }) {
   const onlineDevices = deviceSummary.byStatus.online || 0;
   const degradedLinks = links.filter((link) => link.status !== "healthy" && link.status !== "ready").length;
   const blockedRoutes = routes.filter((route) => String(route.status).includes("blocked")).length;
@@ -105,10 +106,11 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
       id: "modules",
       label: "Modules",
       headline: `${moduleMarketplaceSummary.installed} installed / ${moduleMarketplaceSummary.available} available`,
-      detail: `${mqttEsphomeSummary.mappedDeviceCount} MQTT mapped, ${matterThreadSummary.bindingCount} Matter bindings`,
+      detail: `${mqttEsphomeSummary.mappedDeviceCount} MQTT mapped, ${matterThreadSummary.bindingCount} Matter bindings, ${zigbeeSummary.bindingCount} Zigbee bindings`,
       status: moduleManifestSummary.blocked > 0 ? "attention" : "ready",
       metrics: [
         { label: "Listings", value: moduleMarketplaceSummary.listingCount },
+        { label: "Zigbee", value: zigbeeSummary.bindingCount },
         { label: "Matter", value: matterThreadSummary.bindingCount },
         { label: "MQTT", value: mqttEsphomeSummary.mappedDeviceCount },
       ],
@@ -296,7 +298,7 @@ function buildWorkspaces({ catalog, deviceSummary, eventSummary, automationSumma
   ];
 }
 
-function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, waterDashboard, energyDashboard, sensingDashboard, moduleManifestDashboard, moduleBuilderDashboard, moduleMarketplaceDashboard, moduleCertificationDashboard, mqttEsphomeDashboard, matterThreadDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
+function buildActionQueue({ approvals, lightingDashboard, climateDashboard, securityDashboard, waterDashboard, energyDashboard, sensingDashboard, moduleManifestDashboard, moduleBuilderDashboard, moduleMarketplaceDashboard, moduleCertificationDashboard, mqttEsphomeDashboard, matterThreadDashboard, zigbeeDashboard, devices, routes, auditEvents, mcpOrchestrator, kraDashboard, simulationDashboard }) {
   const approvalActions = approvals.map((approval) => ({
     id: approval.id,
     priority: approval.trafficClass,
@@ -473,6 +475,19 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
       evidence: [command.bindingId, command.requiresApproval ? "approval-required" : "fabric-ready"],
     }));
 
+  const zigbeeActions = (zigbeeDashboard?.commandProfiles || [])
+    .slice(0, 3)
+    .map((command) => ({
+      id: `zigbee-${command.id}`,
+      priority: command.trafficClass,
+      workspaceId: "modules",
+      title: command.name,
+      owner: "Zigbee",
+      status: command.requiresApproval ? "approval_required" : "ready_to_execute",
+      detail: `${command.deviceId || command.permitJoinId} / ${command.cluster} / ${command.command}`,
+      evidence: [command.bindingId || command.permitJoinId, command.requiresApproval ? "approval-required" : "mesh-ready"],
+    }));
+
   const deviceActions = devices
     .filter((device) => device.status !== "online")
     .map((device) => ({
@@ -555,7 +570,7 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
       };
     });
 
-  const primaryActions = [...approvalActions, ...marketplaceActions, ...certificationActions, ...mqttActions, ...matterActions, ...moduleActions, ...buildActions, ...lightingActions, ...climateActions, ...securityActions, ...waterActions, ...energyActions, ...sensingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions];
+  const primaryActions = [...approvalActions, ...marketplaceActions, ...certificationActions, ...mqttActions, ...matterActions, ...zigbeeActions, ...moduleActions, ...buildActions, ...lightingActions, ...climateActions, ...securityActions, ...waterActions, ...energyActions, ...sensingActions, ...mcpActions, ...kraActions, ...simulationActions, ...deviceActions];
   const reservedActions = [
     approvalActions[0],
     lightingActions[0],
@@ -573,13 +588,14 @@ function buildActionQueue({ approvals, lightingDashboard, climateDashboard, secu
   return [...byId.values()].slice(0, 40);
 }
 
-export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, waterManagement, energyManagement, sensingPresence, moduleManifest, moduleBuilder, moduleMarketplace, moduleCertification, mqttEsphome, matterThread, authStatus }) {
+export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, automationEngine, mcpOrchestrator, kraEngine, simulationLab, approvalWorkflow, lightingScenes, climateHvac, securityAccess, waterManagement, energyManagement, sensingPresence, moduleManifest, moduleBuilder, moduleMarketplace, moduleCertification, mqttEsphome, matterThread, zigbeeAdapter, authStatus }) {
   const resolvedModuleManifest = moduleManifest || loadModuleManifest();
   const resolvedModuleBuilder = moduleBuilder || loadModuleBuilder();
   const resolvedModuleMarketplace = moduleMarketplace || loadModuleMarketplace();
   const resolvedModuleCertification = moduleCertification || loadModuleCertification();
   const resolvedMqttEsphome = mqttEsphome || loadMqttEsphome();
   const resolvedMatterThread = matterThread || loadMatterThread();
+  const resolvedZigbeeAdapter = zigbeeAdapter || loadZigbeeAdapter();
   const deviceSummary = summarizeDeviceRegistry(deviceRegistry);
   const eventSummary = summarizeEventLedger(eventLedger);
   const automationSummary = summarizeAutomationEngine(automationEngine);
@@ -595,6 +611,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
   const moduleCertificationSummary = summarizeModuleCertification(resolvedModuleCertification, resolvedModuleMarketplace, resolvedModuleBuilder, resolvedModuleManifest, catalog);
   const mqttEsphomeSummary = summarizeMqttEsphome(resolvedMqttEsphome, deviceRegistry);
   const matterThreadSummary = summarizeMatterThread(resolvedMatterThread, deviceRegistry);
+  const zigbeeSummary = summarizeZigbeeAdapter(resolvedZigbeeAdapter, deviceRegistry);
   const mcpSummary = summarizeMcpOrchestrator(mcpOrchestrator);
   const kraSummary = summarizeKraEngine(kraEngine);
   const simulationSummary = summarizeSimulationLab(simulationLab);
@@ -684,6 +701,11 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     deviceRegistry,
     catalog,
   });
+  const zigbeeDashboard = buildZigbeeDashboard({
+    adapter: resolvedZigbeeAdapter,
+    deviceRegistry,
+    catalog,
+  });
   const links = defaultLinkInventory();
   const narrowbandRoutes = defaultNarrowbandRoutes();
   const auditEvents = filterEvents(eventLedger, { auditRequired: "true", limit: 8 });
@@ -704,6 +726,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     moduleCertificationSummary,
     mqttEsphomeSummary,
     matterThreadSummary,
+    zigbeeSummary,
     approvalSummary: approvalQueue.summary,
     mcpSummary,
     kraSummary,
@@ -764,6 +787,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       moduleCertificationDashboard,
       mqttEsphomeDashboard,
       matterThreadDashboard,
+      zigbeeDashboard,
       devices,
       routes: narrowbandRoutes.routes,
       auditEvents,
@@ -785,6 +809,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
       certification: moduleCertificationDashboard,
       mqttEsphome: mqttEsphomeDashboard,
       matterThread: matterThreadDashboard,
+      zigbee: zigbeeDashboard,
     },
     devices,
     automations: {
@@ -807,6 +832,7 @@ export function buildCommandCentre({ catalog, deviceRegistry, eventLedger, autom
     moduleCertification: moduleCertificationDashboard,
     mqttEsphome: mqttEsphomeDashboard,
     matterThread: matterThreadDashboard,
+    zigbee: zigbeeDashboard,
     approvals: approvalQueue,
     agents: {
       orchestrator: mcpOrchestrator.orchestrator,

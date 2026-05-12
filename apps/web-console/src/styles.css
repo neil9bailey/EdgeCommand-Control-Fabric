@@ -2949,6 +2949,230 @@ h3 {
   padding: 5px 8px;
 }
 
+.zigbee-panel {
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(247, 252, 246, 0.95);
+  box-shadow: var(--shadow);
+}
+
+.zigbee-header {
+  background:
+    linear-gradient(90deg, rgba(62, 132, 83, 0.16), rgba(45, 111, 143, 0.08)),
+    #f7fcf6;
+}
+
+.zigbee-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1.2fr 1.1fr 1.1fr;
+  gap: 1px;
+  background: var(--line);
+}
+
+.zigbee-card {
+  min-height: 286px;
+  padding: 14px;
+  background: rgba(253, 255, 251, 0.98);
+}
+
+.zigbee-wide {
+  grid-column: 1 / -1;
+}
+
+.zigbee-coordinator-card,
+.zigbee-route-list,
+.zigbee-binding-list,
+.zigbee-command-list,
+.zigbee-report-list,
+.zigbee-preview-card {
+  display: grid;
+  gap: 9px;
+}
+
+.zigbee-coordinator-card,
+.zigbee-permit-row,
+.zigbee-route-row,
+.zigbee-binding-row,
+.zigbee-command-row,
+.zigbee-report-row,
+.zigbee-report-preview,
+.zigbee-preview-card > div,
+.zigbee-empty-preview,
+.zigbee-permit-preview,
+.zigbee-intent-result {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 10px;
+}
+
+.zigbee-permit-row,
+.zigbee-route-row,
+.zigbee-binding-row,
+.zigbee-command-row,
+.zigbee-report-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.zigbee-route-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.zigbee-route-row.active,
+.zigbee-binding-row.active,
+.zigbee-command-row.active,
+.zigbee-report-row.active,
+.zigbee-permit-row.active {
+  border-color: #9ebd8e;
+  background: rgba(229, 241, 222, 0.86);
+}
+
+.zigbee-route-score {
+  flex: 0 0 auto;
+  min-width: 42px;
+  text-align: right;
+}
+
+.zigbee-coordinator-card strong,
+.zigbee-coordinator-card span,
+.zigbee-permit-row strong,
+.zigbee-permit-row span,
+.zigbee-route-row strong,
+.zigbee-route-row span,
+.zigbee-binding-row strong,
+.zigbee-binding-row span,
+.zigbee-command-row strong,
+.zigbee-command-row span,
+.zigbee-report-row strong,
+.zigbee-report-row span,
+.zigbee-report-preview strong,
+.zigbee-report-preview span,
+.zigbee-preview-card strong,
+.zigbee-preview-card span,
+.zigbee-empty-preview strong,
+.zigbee-empty-preview span,
+.zigbee-permit-preview strong,
+.zigbee-permit-preview span,
+.zigbee-intent-result strong,
+.zigbee-intent-result span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.zigbee-coordinator-card strong,
+.zigbee-permit-row strong,
+.zigbee-route-row strong,
+.zigbee-binding-row strong,
+.zigbee-command-row strong,
+.zigbee-report-row strong,
+.zigbee-report-preview strong,
+.zigbee-preview-card strong,
+.zigbee-empty-preview strong,
+.zigbee-permit-preview strong,
+.zigbee-intent-result strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.zigbee-coordinator-card span,
+.zigbee-permit-row span,
+.zigbee-route-row span,
+.zigbee-binding-row span,
+.zigbee-command-row span,
+.zigbee-report-row span,
+.zigbee-report-preview span,
+.zigbee-preview-card span,
+.zigbee-empty-preview span,
+.zigbee-permit-preview span,
+.zigbee-intent-result span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.zigbee-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.zigbee-command-actions button,
+.zigbee-report-row button,
+.zigbee-permit-row button,
+.zigbee-intent-button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  background: #3e8453;
+  color: #fff;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.zigbee-command-actions button:nth-child(2) {
+  background: var(--blue);
+}
+
+.zigbee-command-actions button:disabled,
+.zigbee-report-row button:disabled,
+.zigbee-permit-row button:disabled,
+.zigbee-intent-button:disabled {
+  opacity: 0.72;
+  cursor: progress;
+}
+
+.zigbee-intent-button {
+  width: 100%;
+  margin-top: 10px;
+  justify-content: flex-start;
+  background: var(--coal);
+  color: #fff8ec;
+}
+
+.zigbee-intent-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zigbee-report-preview,
+.zigbee-permit-preview,
+.zigbee-intent-result {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  border-color: #9ebd8e;
+  background: rgba(229, 241, 222, 0.86);
+  color: #2d5f3b;
+}
+
+.zigbee-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.zigbee-next-actions span {
+  border: 1px solid #9ebd8e;
+  border-radius: 999px;
+  background: rgba(229, 241, 222, 0.86);
+  color: #2d5f3b;
+  padding: 5px 8px;
+}
+
 .approval-workflow-panel {
   margin-bottom: 18px;
   overflow: hidden;
@@ -4104,6 +4328,10 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .zigbee-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .approval-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4166,6 +4394,7 @@ h3 {
     .certification-grid,
     .mqtt-grid,
     .matter-grid,
+    .zigbee-grid,
     .approval-grid,
     .simulation-grid,
     .kra-grid,

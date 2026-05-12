@@ -66,6 +66,7 @@ import {
   fetchSecurity,
   fetchSensing,
   fetchWater,
+  fetchZigbee,
   previewLightingIntent,
   previewLightingScene,
   previewModuleFlag,
@@ -82,8 +83,13 @@ import {
   previewMatterCommand,
   previewMatterCommissioning,
   previewMatterIntent,
+  previewZigbeeCommand,
+  previewZigbeeIntent,
+  previewZigbeePermitJoin,
+  previewZigbeeReporting,
   publishMqttCommand,
   executeMatterCommand,
+  executeZigbeeCommand,
   previewClimateIntent,
   previewClimateProfile,
   previewClimateSetpoint,
@@ -146,6 +152,11 @@ import type {
   MatterCommandPreview,
   MatterThreadIntentPreview,
   MatterThreadResponse,
+  ZigbeeCommandPreview,
+  ZigbeeIntentPreview,
+  ZigbeePermitJoinPreview,
+  ZigbeeReportingPreview,
+  ZigbeeResponse,
   NarrowbandRoutes,
   PlatformOverview,
   SimulationLabResponse,
@@ -341,6 +352,12 @@ function App() {
   const [matterCommissioningPreview, setMatterCommissioningPreview] = useState<MatterCommissioningPreview | null>(null);
   const [matterIntentPreview, setMatterIntentPreview] = useState<MatterThreadIntentPreview | null>(null);
   const [matterLoading, setMatterLoading] = useState<"preview" | "execute" | "commission" | "intent" | null>(null);
+  const [zigbee, setZigbee] = useState<ZigbeeResponse | null>(null);
+  const [zigbeePreview, setZigbeePreview] = useState<ZigbeeCommandPreview | null>(null);
+  const [zigbeePermitJoinPreview, setZigbeePermitJoinPreview] = useState<ZigbeePermitJoinPreview | null>(null);
+  const [zigbeeReportingPreview, setZigbeeReportingPreview] = useState<ZigbeeReportingPreview | null>(null);
+  const [zigbeeIntentPreview, setZigbeeIntentPreview] = useState<ZigbeeIntentPreview | null>(null);
+  const [zigbeeLoading, setZigbeeLoading] = useState<"preview" | "execute" | "permit" | "reporting" | "intent" | null>(null);
   const [approvals, setApprovals] = useState<ApprovalQueueResponse | null>(null);
   const [approvalDecision, setApprovalDecision] = useState<ApprovalDecisionResponse | null>(null);
   const [approvalDecisionLoading, setApprovalDecisionLoading] = useState<"approve" | "reject" | "request_changes" | null>(null);
@@ -381,6 +398,7 @@ function App() {
     void fetchModuleCertification().then(setModuleCertification);
     void fetchMqttEsphome().then(setMqttEsphome);
     void fetchMatterThread().then(setMatterThread);
+    void fetchZigbee().then(setZigbee);
     void fetchApprovals().then(setApprovals);
     void fetchKra().then(setKra);
     void fetchSimulationLab().then(setSimulationLab);
@@ -782,6 +800,55 @@ function App() {
     }
   }
 
+  async function previewZigbee(commandId: string) {
+    setZigbeeLoading("preview");
+    try {
+      setZigbeePreview(await previewZigbeeCommand(commandId));
+    } finally {
+      setZigbeeLoading(null);
+    }
+  }
+
+  async function executeZigbee(commandId: string) {
+    setZigbeeLoading("execute");
+    try {
+      setZigbeePreview(await executeZigbeeCommand(commandId));
+    } finally {
+      setZigbeeLoading(null);
+    }
+  }
+
+  async function previewZigbeePermitJoinProfile(permitJoinId: string) {
+    setZigbeeLoading("permit");
+    try {
+      setZigbeePermitJoinPreview(await previewZigbeePermitJoin(permitJoinId));
+    } finally {
+      setZigbeeLoading(null);
+    }
+  }
+
+  async function previewZigbeeReportingProfile(reportingId: string) {
+    setZigbeeLoading("reporting");
+    try {
+      setZigbeeReportingPreview(await previewZigbeeReporting(reportingId));
+    } finally {
+      setZigbeeLoading(null);
+    }
+  }
+
+  async function previewZigbeeFromIntent(intentText: string) {
+    setZigbeeLoading("intent");
+    try {
+      const result = await previewZigbeeIntent(intentText);
+      setZigbeeIntentPreview(result);
+      if ("command" in result.preview) setZigbeePreview(result.preview);
+      if ("checklist" in result.preview) setZigbeePermitJoinPreview(result.preview);
+      if ("configureReporting" in result.preview) setZigbeeReportingPreview(result.preview);
+    } finally {
+      setZigbeeLoading(null);
+    }
+  }
+
   async function decideApproval(decision: "approve" | "reject" | "request_changes") {
     const approval = approvals?.approvals[0];
     if (!approval) return;
@@ -888,6 +955,7 @@ function App() {
           <Metric label="Certs" value={moduleCertification?.summary.passed ?? commandCentre?.moduleCertification?.summary.passed ?? "-"} detail="passed gates" tone="good" />
           <Metric label="MQTT" value={mqttEsphome?.summary.mappedDeviceCount ?? commandCentre?.mqttEsphome?.summary.mappedDeviceCount ?? "-"} detail="mapped devices" tone="good" />
           <Metric label="Matter" value={matterThread?.summary.bindingCount ?? commandCentre?.matterThread?.summary.bindingCount ?? "-"} detail="fabric bindings" tone="good" />
+          <Metric label="Zigbee" value={zigbee?.summary.bindingCount ?? commandCentre?.zigbee?.summary.bindingCount ?? "-"} detail="mesh bindings" tone="good" />
           <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
           <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
           <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
@@ -1015,6 +1083,19 @@ function App() {
           onExecute={executeMatter}
           onCommissioningPreview={previewMatterCommissioningProfile}
           onIntentPreview={previewMatterFromIntent}
+        />
+        <ZigbeeAdapterPanel
+          adapter={zigbee || commandCentre?.zigbee || commandCentre?.modules.zigbee || null}
+          preview={zigbeePreview}
+          permitJoinPreview={zigbeePermitJoinPreview}
+          reportingPreview={zigbeeReportingPreview}
+          intentPreview={zigbeeIntentPreview}
+          loading={zigbeeLoading}
+          onPreview={previewZigbee}
+          onExecute={executeZigbee}
+          onPermitJoinPreview={previewZigbeePermitJoinProfile}
+          onReportingPreview={previewZigbeeReportingProfile}
+          onIntentPreview={previewZigbeeFromIntent}
         />
         <AutomationOpsPanel
           automations={automations}
@@ -3615,6 +3696,233 @@ function MatterThreadPanel({
             <div className="matter-intent-result">
               <strong>{intentPreview.match.name}</strong>
               <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {(intentPreview.match.commandId || intentPreview.match.commissioningId || "matter").replace(/-/g, " ")}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ZigbeeAdapterPanel({
+  adapter,
+  preview,
+  permitJoinPreview,
+  reportingPreview,
+  intentPreview,
+  loading,
+  onPreview,
+  onExecute,
+  onPermitJoinPreview,
+  onReportingPreview,
+  onIntentPreview,
+}: {
+  adapter: ZigbeeResponse | null;
+  preview: ZigbeeCommandPreview | null;
+  permitJoinPreview: ZigbeePermitJoinPreview | null;
+  reportingPreview: ZigbeeReportingPreview | null;
+  intentPreview: ZigbeeIntentPreview | null;
+  loading: "preview" | "execute" | "permit" | "reporting" | "intent" | null;
+  onPreview: (commandId: string) => void;
+  onExecute: (commandId: string) => void;
+  onPermitJoinPreview: (permitJoinId: string) => void;
+  onReportingPreview: (reportingId: string) => void;
+  onIntentPreview: (intent: string) => void;
+}) {
+  const bindings = adapter?.deviceBindings || [];
+  const routes = adapter?.meshRoutes || [];
+  const commands = adapter?.commandProfiles || [];
+  const reports = adapter?.reportingProfiles || [];
+  const permits = adapter?.permitJoinProfiles || [];
+  const recipes = adapter?.intentRecipes || [];
+  const activeCommandId = preview?.command.id || commands.find((command) => !command.requiresApproval)?.id || commands[0]?.id;
+  const activeReportId = reportingPreview?.profile.id || reports.find((profile) => profile.status === "ready")?.id || reports[0]?.id;
+  const activePermitId = permitJoinPreview?.profile.id || permits.find((profile) => profile.status === "ready")?.id || permits[0]?.id;
+  const activeRecipe = recipes.find((recipe) => recipe.commandId === activeCommandId || recipe.reportingId === activeReportId || recipe.permitJoinId === activePermitId) || recipes[0];
+  const activeBinding = preview?.binding || reportingPreview?.binding || bindings[0] || null;
+
+  return (
+    <section className="zigbee-panel" aria-label="Zigbee adapter">
+      <div className="section-header zigbee-header">
+        <div>
+          <p className="eyebrow">Zigbee Adapter</p>
+          <h2>Coordinator Mesh And Battery Device Control</h2>
+        </div>
+        <div className="event-summary">
+          <StatusPill tone={adapter?.summary.coordinatorStatus === "online" ? "good" : "warn"} label={adapter?.summary.coordinatorStatus || "offline"} />
+          <StatusPill tone="good" label={`${adapter?.summary.bindingCount || 0} bindings`} />
+          <StatusPill tone={adapter?.summary.watchRoutes ? "warn" : "good"} label={`${adapter?.summary.averageLqi || 0} avg LQI`} />
+        </div>
+      </div>
+
+      <div className="zigbee-grid">
+        <div className="zigbee-card coordinator">
+          <div className="section-header compact">
+            <h3>Coordinator</h3>
+            <RadioTower size={18} />
+          </div>
+          <div className="zigbee-coordinator-card">
+            <strong>{adapter?.coordinator.name || "Zigbee coordinator"}</strong>
+            <span>ch {adapter?.coordinator.channel || "-"} / {adapter?.coordinator.driver || "driver pending"}</span>
+            <span>{adapter?.coordinator.networkPanId || "no PAN"} / {adapter?.coordinator.networkKeyRef || "key ref pending"}</span>
+          </div>
+          {permits.map((profile) => (
+            <div className={`zigbee-permit-row ${profile.id === activePermitId ? "active" : ""}`} key={profile.id}>
+              <div>
+                <strong>{profile.name}</strong>
+                <span>{profile.durationSeconds}s / {profile.allowedDeviceTypes.length} device classes</span>
+              </div>
+              <button onClick={() => onPermitJoinPreview(profile.id)} disabled={Boolean(loading)}>
+                <ClipboardCheck size={14} />
+                <span>{loading === "permit" && profile.id === activePermitId ? "Checking" : "Permit"}</span>
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="zigbee-card">
+          <div className="section-header compact">
+            <h3>Mesh Routes</h3>
+            <GitBranch size={18} />
+          </div>
+          <div className="zigbee-route-list">
+            {routes.map((route) => (
+              <div className={`zigbee-route-row ${route.deviceId === activeBinding?.deviceId ? "active" : ""}`} key={route.id}>
+                <div>
+                  <strong>{route.device?.name || route.deviceId}</strong>
+                  <span>{route.role.replace(/_/g, " ")} / depth {route.depth} / RSSI {route.rssi}</span>
+                </div>
+                <div className="zigbee-route-score">
+                  <strong>{route.lqi}</strong>
+                  <span>LQI</span>
+                </div>
+                <StatusPill tone={route.status === "healthy" ? "good" : "warn"} label={route.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="zigbee-card">
+          <div className="section-header compact">
+            <h3>Bindings</h3>
+            <Cpu size={18} />
+          </div>
+          <div className="zigbee-binding-list">
+            {bindings.map((binding) => (
+              <div className={`zigbee-binding-row ${binding.id === activeBinding?.id ? "active" : ""}`} key={binding.id}>
+                <div>
+                  <strong>{binding.device?.name || binding.deviceId}</strong>
+                  <span>{binding.deviceType.replace(/_/g, " ")} / ep {binding.endpoint} / {binding.networkAddress}</span>
+                </div>
+                <StatusPill tone={binding.risk === "high" ? "danger" : binding.readiness.canCommand ? "good" : "warn"} label={binding.readiness.canCommand ? "ready" : "hold"} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="zigbee-card">
+          <div className="section-header compact">
+            <h3>Commands</h3>
+            <PlayCircle size={18} />
+          </div>
+          <div className="zigbee-command-list">
+            {commands.map((command) => (
+              <div className={`zigbee-command-row ${command.id === activeCommandId ? "active" : ""}`} key={command.id}>
+                <div>
+                  <strong>{command.name}</strong>
+                  <span>{command.cluster} / {command.command}</span>
+                </div>
+                <div className="zigbee-command-actions">
+                  <button onClick={() => onPreview(command.id)} disabled={Boolean(loading)}>
+                    <Search size={14} />
+                    <span>{loading === "preview" && command.id === activeCommandId ? "Checking" : "Preview"}</span>
+                  </button>
+                  <button onClick={() => onExecute(command.id)} disabled={Boolean(loading) || command.requiresApproval}>
+                    <RadioTower size={14} />
+                    <span>{loading === "execute" && command.id === activeCommandId ? "Sending" : "Sim"}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {activeRecipe && (
+            <button className="zigbee-intent-button" onClick={() => onIntentPreview(activeRecipe.exampleIntent)} disabled={Boolean(loading)}>
+              <Bot size={16} />
+              <span>{loading === "intent" ? "Matching" : activeRecipe.exampleIntent}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="zigbee-card">
+          <div className="section-header compact">
+            <h3>Reporting</h3>
+            <Activity size={18} />
+          </div>
+          <div className="zigbee-report-list">
+            {reports.map((report) => (
+              <div className={`zigbee-report-row ${report.id === activeReportId ? "active" : ""}`} key={report.id}>
+                <div>
+                  <strong>{report.name}</strong>
+                  <span>{report.cluster} / {report.attribute} / {report.maxIntervalSeconds}s</span>
+                </div>
+                <button onClick={() => onReportingPreview(report.id)} disabled={Boolean(loading)}>
+                  <Gauge size={14} />
+                  <span>{loading === "reporting" && report.id === activeReportId ? "Checking" : "Report"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          {reportingPreview && (
+            <div className="zigbee-report-preview">
+              <strong>{reportingPreview.profile.name}</strong>
+              <span>{reportingPreview.status.replace(/_/g, " ")} / change {reportingPreview.configureReporting.reportableChange}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="zigbee-card zigbee-wide">
+          <div className="section-header compact">
+            <h3>{preview ? preview.command.name : "Zigbee Frame Preview"}</h3>
+            <Wifi size={18} />
+          </div>
+          {preview ? (
+            <div className="zigbee-preview-card">
+              <div>
+                <span>Status</span>
+                <strong>{preview.status.replace(/_/g, " ")}</strong>
+              </div>
+              <div>
+                <span>Target</span>
+                <strong>{preview.frame.ieeeAddress || preview.command.permitJoinId || "coordinator"}</strong>
+              </div>
+              <div>
+                <span>Frame</span>
+                <strong>{preview.frame.cluster} / {preview.frame.command}</strong>
+              </div>
+              <div>
+                <span>Desired</span>
+                <strong>{JSON.stringify(preview.frame.desiredState)}</strong>
+              </div>
+              <div className="zigbee-next-actions">
+                {preview.nextActions.map((action) => <span key={action}>{action.replace(/_/g, " ")}</span>)}
+              </div>
+            </div>
+          ) : (
+            <div className="zigbee-empty-preview">
+              <strong>{adapter?.coordinator.name || "Mesh adapter"}</strong>
+              <span>{adapter?.summary.routeCount || 0} routes / {adapter?.summary.watchRoutes || 0} watch route / {adapter?.summary.lowBatteryDevices || 0} low battery</span>
+            </div>
+          )}
+          {permitJoinPreview && (
+            <div className="zigbee-permit-preview">
+              <strong>{permitJoinPreview.profile.name}</strong>
+              <span>{permitJoinPreview.status.replace(/_/g, " ")} / {permitJoinPreview.summary.durationSeconds}s window / {permitJoinPreview.summary.allowlistCount} allowlist entries</span>
+            </div>
+          )}
+          {intentPreview?.match && (
+            <div className="zigbee-intent-result">
+              <strong>{intentPreview.match.name}</strong>
+              <span>{Math.round(intentPreview.match.confidence * 100)}% confidence / {(intentPreview.match.commandId || intentPreview.match.reportingId || intentPreview.match.permitJoinId || "zigbee").replace(/-/g, " ")}</span>
             </div>
           )}
         </div>

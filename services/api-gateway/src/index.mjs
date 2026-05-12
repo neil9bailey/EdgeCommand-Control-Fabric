@@ -166,6 +166,16 @@ import {
   previewMatterIntent,
   summarizeMatterThread,
 } from "./matterThread.mjs";
+import {
+  buildZigbeeDashboard,
+  executeZigbeeCommand,
+  loadZigbeeAdapter,
+  previewZigbeeCommand,
+  previewZigbeeIntent,
+  previewZigbeePermitJoin,
+  previewZigbeeReporting,
+  summarizeZigbeeAdapter,
+} from "./zigbeeAdapter.mjs";
 
 const secretLoadSummary = await loadExternalSecrets();
 const authConfig = buildAuthConfig();
@@ -193,6 +203,7 @@ const moduleMarketplace = loadModuleMarketplace();
 const moduleCertification = loadModuleCertification();
 const mqttEsphome = loadMqttEsphome();
 const matterThread = loadMatterThread();
+const zigbeeAdapter = loadZigbeeAdapter();
 const publicPaths = new Set(["/health", "/auth/status"]);
 
 app.use(cors({ origin: true, credentials: false }));
@@ -225,6 +236,7 @@ function buildOverview() {
   const moduleCertificationSummary = summarizeModuleCertification(moduleCertification, moduleMarketplace, moduleBuilder, moduleManifest, catalog);
   const mqttEsphomeSummary = summarizeMqttEsphome(mqttEsphome, deviceRegistry);
   const matterThreadSummary = summarizeMatterThread(matterThread, deviceRegistry);
+  const zigbeeSummary = summarizeZigbeeAdapter(zigbeeAdapter, deviceRegistry);
   return {
     ...summary,
     devices: deviceSummary,
@@ -265,6 +277,7 @@ function buildOverview() {
       moduleCertification: `${moduleCertificationSummary.passed} passed / ${moduleCertificationSummary.approvalRequired} approval-required`,
       mqttEsphome: `${mqttEsphomeSummary.mappedDeviceCount} mapped devices / ${mqttEsphomeSummary.publishableMappings} publishable`,
       matterThread: `${matterThreadSummary.bindingCount} bindings / ${matterThreadSummary.healthyThreadNetworks} healthy Thread network`,
+      zigbee: `${zigbeeSummary.bindingCount} bindings / ${zigbeeSummary.healthyRoutes} healthy mesh routes`,
     },
     links: defaultLinkInventory(),
   };
@@ -320,6 +333,7 @@ app.get("/api/command-centre", (_req, res) => {
     moduleCertification,
     mqttEsphome,
     matterThread,
+    zigbeeAdapter,
     authStatus: publicAuthStatus(authConfig, secretProviderStatus),
   }));
 });
@@ -777,6 +791,137 @@ app.post(
   (req, res) => {
     res.json(previewMatterIntent({
       adapter: matterThread,
+      deviceRegistry,
+      intent: req.body?.intent || "",
+      actor: req.auth,
+    }));
+  },
+);
+
+app.get("/api/zigbee", (_req, res) => {
+  res.json(buildZigbeeDashboard({
+    adapter: zigbeeAdapter,
+    deviceRegistry,
+    catalog,
+  }));
+});
+
+app.get("/api/zigbee/permit-join/:id/preview", (req, res) => {
+  const result = previewZigbeePermitJoin({
+    adapter: zigbeeAdapter,
+    permitJoinId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "zigbee_permit_join_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/zigbee/permit-join/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewZigbeePermitJoin({
+      adapter: zigbeeAdapter,
+      permitJoinId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "zigbee_permit_join_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.get("/api/zigbee/reporting/:id/preview", (req, res) => {
+  const result = previewZigbeeReporting({
+    adapter: zigbeeAdapter,
+    deviceRegistry,
+    reportingId: req.params.id,
+  });
+  if (result.error === "zigbee_reporting_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/zigbee/reporting/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewZigbeeReporting({
+      adapter: zigbeeAdapter,
+      deviceRegistry,
+      reportingId: req.params.id,
+    });
+    if (result.error === "zigbee_reporting_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.get("/api/zigbee/commands/:id/preview", (req, res) => {
+  const result = previewZigbeeCommand({
+    adapter: zigbeeAdapter,
+    deviceRegistry,
+    commandId: req.params.id,
+    actor: { subject: "system-preview", name: "System Preview", roles: ["Automation.Operator"] },
+  });
+  if (result.error === "zigbee_command_profile_not_found") {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+app.post(
+  "/api/zigbee/commands/:id/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = previewZigbeeCommand({
+      adapter: zigbeeAdapter,
+      deviceRegistry,
+      commandId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "zigbee_command_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.json(result);
+  },
+);
+
+app.post(
+  "/api/zigbee/commands/:id/execute",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    const result = executeZigbeeCommand({
+      adapter: zigbeeAdapter,
+      deviceRegistry,
+      commandId: req.params.id,
+      actor: req.auth,
+    });
+    if (result.error === "zigbee_command_profile_not_found") {
+      res.status(404).json(result);
+      return;
+    }
+    res.status(result.summary?.canExecute ? 200 : 409).json(result);
+  },
+);
+
+app.post(
+  "/api/zigbee/intent/preview",
+  requireRoles(["Automation.Admin", "Automation.Operator", "Automation.AgentApprover", "Automation.Security"]),
+  (req, res) => {
+    res.json(previewZigbeeIntent({
+      adapter: zigbeeAdapter,
       deviceRegistry,
       intent: req.body?.intent || "",
       actor: req.auth,

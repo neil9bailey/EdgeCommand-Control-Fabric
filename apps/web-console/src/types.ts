@@ -2665,6 +2665,211 @@ export interface MatterThreadResponse {
   rule: string;
 }
 
+export interface ZigbeeSummary {
+  schemaVersion: string;
+  coordinatorStatus: string;
+  bindingCount: number;
+  zigbeeRegistryDevices: number;
+  onlineZigbeeDevices: number;
+  routeCount: number;
+  healthyRoutes: number;
+  watchRoutes: number;
+  lowBatteryDevices: number;
+  permitJoinProfileCount: number;
+  readyPermitJoinProfiles: number;
+  reportingProfileCount: number;
+  readyReportingProfiles: number;
+  commandProfileCount: number;
+  approvalRequiredCommands: number;
+  commandableBindings: number;
+  averageLqi: number;
+  byDeviceType: Record<string, number>;
+  byRisk: Record<string, number>;
+  byRole: Record<string, number>;
+}
+
+export interface ZigbeeCoordinator {
+  id: string;
+  name: string;
+  siteId: string;
+  zoneId: string;
+  driver: string;
+  transport: string;
+  networkPanId: string;
+  extendedPanId: string;
+  channel: number;
+  status: string;
+  networkKeyRef: string;
+  permitJoin: boolean;
+  lastSeen: string;
+}
+
+export interface ZigbeeMeshRoute {
+  id: string;
+  deviceId: string;
+  parentIeee: string;
+  depth: number;
+  lqi: number;
+  rssi: number;
+  role: string;
+  batteryPercent: number | null;
+  lastSeenMinutes: number;
+  status: string;
+  device?: DeviceDefinition | null;
+  binding?: ZigbeeDeviceBinding | null;
+}
+
+export interface ZigbeeDeviceBinding {
+  id: string;
+  deviceId: string;
+  ieeeAddress: string;
+  networkAddress: string;
+  endpoint: number;
+  deviceType: string;
+  clusters: string[];
+  capability: string;
+  risk: "low" | "medium" | "high" | string;
+  trafficClass: string;
+  device?: DeviceDefinition | null;
+  route?: ZigbeeMeshRoute | null;
+  readiness: {
+    deviceKnown: boolean;
+    deviceOnline: boolean;
+    coordinatorOnline: boolean;
+    routeHealthy: boolean;
+    batteryOk: boolean;
+    canCommand: boolean;
+    registryCapabilities: string[];
+  };
+}
+
+export interface ZigbeePermitJoinProfile {
+  id: string;
+  name: string;
+  siteId: string;
+  coordinatorId: string;
+  durationSeconds: number;
+  allowedManufacturers: string[];
+  allowedDeviceTypes: string[];
+  requiresApproval: boolean;
+  status: string;
+  checklist: string[];
+}
+
+export interface ZigbeeReportingProfile {
+  id: string;
+  name: string;
+  bindingId: string;
+  deviceId: string;
+  cluster: string;
+  attribute: string;
+  minIntervalSeconds: number;
+  maxIntervalSeconds: number;
+  reportableChange: number;
+  status: string;
+  binding?: ZigbeeDeviceBinding | null;
+  device?: DeviceDefinition | null;
+}
+
+export interface ZigbeeCommandProfile {
+  id: string;
+  name: string;
+  bindingId: string | null;
+  deviceId: string | null;
+  permitJoinId?: string;
+  cluster: string;
+  command: string;
+  desiredState: Record<string, string | number | boolean>;
+  requiresApproval: boolean;
+  trafficClass: string;
+  binding?: ZigbeeDeviceBinding | null;
+  permitJoin?: ZigbeePermitJoinProfile | null;
+  device?: DeviceDefinition | null;
+}
+
+export interface ZigbeeCommandPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ZigbeeResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  command: ZigbeeCommandProfile;
+  binding: ZigbeeDeviceBinding | null;
+  permitJoin: ZigbeePermitJoinProfile | null;
+  device: DeviceDefinition | null;
+  coordinator: ZigbeeCoordinator;
+  frame: { ieeeAddress: string | null; networkAddress: string | null; endpoint: number | null; cluster: string; command: string; desiredState: Record<string, string | number | boolean>; simulated: boolean };
+  summary: { canExecute: boolean; requiresApproval: boolean; approvalSatisfied: boolean; deviceOnline: boolean; routeStatus: string };
+  policy: { result: string; rules: Array<{ id: string; name: string; risk: string; requiresApproval: boolean; message: string }> };
+  nextActions: string[];
+  event: FabricEvent;
+  executeAttempted?: boolean;
+}
+
+export interface ZigbeePermitJoinPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ZigbeeResponse["service"];
+  actor: { subject: string; name: string; roles: string[] };
+  status: string;
+  profile: ZigbeePermitJoinProfile;
+  coordinator: ZigbeeCoordinator;
+  checklist: Array<{ id: string; label: string; passed: boolean }>;
+  summary: { coordinatorOnline: boolean; durationSeconds: number; allowlistCount: number; requiresApproval: boolean; approvalSatisfied: boolean; canPermitJoin: boolean };
+  nextActions: string[];
+}
+
+export interface ZigbeeReportingPreview {
+  previewId: string;
+  createdAt: string;
+  tenant: string;
+  service: ZigbeeResponse["service"];
+  status: string;
+  profile: ZigbeeReportingProfile;
+  binding: ZigbeeDeviceBinding | null;
+  device: DeviceDefinition | null;
+  coordinator: ZigbeeCoordinator;
+  configureReporting: { ieeeAddress: string | null; endpoint: number | null; cluster: string; attribute: string; minIntervalSeconds: number; maxIntervalSeconds: number; reportableChange: number; simulated: boolean };
+  summary: { deviceKnown: boolean; deviceOnline: boolean; coordinatorOnline: boolean; canConfigure: boolean; watchRoute: boolean };
+  nextActions: string[];
+}
+
+export interface ZigbeeIntentPreview {
+  intent: string;
+  match: null | { id: string; name: string; commandId: string | null; permitJoinId: string | null; reportingId: string | null; confidence: number; score: number };
+  preview: ZigbeeCommandPreview | ZigbeePermitJoinPreview | ZigbeeReportingPreview;
+}
+
+export interface ZigbeeResponse {
+  service: {
+    id: string;
+    name: string;
+    moduleId: string;
+    mode: string;
+    executionBoundary: string;
+    defaultPermitJoinId: string;
+    defaultCommandId: string;
+    defaultReportingId: string;
+    rule: string;
+  };
+  featureModule: { moduleId: string; state: string; buildStrategy: string; enabledBy: string[]; buildArtifacts: string[] };
+  coordinator: ZigbeeCoordinator;
+  module: ModuleDefinition | null;
+  summary: ZigbeeSummary;
+  meshRoutes: ZigbeeMeshRoute[];
+  deviceBindings: ZigbeeDeviceBinding[];
+  permitJoinProfiles: ZigbeePermitJoinProfile[];
+  reportingProfiles: ZigbeeReportingProfile[];
+  commandProfiles: ZigbeeCommandProfile[];
+  healthSamples: Array<{ id: string; coordinatorId: string; status: string; pairedDevices: number; healthyRoutes: number; watchRoutes: number; averageLqi: number; lowBatteryDevices: number; staleDevices: number }>;
+  policies: Array<{ id: string; name: string; risk: string; requiresApproval: boolean; message: string }>;
+  intentRecipes: Array<{ id: string; name: string; keywords: string[]; commandId?: string; permitJoinId?: string; reportingId?: string; confidence: number; exampleIntent: string }>;
+  recentZigbeeRuns: Array<{ id: string; commandId: string; bindingId: string; status: string; actor: string; summary: string }>;
+  rule: string;
+}
+
 export type CommandCentreWorkspaceId = "modules" | "devices" | "automations" | "lighting" | "climate" | "security" | "water" | "energy" | "sensing" | "approvals" | "agents" | "risk" | "simulations" | "connectivity" | "identity" | "audit";
 
 export interface CommandCentreMetric {
@@ -2737,6 +2942,7 @@ export interface CommandCentreResponse {
     certification?: ModuleCertificationResponse;
     mqttEsphome?: MqttEsphomeResponse;
     matterThread?: MatterThreadResponse;
+    zigbee?: ZigbeeResponse;
   };
   devices: CommandCentreDevice[];
   automations: {
@@ -2759,6 +2965,7 @@ export interface CommandCentreResponse {
   moduleCertification?: ModuleCertificationResponse;
   mqttEsphome?: MqttEsphomeResponse;
   matterThread?: MatterThreadResponse;
+  zigbee?: ZigbeeResponse;
   approvals: ApprovalQueueResponse;
   agents: {
     orchestrator: McpResponse["orchestrator"];

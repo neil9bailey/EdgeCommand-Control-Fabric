@@ -551,4 +551,29 @@ Verification:
 
 ### E24 - Zigbee Adapter
 
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- File-backed Zigbee adapter package with coordinator metadata, mesh routes, device bindings, permit-join profiles, reporting profiles, command profiles, policies, health samples, intent recipes, and recent run seeds.
+- API gateway Zigbee service for coordinator health, registry-backed mesh bindings, permit-join preview, reporting preview, command preview, simulated command execution, and intent-to-command/reporting/permit routing.
+- `/api/zigbee`, `/api/zigbee/permit-join/:id/preview`, `/api/zigbee/reporting/:id/preview`, `/api/zigbee/commands/:id/preview`, `/api/zigbee/commands/:id/execute`, and `/api/zigbee/intent/preview` endpoints.
+- Global Command Centre Modules workspace now includes Zigbee mesh-binding posture and mesh-ready adapter actions.
+- Web console Zigbee Adapter panel showing coordinator state, mesh routes, LQI, battery-watch posture, bindings, reporting previews, permit-join windows, command previews, simulated frames, and intent routing.
+- Tests for mesh summary, dashboard enrichment, simulated frames, approval-gated permit join, simulated execution, reporting health, permit-join preview, and natural-language Zigbee routing.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm test`
+- `npm run build`
+- `docker compose up --build -d`
+- Live API verification for `/api/zigbee`, `/api/zigbee/commands/:id/preview`, `/api/zigbee/commands/:id/execute`, `/api/zigbee/reporting/:id/preview`, `/api/zigbee/permit-join/:id/preview`, and `/api/command-centre`.
+- Browser verification for the Zigbee Adapter panel, Coordinator Mesh And Battery Device Control, Living Floor Wash, Utility Leak Sensor, Mesh Routes, Zigbee metric, and clean browser console.
+
+## Next
+
+### E25 - Z-Wave Adapter
+
 Status: next planned build slice.

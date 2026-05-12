@@ -658,8 +658,8 @@ Deliverables:
 
 Acceptance:
 
-- Zigbee-like simulated devices map to capabilities.
-- Real coordinator integration path is documented and modular.
+- Zigbee-like simulated devices map to capabilities. Foundation complete through registry-backed Zigbee mesh bindings, route health, reporting profiles, permit-join previews, and simulated command frames.
+- Real coordinator integration path is documented and modular. Foundation complete through a package-driven coordinator contract that can be replaced by Zigbee2MQTT, deCONZ, Silicon Labs, or vendor-specific runtime workers.
 
 ## E25 - Z-Wave Adapter
 

@@ -38,6 +38,7 @@ Current status:
 - E23 Matter and Thread Adapter foundation is complete.
 - E24 Zigbee Adapter foundation is complete.
 - E25 Z-Wave Adapter foundation is complete.
+- E26A UI Information Architecture and Modern Shell is live.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:

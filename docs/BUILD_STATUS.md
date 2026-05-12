@@ -599,6 +599,28 @@ Verification:
 
 ## Next
 
+### E26A - UI Information Architecture And Modern Shell
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- Live web console moved from one long page to focused pages: Overview, Site Ops, Connectivity, Agents, Approvals, Events, and Build Centre.
+- Primary navigation now uses general Site Ops language instead of residential-only Home Ops framing.
+- Existing API-backed panels remain intact, but are mounted only in their relevant page.
+- Events, logs, audit summaries, and runtime messages are separated into the Events page instead of competing with operational controls.
+- Modernized visual shell with black navigation, electric blue/cyan accents, white work surfaces, updated typography, tighter alignment, and robust button/table text wrapping support.
+
+Verification:
+
+- `npm run test -w services/api-gateway`
+- `npm run typecheck -w apps/web-console`
+- `npm run build`
+- `docker compose up --build -d`
+- Browser verification for the live web console shell at `http://127.0.0.1:5174`, including Overview and the new page navigation surface.
+
+## Next
+
 ### E26 - BLE, RF, IR, And Wired Protocol Adapters
 
 Status: next planned build slice.

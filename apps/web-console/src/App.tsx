@@ -239,6 +239,74 @@ const workspaceIcons: Record<CommandCentreWorkspaceId, LucideIcon> = {
 const defaultIntent =
   "If the utility room leaks, close the main valve, alert me, and prove the emergency path still works if broadband is down.";
 
+type AppPage = "overview" | "operations" | "connectivity" | "agents" | "approvals" | "events" | "builder";
+
+const appPages: Array<{
+  id: AppPage;
+  label: string;
+  badge: string;
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+}> = [
+  {
+    id: "overview",
+    label: "Overview",
+    badge: "live",
+    icon: Gauge,
+    title: "Overview",
+    subtitle: "A quieter command surface with focused pages for site, estate, utility, and enterprise operations.",
+  },
+  {
+    id: "operations",
+    label: "Site Ops",
+    badge: "6",
+    icon: Home,
+    title: "Site Operations",
+    subtitle: "Residential, commercial, industrial, utility, and estate operations grouped by task.",
+  },
+  {
+    id: "connectivity",
+    label: "Connectivity",
+    badge: "5",
+    icon: Cable,
+    title: "Connectivity Fabric",
+    subtitle: "Adapter pages for IP, mesh, non-IP, cloud, and constrained narrowband paths.",
+  },
+  {
+    id: "agents",
+    label: "Agents",
+    badge: "AI",
+    icon: Bot,
+    title: "Agents And Intent",
+    subtitle: "AIP proposals, KRA critique, MCP tool sessions, simulations, and explainable decisions.",
+  },
+  {
+    id: "approvals",
+    label: "Approvals",
+    badge: "gate",
+    icon: ClipboardCheck,
+    title: "Approvals",
+    subtitle: "Human decisions and high-risk evidence in a deliberate queue.",
+  },
+  {
+    id: "events",
+    label: "Events",
+    badge: "audit",
+    icon: Activity,
+    title: "Events And Logs",
+    subtitle: "Audit records, runtime messages, telemetry, and command traces separated from controls.",
+  },
+  {
+    id: "builder",
+    label: "Build Centre",
+    badge: "mods",
+    icon: Puzzle,
+    title: "Build Centre",
+    subtitle: "Marketplace, manifest, certification, IaC fragments, and feature enablement.",
+  },
+];
+
 function iconForModule(mod: ModuleDefinition): LucideIcon {
   return moduleIcons[mod.id] || categoryIcons[mod.category] || Boxes;
 }
@@ -385,6 +453,7 @@ function App() {
   const [automationLoading, setAutomationLoading] = useState(false);
   const [commandCentre, setCommandCentre] = useState<CommandCentreResponse | null>(null);
   const [activeWorkspace, setActiveWorkspace] = useState<CommandCentreWorkspaceId>("devices");
+  const [activePage, setActivePage] = useState<AppPage>("overview");
   const [activeCategory, setActiveCategory] = useState("Home Automation");
   const [activeModuleId, setActiveModuleId] = useState("water-management");
   const [query, setQuery] = useState("");
@@ -442,6 +511,8 @@ function App() {
       setActiveModuleId(filteredModules[0].id);
     }
   }, [activeModuleId, filteredModules]);
+
+  const activePageMeta = appPages.find((page) => page.id === activePage) || appPages[0];
 
   async function runIntent() {
     setIntentLoading(true);
@@ -944,7 +1015,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <aside className="side-rail" aria-label="Module navigation">
+      <aside className="side-rail" aria-label="Primary navigation">
         <div className="brand-lockup">
           <div className="brand-mark"><Cpu size={22} /></div>
           <div>
@@ -955,31 +1026,33 @@ function App() {
 
         <div className="search-box">
           <Search size={16} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find modules" />
+          <input value={intent} onChange={(event) => setIntent(event.target.value)} placeholder="Describe site intent" />
         </div>
 
-        <nav className="category-nav">
-          <button className={activeCategory === "All" ? "active" : ""} onClick={() => setActiveCategory("All")}>
-            <Layers3 size={17} />
-            <span>All Modules</span>
-            <em>{modules.length || "-"}</em>
-          </button>
-          {categories.map((category) => {
-            const Icon = categoryIcons[category] || Boxes;
-            const count = modules.filter((mod) => mod.category === category).length;
+        <nav className="category-nav app-nav">
+          {appPages.map((page) => {
+            const Icon = page.icon;
             return (
               <button
-                key={category}
-                className={activeCategory === category ? "active" : ""}
-                onClick={() => setActiveCategory(category)}
+                key={page.id}
+                className={activePage === page.id ? "active" : ""}
+                onClick={() => setActivePage(page.id)}
               >
                 <Icon size={17} />
-                <span>{category}</span>
-                <em>{count}</em>
+                <span>{page.label}</span>
+                <em>{page.badge}</em>
               </button>
             );
           })}
         </nav>
+
+        <div className="module-filter">
+          <span>Build Centre Filter</span>
+          <div className="search-box compact">
+            <Search size={14} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find modules" />
+          </div>
+        </div>
 
         <div className="rail-footer">
           <span>Tenant</span>
@@ -990,8 +1063,9 @@ function App() {
       <main className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Local Docker Desktop blueprint</p>
-            <h1>EdgeCommand Control Fabric Command Centre</h1>
+            <p className="eyebrow">Local Docker Desktop / Azure-ready control fabric</p>
+            <h1>{activePageMeta.title}</h1>
+            <span>{activePageMeta.subtitle}</span>
           </div>
           <div className="topbar-actions">
             <StatusPill tone="good" label={overview ? "API online" : "offline mock"} />
@@ -1001,6 +1075,8 @@ function App() {
           </div>
         </header>
 
+        {activePage === "overview" && (
+          <>
         <section className="command-band" aria-label="Platform command centre">
           <Metric label="Modules" value={overview?.moduleCount || modules.length || "-"} detail="manifest surfaces" />
           <Metric label="Devices" value={deviceRegistry?.summary.deviceCount || overview?.devices?.deviceCount || "-"} detail="registry seed" tone="good" />
@@ -1039,8 +1115,12 @@ function App() {
           onWorkspaceChange={setActiveWorkspace}
           modules={modules}
         />
+          </>
+        )}
 
-        <EventAuditStrip eventLedger={eventLedger} fallbackSummary={overview?.events || null} />
+        {activePage === "events" && <EventAuditStrip eventLedger={eventLedger} fallbackSummary={overview?.events || null} />}
+        {activePage === "operations" && (
+          <>
         <LightingScenesPanel
           lighting={lighting || commandCentre?.lighting || null}
           preview={lightingPreview}
@@ -1096,6 +1176,10 @@ function App() {
           onPreview={previewSensing}
           onIntentPreview={previewSensingFromIntent}
         />
+          </>
+        )}
+        {activePage === "builder" && (
+          <>
         <ModuleManifestPanel
           manifest={moduleManifest || commandCentre?.moduleManifest || commandCentre?.modules.manifest || null}
           preview={moduleFlagPreview}
@@ -1128,6 +1212,10 @@ function App() {
           onPreview={previewCertification}
           onIntentPreview={previewCertificationFromIntent}
         />
+          </>
+        )}
+        {activePage === "connectivity" && (
+          <>
         <MqttEsphomePanel
           adapter={mqttEsphome || commandCentre?.mqttEsphome || commandCentre?.modules.mqttEsphome || null}
           preview={mqttPreview}
@@ -1176,6 +1264,9 @@ function App() {
           onExclusionPreview={previewZwaveExclusionProfile}
           onIntentPreview={previewZwaveFromIntent}
         />
+          </>
+        )}
+        {activePage === "operations" && (
         <AutomationOpsPanel
           automations={automations}
           approvals={approvals}
@@ -1183,11 +1274,26 @@ function App() {
           loading={automationLoading}
           onRunScenario={runScenario}
         />
+        )}
+        {activePage === "approvals" && (
         <ApprovalWorkflowPanel
           approvals={approvals || commandCentre?.approvals || null}
           decision={approvalDecision}
           loading={approvalDecisionLoading}
           onDecision={decideApproval}
+        />
+        )}
+        {activePage === "agents" && (
+          <>
+        <IntentWorkbench
+          intent={intent}
+          onIntentChange={setIntent}
+          onRun={runIntent}
+          loading={intentLoading}
+          proposal={proposal}
+          decision={intentDecision}
+          decisionLoading={decisionLoading}
+          onDecision={decideIntent}
         />
         <SimulationLabPanel
           simulation={simulationLab || commandCentre?.simulations || null}
@@ -1196,7 +1302,10 @@ function App() {
           onRunScenario={runSimulationDrill}
         />
         <KraOpsPanel kra={kra || commandCentre?.risk || null} />
+          </>
+        )}
 
+        {activePage === "builder" && (
         <section className="main-grid">
           <div className="module-browser" aria-label="Module list">
             <div className="section-header">
@@ -1205,6 +1314,18 @@ function App() {
                 <h2>Module Surfaces</h2>
               </div>
               <span>{filteredModules.length} visible</span>
+            </div>
+            <div className="module-category-pills" aria-label="Module category filter">
+              <button className={activeCategory === "All" ? "active" : ""} onClick={() => setActiveCategory("All")}>All</button>
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  className={activeCategory === category ? "active" : ""}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category}
+                </button>
+              ))}
             </div>
             <div className="module-list">
               {filteredModules.map((mod) => (
@@ -1220,18 +1341,9 @@ function App() {
 
           <div className="dashboard-stack">
             {activeModule && <ModuleDashboard module={activeModule} routes={routes} devices={deviceRegistry?.devices || []} />}
-            <IntentWorkbench
-              intent={intent}
-              onIntentChange={setIntent}
-              onRun={runIntent}
-              loading={intentLoading}
-              proposal={proposal}
-              decision={intentDecision}
-              decisionLoading={decisionLoading}
-              onDecision={decideIntent}
-            />
           </div>
         </section>
+        )}
       </main>
     </div>
   );

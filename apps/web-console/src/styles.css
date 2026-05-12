@@ -1,23 +1,24 @@
 :root {
   color-scheme: light;
-  --paper: #f4f0e8;
-  --paper-2: #ebe4d8;
-  --ink: #1c1b19;
-  --muted: #6b665e;
-  --line: #cec5b7;
-  --coal: #252321;
-  --coal-2: #34302c;
-  --green: #1f7a5c;
-  --green-soft: #d9eadf;
-  --amber: #b67a1d;
-  --amber-soft: #f2dfb8;
-  --red: #b23b35;
-  --red-soft: #efd1cd;
-  --blue: #2d6f8f;
-  --blue-soft: #d8eaf0;
-  --plum: #6f4c7b;
-  --shadow: 0 18px 50px rgba(42, 35, 26, 0.16);
-  font-family: "Bahnschrift", "Aptos", "Segoe UI", sans-serif;
+  --paper: #f7fbff;
+  --paper-2: #edf4ff;
+  --ink: #0c1222;
+  --muted: #667085;
+  --line: #dbe7ff;
+  --coal: #05070c;
+  --coal-2: #0b1020;
+  --green: #12b76a;
+  --green-soft: #e9fbf2;
+  --amber: #f79009;
+  --amber-soft: #fff5e6;
+  --red: #f04438;
+  --red-soft: #fff0ee;
+  --blue: #005dff;
+  --blue-soft: #edf4ff;
+  --plum: #2f6bff;
+  --cyan: #00e5ff;
+  --shadow: 0 24px 70px rgba(15, 40, 90, 0.16);
+  font-family: "Aptos Display", "Segoe UI Variable", "Aptos", "Segoe UI", sans-serif;
   font-size: 16px;
 }
 
@@ -30,10 +31,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    linear-gradient(90deg, rgba(28, 27, 25, 0.05) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(28, 27, 25, 0.04) 1px, transparent 1px),
-    var(--paper);
-  background-size: 32px 32px;
+    radial-gradient(circle at 12% 5%, rgba(0, 93, 255, 0.18), transparent 24rem),
+    linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%);
   color: var(--ink);
 }
 
@@ -49,7 +48,7 @@ button {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 292px minmax(0, 1fr);
+  grid-template-columns: 272px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -61,8 +60,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  background: var(--coal);
-  color: #f7efe3;
+  background: linear-gradient(180deg, var(--coal), var(--coal-2));
+  color: #fbfdff;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -78,10 +77,10 @@ button {
   height: 42px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  color: #f7efe3;
-  background: var(--green);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  box-shadow: 0 0 28px rgba(0, 163, 255, 0.55);
 }
 
 .brand-lockup strong,
@@ -94,7 +93,7 @@ button {
 }
 
 .brand-lockup span {
-  color: #c9bca8;
+  color: #9fb3d9;
   font-size: 12px;
 }
 
@@ -107,7 +106,7 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.07);
-  color: #dacdb9;
+  color: #dbe7ff;
 }
 
 .search-box input {
@@ -116,11 +115,32 @@ button {
   border: 0;
   outline: 0;
   background: transparent;
-  color: #fff8ec;
+  color: #fff;
 }
 
 .search-box input::placeholder {
-  color: #a99d8d;
+  color: #92a6cf;
+}
+
+.search-box.compact {
+  height: 36px;
+  padding: 0 10px;
+}
+
+.module-filter {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.module-filter > span {
+  color: #9fb3d9;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .category-nav {
@@ -140,14 +160,14 @@ button {
   padding: 8px 10px;
   border-radius: 8px;
   background: transparent;
-  color: #ded2c0;
+  color: #dbe7ff;
   text-align: left;
   cursor: pointer;
 }
 
 .category-nav button:hover,
 .category-nav button.active {
-  background: #f7efe3;
+  background: #ffffff;
   color: var(--coal);
 }
 
@@ -175,7 +195,7 @@ button {
 }
 
 .rail-footer span {
-  color: #b9ad9f;
+  color: #9fb3d9;
   font-size: 11px;
 }
 
@@ -185,16 +205,23 @@ button {
 
 .workspace {
   min-width: 0;
-  padding: 22px;
+  padding: 0 24px 28px;
 }
 
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
   min-height: 74px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin-bottom: 18px;
+  margin: 0 -24px 18px;
+  padding: 18px 24px;
+  background: rgba(248, 251, 255, 0.88);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(219, 231, 255, 0.88);
 }
 
 .eyebrow {
@@ -216,6 +243,41 @@ h1 {
   margin-bottom: 0;
   font-size: clamp(28px, 4vw, 42px);
   line-height: 1;
+}
+
+.topbar span {
+  display: block;
+  max-width: 920px;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.module-category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0 0 12px;
+}
+
+.module-category-pills button {
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.module-category-pills button.active {
+  border-color: var(--coal);
+  background: var(--coal);
+  color: #fff;
 }
 
 h2 {

@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EdgeCommand Modern UI Mockup</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --black: #05070c;
+      --black-2: #0b1020;
+      --white: #fbfdff;
+      --panel: #ffffff;
+      --panel-2: #f4f8ff;
+      --ink: #0c1222;
+      --muted: #667085;
+      --line: #dbe7ff;
+      --blue: #005dff;
+      --blue-2: #00a3ff;
+      --cyan: #00e5ff;
+      --green: #12b76a;
+      --amber: #f79009;
+      --red: #f04438;
+      --shadow: 0 24px 70px rgba(15, 40, 90, 0.16);
+      font-family: "Aptos Display", "Segoe UI Variable", "Segoe UI", sans-serif;
+      font-size: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 12% 5%, rgba(0, 93, 255, 0.18), transparent 24rem),
+        linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%);
+      color: var(--ink);
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+    }
+
+    .rail {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 18px;
+      padding: 18px;
+      background: linear-gradient(180deg, var(--black), var(--black-2));
+      color: var(--white);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      color: white;
+      font-weight: 900;
+      box-shadow: 0 0 28px rgba(0, 163, 255, 0.55);
+    }
+
+    .brand strong, .brand span {
+      display: block;
+      overflow-wrap: anywhere;
+    }
+
+    .brand strong { font-size: 15px; line-height: 1.1; }
+    .brand span { color: #9fb3d9; font-size: 12px; }
+
+    .intent-box {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .intent-box label {
+      color: #9fb3d9;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .intent-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .intent-row input {
+      min-width: 0;
+      height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.22);
+      color: white;
+      padding: 0 10px;
+      outline: 0;
+    }
+
+    .icon-btn, .primary-btn, .ghost-btn {
+      min-height: 38px;
+      border: 0;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 12px;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      width: 38px;
+      padding: 0;
+      background: var(--blue);
+      color: white;
+    }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+      align-content: start;
+      overflow-y: auto;
+    }
+
+    .nav button {
+      min-width: 0;
+      min-height: 44px;
+      border: 0;
+      border-radius: 12px;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: #dbe7ff;
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .nav button:hover, .nav button.active {
+      background: #ffffff;
+      color: var(--black);
+    }
+
+    .nav span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .nav em {
+      font-style: normal;
+      font-size: 11px;
+      opacity: 0.68;
+    }
+
+    .rail-status {
+      display: grid;
+      gap: 7px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .rail-status span { color: #9fb3d9; font-size: 11px; }
+    .rail-status strong { font-size: 13px; }
+
+    main {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 24px;
+      background: rgba(248, 251, 255, 0.86);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(219, 231, 255, 0.8);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .topbar p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--blue), var(--blue-2));
+      color: white;
+      box-shadow: 0 14px 30px rgba(0, 93, 255, 0.24);
+    }
+
+    .ghost-btn {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+    }
+
+    .page {
+      display: none;
+      padding: 22px 24px 28px;
+      min-width: 0;
+    }
+
+    .page.active { display: block; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 18px; min-width: 0; }
+
+    .hero-band {
+      min-height: 196px;
+      border-radius: 18px;
+      overflow: hidden;
+      color: white;
+      background:
+        linear-gradient(135deg, rgba(0, 93, 255, 0.96), rgba(0, 229, 255, 0.7)),
+        var(--blue);
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 20px;
+      padding: 22px;
+    }
+
+    .hero-band h2 {
+      margin: 0 0 10px;
+      font-size: clamp(26px, 4vw, 46px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .hero-band p {
+      max-width: 780px;
+      margin: 0;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .route-card {
+      align-self: stretch;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 14px;
+      background: rgba(5, 7, 12, 0.18);
+      padding: 14px;
+      display: grid;
+      align-content: space-between;
+      gap: 14px;
+    }
+
+    .route-card strong, .route-card span { display: block; }
+    .route-card span { color: rgba(255, 255, 255, 0.78); font-size: 12px; }
+
+    .grid-4, .grid-3, .grid-2 {
+      display: grid;
+      gap: 12px;
+    }
+
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .metric, .panel, .side-panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 14px 38px rgba(15, 40, 90, 0.08);
+    }
+
+    .metric {
+      min-height: 108px;
+      padding: 14px;
+      display: grid;
+      align-content: space-between;
+      gap: 8px;
+    }
+
+    .metric span, .panel span, .table-card span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--ink);
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .metric.good strong { color: var(--green); }
+    .metric.warn strong { color: var(--amber); }
+    .metric.danger strong { color: var(--red); }
+
+    .panel { padding: 16px; }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .panel h3 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.15;
+    }
+
+    .pill {
+      max-width: 100%;
+      min-height: 26px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: #edf4ff;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .pill.good { background: #e9fbf2; color: var(--green); }
+    .pill.warn { background: #fff5e6; color: #a15c00; }
+    .pill.danger { background: #fff0ee; color: var(--red); }
+
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .module-tile {
+      min-width: 0;
+      min-height: 130px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, white, #f7faff);
+      padding: 13px;
+      display: grid;
+      align-content: space-between;
+      gap: 10px;
+    }
+
+    .module-tile strong, .module-tile span {
+      display: block;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .module-tile strong { font-size: 14px; }
+    .module-tile span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .table-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th, td {
+      min-width: 0;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+
+    th {
+      color: var(--muted);
+      background: #f5f9ff;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .side-panel {
+      position: sticky;
+      top: 92px;
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+    }
+
+    .event-log {
+      display: grid;
+      gap: 10px;
+      max-height: 560px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+    }
+
+    .event-icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--black);
+      color: var(--cyan);
+      font-size: 16px;
+    }
+
+    .event strong, .event span {
+      display: block;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .event strong { font-size: 13px; }
+    .event span { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+    .workspace-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .workspace-tabs button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+      color: var(--ink);
+      padding: 0 12px;
+    }
+
+    .workspace-tabs button.active {
+      background: var(--black);
+      color: white;
+      border-color: var(--black);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .flow-step {
+      min-height: 118px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+      display: grid;
+      align-content: space-between;
+      gap: 10px;
+    }
+
+    .flow-step strong, .flow-step span { display: block; overflow-wrap: anywhere; }
+    .flow-step span { color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+    @media (max-width: 1180px) {
+      .shell { grid-template-columns: 84px minmax(0, 1fr); }
+      .brand div, .intent-box, .nav span, .nav em, .rail-status { display: none; }
+      .nav button { grid-template-columns: 1fr; justify-items: center; }
+      .layout { grid-template-columns: 1fr; }
+      .side-panel { position: static; }
+      .grid-4, .module-grid, .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero-band { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .shell { grid-template-columns: 1fr; }
+      .rail {
+        position: static;
+        height: auto;
+        grid-template-rows: auto;
+      }
+      .brand div, .intent-box, .nav span, .nav em, .rail-status { display: block; }
+      .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .nav button { grid-template-columns: 24px 1fr auto; justify-items: stretch; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .actions { justify-content: flex-start; }
+      .grid-4, .grid-3, .grid-2, .module-grid, .flow { grid-template-columns: 1fr; }
+      .page { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <div class="brand">
+        <div class="mark">EC</div>
+        <div>
+          <strong>EdgeCommand</strong>
+          <span>Control Fabric</span>
+        </div>
+      </div>
+
+      <div class="intent-box">
+        <label for="intent">Human intent</label>
+        <div class="intent-row">
+          <input id="intent" value="Make the home safe for overnight" />
+          <button class="icon-btn" title="Preview intent">↗</button>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Primary">
+        <button class="active" data-page="overview"><span>⌂</span><span>Overview</span><em>live</em></button>
+        <button data-page="home"><span>◇</span><span>Home Ops</span><em>6</em></button>
+        <button data-page="connectivity"><span>⌁</span><span>Connectivity</span><em>5</em></button>
+        <button data-page="agents"><span>✦</span><span>Agents</span><em>AI</em></button>
+        <button data-page="approvals"><span>✓</span><span>Approvals</span><em>4</em></button>
+        <button data-page="events"><span>≡</span><span>Events</span><em>audit</em></button>
+        <button data-page="builder"><span>▣</span><span>Build Centre</span><em>mods</em></button>
+      </nav>
+
+      <div class="rail-status">
+        <span>Tenant</span>
+        <strong>vendorlogic.io</strong>
+        <span>Auth</span>
+        <strong>Entra / Key Vault ready</strong>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">Overview</h1>
+          <p id="pageSubtitle">A quieter command surface with pages for work, not one endless scroll.</p>
+        </div>
+        <div class="actions">
+          <button class="ghost-btn">View Logs</button>
+          <button class="ghost-btn">Open Simulator</button>
+          <button class="primary-btn">New Automation</button>
+        </div>
+      </header>
+
+      <section class="page active" id="overview">
+        <div class="layout">
+          <div class="stack">
+            <div class="hero-band">
+              <div>
+                <h2>Operations at a glance. Details only when called.</h2>
+                <p>Modules become pages. Logs stop competing with controls. Human intent stays available everywhere, while high-risk actions remain preview-first and approval-gated.</p>
+              </div>
+              <div class="route-card">
+                <div>
+                  <strong>Narrowband Route</strong>
+                  <span>LoRaWAN command path ready for P0/P1 semantic messages.</span>
+                </div>
+                <button class="primary-btn">Open Route Map</button>
+              </div>
+            </div>
+
+            <div class="grid-4">
+              <div class="metric good"><span>Online Devices</span><strong>31</strong><span>across 2 sites</span></div>
+              <div class="metric danger"><span>Approvals</span><strong>4</strong><span>human decisions</span></div>
+              <div class="metric good"><span>Adapters</span><strong>5</strong><span>MQTT, Matter, Zigbee, Z-Wave</span></div>
+              <div class="metric warn"><span>Routes</span><strong>2</strong><span>degraded or standby</span></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>Priority Workspaces</h3>
+                  <span>One click into focused pages.</span>
+                </div>
+                <span class="pill">human friendly</span>
+              </div>
+              <div class="module-grid">
+                <div class="module-tile"><span class="pill good">ready</span><strong>Home Operations</strong><span>Lighting, climate, water, energy, sensing, and security.</span></div>
+                <div class="module-tile"><span class="pill">live</span><strong>Connectivity Fabric</strong><span>MQTT, Matter, Zigbee, Z-Wave, narrowband routes.</span></div>
+                <div class="module-tile"><span class="pill warn">review</span><strong>Approval Queue</strong><span>High-risk actions separated from everyday telemetry.</span></div>
+                <div class="module-tile"><span class="pill">AI</span><strong>Agents And Intent</strong><span>AIP proposals, KRA critique, MCP sessions, evidence.</span></div>
+                <div class="module-tile"><span class="pill">build</span><strong>Module Build Centre</strong><span>Marketplace, manifests, certification, IaC fragments.</span></div>
+                <div class="module-tile"><span class="pill good">audit</span><strong>Events And Logs</strong><span>Telemetry, audit, command traces, and runtime messages.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="side-panel">
+            <div class="panel-head">
+              <div>
+                <h3>Activity Stream</h3>
+                <span>Dedicated event surface.</span>
+              </div>
+              <span class="pill good">live</span>
+            </div>
+            <div class="event-log">
+              <div class="event"><div class="event-icon">✓</div><div><strong>Z-Wave status preview</strong><span>Front Door Lock queried through supervised S2 frame.</span></div></div>
+              <div class="event"><div class="event-icon">!</div><div><strong>Approval required</strong><span>Remote unlock proposal held for human decision.</span></div></div>
+              <div class="event"><div class="event-icon">⌁</div><div><strong>LoRaWAN path ready</strong><span>P0 water valve command encoded below payload limit.</span></div></div>
+              <div class="event"><div class="event-icon">◇</div><div><strong>Zigbee mesh watch</strong><span>Hall occupancy route is healthy but under watch threshold.</span></div></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="page" id="home">
+        <div class="stack">
+          <div class="workspace-tabs">
+            <button class="active">Lighting</button><button>Climate</button><button>Security</button><button>Water</button><button>Energy</button><button>Sensing</button>
+          </div>
+          <div class="grid-3">
+            <div class="metric good"><span>Scenes</span><strong>8</strong><span>enabled</span></div>
+            <div class="metric warn"><span>Security</span><strong>2</strong><span>guarded profiles</span></div>
+            <div class="metric good"><span>Water</span><strong>3</strong><span>safe profiles</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Home Operations Table</h3><span class="pill">dense but calm</span></div>
+            <div class="table-card">
+              <table>
+                <thead><tr><th>Area</th><th>Status</th><th>Last Action</th><th>Next Step</th></tr></thead>
+                <tbody>
+                  <tr><td>Kitchen Lighting</td><td><span class="pill good">ready</span></td><td>Scene previewed</td><td>Open lighting page</td></tr>
+                  <tr><td>Main Water Valve</td><td><span class="pill danger">approval</span></td><td>Leak drill simulated</td><td>Review evidence</td></tr>
+                  <tr><td>Home Battery</td><td><span class="pill warn">governed</span></td><td>Reserve protected</td><td>Open energy plan</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="connectivity">
+        <div class="stack">
+          <div class="grid-4">
+            <div class="metric good"><span>MQTT</span><strong>3</strong><span>mapped devices</span></div>
+            <div class="metric good"><span>Matter</span><strong>5</strong><span>fabric bindings</span></div>
+            <div class="metric good"><span>Zigbee</span><strong>5</strong><span>mesh bindings</span></div>
+            <div class="metric danger"><span>Z-Wave</span><strong>1</strong><span>S2 secure lock</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Adapter Pages</h3><span class="pill">open when needed</span></div>
+            <div class="module-grid">
+              <div class="module-tile"><span class="pill good">ready</span><strong>MQTT / ESPHome</strong><span>Topic maps, discovery, publish previews.</span></div>
+              <div class="module-tile"><span class="pill good">ready</span><strong>Matter / Thread</strong><span>Fabric, commissioning, border routers.</span></div>
+              <div class="module-tile"><span class="pill good">ready</span><strong>Zigbee</strong><span>Coordinator, mesh routes, battery devices.</span></div>
+              <div class="module-tile"><span class="pill danger">secure</span><strong>Z-Wave</strong><span>S2 locks, inclusion, supervised commands.</span></div>
+              <div class="module-tile"><span class="pill warn">next</span><strong>BLE / RF / IR</strong><span>Legacy and bridge adapters.</span></div>
+              <div class="module-tile"><span class="pill">cloud</span><strong>Vendor APIs</strong><span>OAuth, webhooks, cloud devices.</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="agents">
+        <div class="stack">
+          <div class="flow">
+            <div class="flow-step"><span class="pill">intent</span><strong>Human asks</strong><span>“Secure the house overnight.”</span></div>
+            <div class="flow-step"><span class="pill">AIP</span><strong>Plan proposal</strong><span>Creates preview-only actions and evidence.</span></div>
+            <div class="flow-step"><span class="pill warn">KRA</span><strong>Risk critique</strong><span>Blocks direct execution claims.</span></div>
+            <div class="flow-step"><span class="pill good">MCP</span><strong>Tool session</strong><span>Runs approved previews only.</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Agent Transcript</h3><span class="pill">dedicated messages</span></div>
+            <div class="event-log">
+              <div class="event"><div class="event-icon">AI</div><div><strong>AIP proposal</strong><span>Lock front door, arm hall panel, lower thermostats, close garden lighting.</span></div></div>
+              <div class="event"><div class="event-icon">KR</div><div><strong>KRA critique</strong><span>Unlock commands require approval. Lock status query remains allowed.</span></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="approvals">
+        <div class="panel">
+          <div class="panel-head"><h3>Approval Queue</h3><span class="pill danger">human gate</span></div>
+          <div class="table-card">
+            <table>
+              <thead><tr><th>Request</th><th>Risk</th><th>Evidence</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr><td>Unlock Front Door Lock</td><td><span class="pill danger">P1</span></td><td>S2, supervision, actor, audit</td><td><button class="ghost-btn">Review</button></td></tr>
+                <tr><td>Close Main Water Valve</td><td><span class="pill danger">P0</span></td><td>Simulation attached</td><td><button class="ghost-btn">Review</button></td></tr>
+                <tr><td>Permit Z-Wave Inclusion</td><td><span class="pill warn">P2</span></td><td>DSK checklist pending</td><td><button class="ghost-btn">Review</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="events">
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><h3>Audit Events</h3><span class="pill">immutable</span></div>
+            <div class="event-log">
+              <div class="event"><div class="event-icon">A</div><div><strong>Approval decision</strong><span>Operator approved Z-Wave secure lock command preview.</span></div></div>
+              <div class="event"><div class="event-icon">C</div><div><strong>Command preview</strong><span>Matter kitchen dim command produced no fabric mutation.</span></div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Runtime Messages</h3><span class="pill good">healthy</span></div>
+            <div class="event-log">
+              <div class="event"><div class="event-icon">API</div><div><strong>API gateway</strong><span>Healthy on Docker Desktop, Entra-ready auth in development mode.</span></div></div>
+              <div class="event"><div class="event-icon">KV</div><div><strong>Secrets</strong><span>Shared Key Vault mapping prepared for Entra, LLM, vendor APIs.</span></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="builder">
+        <div class="stack">
+          <div class="flow">
+            <div class="flow-step"><span class="pill">request</span><strong>Feature request</strong><span>User asks for a module or adapter.</span></div>
+            <div class="flow-step"><span class="pill">build</span><strong>IaC fragments</strong><span>Docker, Azure Container Apps, tests.</span></div>
+            <div class="flow-step"><span class="pill warn">certify</span><strong>Harness checks</strong><span>Evidence and approval requirements.</span></div>
+            <div class="flow-step"><span class="pill good">enable</span><strong>Manifest flag</strong><span>Feature appears in the right page.</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const titles = {
+      overview: ["Overview", "A quieter command surface with pages for work, not one endless scroll."],
+      home: ["Home Operations", "Daily automation areas grouped by task, not by implementation detail."],
+      connectivity: ["Connectivity Fabric", "Adapters become focused pages with their own controls and logs."],
+      agents: ["Agents And Intent", "AIP, KRA, and MCP workflows separated from device controls."],
+      approvals: ["Approvals", "Human decisions and high-risk evidence in one deliberate queue."],
+      events: ["Events And Logs", "Audit, runtime messages, telemetry, and command traces live here."],
+      builder: ["Build Centre", "Marketplace, certification, IaC, and feature enablement in one flow."]
+    };
+
+    document.querySelectorAll(".nav button").forEach((button) => {
+      button.addEventListener("click", () => {
+        const page = button.dataset.page;
+        document.querySelectorAll(".nav button").forEach((item) => item.classList.toggle("active", item === button));
+        document.querySelectorAll(".page").forEach((section) => section.classList.toggle("active", section.id === page));
+        document.getElementById("pageTitle").textContent = titles[page][0];
+        document.getElementById("pageSubtitle").textContent = titles[page][1];
+      });
+    });
+  </script>
+</body>
+</html>

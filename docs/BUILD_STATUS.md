@@ -621,6 +621,28 @@ Verification:
 
 ## Next
 
+### E26B - Enterprise Operational Dashboard
+
+Status: complete and pushed to `origin/main`.
+
+Delivered:
+
+- Overview is now a dedicated enterprise operational dashboard instead of a dense metric wall.
+- Dashboard shows command fabric posture, Entra and Key Vault status, managed sites, connected assets, approvals, critical events, narrowband route readiness, and buildable module posture.
+- Enterprise readiness cards route operators into the correct dedicated pages: Site Ops, Connectivity, Agents, Approvals, Events, and Build Centre.
+- Priority actions, estate health, narrowband route posture, and recent event evidence are separated into clean operational sections.
+- Shared UI palette was aligned further around black navigation, electric blue/cyan accents, white work surfaces, and higher contrast enterprise dashboard cards.
+
+Verification:
+
+- `npm run typecheck -w apps/web-console`
+- `npm run test -w services/api-gateway`
+- `npm run build`
+- `docker compose up --build -d`
+- Browser verification at `http://127.0.0.1:5174` confirmed the live dashboard content renders with no console errors.
+
+## Next
+
 ### E26 - BLE, RF, IR, And Wired Protocol Adapters
 
 Status: next planned build slice.

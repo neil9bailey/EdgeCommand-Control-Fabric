@@ -39,6 +39,7 @@ Current status:
 - E24 Zigbee Adapter foundation is complete.
 - E25 Z-Wave Adapter foundation is complete.
 - E26A UI Information Architecture and Modern Shell is live.
+- E26B Enterprise Operational Dashboard is live for Overview readiness, estate health, actions, routes, events, and approval posture.
 - The DIIaC reference folder remains read-only and unmodified.
 
 Core direction:

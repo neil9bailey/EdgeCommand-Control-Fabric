@@ -1076,46 +1076,17 @@ function App() {
         </header>
 
         {activePage === "overview" && (
-          <>
-        <section className="command-band" aria-label="Platform command centre">
-          <Metric label="Modules" value={overview?.moduleCount || modules.length || "-"} detail="manifest surfaces" />
-          <Metric label="Devices" value={deviceRegistry?.summary.deviceCount || overview?.devices?.deviceCount || "-"} detail="registry seed" tone="good" />
-          <Metric label="Events" value={eventLedger?.summary.eventCount || overview?.events?.eventCount || "-"} detail="ledger records" tone="good" />
-          <Metric label="Audit" value={eventLedger?.summary.auditRequired || overview?.events?.auditRequired || "-"} detail="durable gates" tone="warn" />
-          <Metric label="Rules" value={automations?.summary.armedRules || overview?.automation?.armedRules || "-"} detail="armed automations" tone="good" />
-          <Metric label="Policy" value={automations?.summary.policyCount || overview?.automation?.policyCount || "-"} detail="safety packs" tone="danger" />
-          <Metric label="Lighting" value={lighting?.summary.enabledSceneCount || commandCentre?.lighting.summary.enabledSceneCount || "-"} detail="enabled scenes" tone="good" />
-          <Metric label="Climate" value={climate?.summary.enabledProfileCount || commandCentre?.climate.summary.enabledProfileCount || "-"} detail="comfort profiles" tone="warn" />
-          <Metric label="Security" value={security?.summary.enabledProfileCount || commandCentre?.security.summary.enabledProfileCount || "-"} detail="guarded profiles" tone="danger" />
-          <Metric label="Water" value={water?.summary.enabledProfileCount || commandCentre?.water.summary.enabledProfileCount || "-"} detail="P0 profiles" tone="danger" />
-          <Metric label="Energy" value={energy?.summary.totalSolarWatts || commandCentre?.energy.summary.totalSolarWatts || "-"} detail="solar watts" tone="good" />
-          <Metric label="Sensing" value={sensing?.summary.occupiedZoneCount ?? commandCentre?.sensing.summary.occupiedZoneCount ?? "-"} detail="occupied zones" tone="good" />
-          <Metric label="Flags" value={moduleManifest?.summary.enabled ?? commandCentre?.moduleManifest?.summary.enabled ?? "-"} detail="enabled modules" tone="good" />
-          <Metric label="Builds" value={moduleBuilder?.summary.readyToQueue ?? commandCentre?.moduleBuilder?.summary.readyToQueue ?? "-"} detail="queue-ready" tone="warn" />
-          <Metric label="Market" value={moduleMarketplace?.summary.available ?? commandCentre?.moduleMarketplace?.summary.available ?? "-"} detail="available" tone="good" />
-          <Metric label="Certs" value={moduleCertification?.summary.passed ?? commandCentre?.moduleCertification?.summary.passed ?? "-"} detail="passed gates" tone="good" />
-          <Metric label="MQTT" value={mqttEsphome?.summary.mappedDeviceCount ?? commandCentre?.mqttEsphome?.summary.mappedDeviceCount ?? "-"} detail="mapped devices" tone="good" />
-          <Metric label="Matter" value={matterThread?.summary.bindingCount ?? commandCentre?.matterThread?.summary.bindingCount ?? "-"} detail="fabric bindings" tone="good" />
-          <Metric label="Zigbee" value={zigbee?.summary.bindingCount ?? commandCentre?.zigbee?.summary.bindingCount ?? "-"} detail="mesh bindings" tone="good" />
-          <Metric label="Z-Wave" value={zwave?.summary.secureNodeCount ?? commandCentre?.zwave?.summary.secureNodeCount ?? "-"} detail="secure nodes" tone="danger" />
-          <Metric label="Sims" value={simulationLab?.summary.scenarioCount || commandCentre?.simulations.summary.scenarioCount || "-"} detail="failure labs" tone="good" />
-          <Metric label="KRA" value={kra?.summary.enabledRulePacks || commandCentre?.risk.summary.enabledRulePacks || "-"} detail="critique packs" tone="warn" />
-          <Metric label="Narrowband" value={overview?.narrowband || "-"} detail="semantic SD-WAN" tone="warn" />
-          <Metric label="Approvals" value={approvals?.summary.pending || eventLedger?.summary.pendingApprovals || overview?.commandCentre.pendingApprovals || 4} detail="pending gates" tone="warn" />
-          <Metric
-            label="Identity"
-            value={authStatus?.entraEnabled ? "Entra" : "Dev"}
-            detail={authStatus?.secretProvider?.keyVaultEnabled ? "Key Vault backed" : "local env"}
+          <OperationalDashboard
+            overview={overview}
+            commandCentre={commandCentre}
+            deviceRegistry={deviceRegistry}
+            eventLedger={eventLedger}
+            approvals={approvals}
+            modules={modules}
+            routes={routes}
+            authStatus={authStatus}
+            onNavigate={setActivePage}
           />
-        </section>
-
-        <CommandCentreDeck
-          commandCentre={commandCentre}
-          activeWorkspace={activeWorkspace}
-          onWorkspaceChange={setActiveWorkspace}
-          modules={modules}
-        />
-          </>
         )}
 
         {activePage === "events" && <EventAuditStrip eventLedger={eventLedger} fallbackSummary={overview?.events || null} />}
@@ -1346,6 +1317,272 @@ function App() {
         )}
       </main>
     </div>
+  );
+}
+
+function OperationalDashboard({
+  overview,
+  commandCentre,
+  deviceRegistry,
+  eventLedger,
+  approvals,
+  modules,
+  routes,
+  authStatus,
+  onNavigate,
+}: {
+  overview: PlatformOverview | null;
+  commandCentre: CommandCentreResponse | null;
+  deviceRegistry: DeviceRegistryResponse | null;
+  eventLedger: EventLedgerResponse | null;
+  approvals: ApprovalQueueResponse | null;
+  modules: ModuleDefinition[];
+  routes: NarrowbandRoutes | null;
+  authStatus: AuthStatus | null;
+  onNavigate: (page: AppPage) => void;
+}) {
+  const deviceSummary = deviceRegistry?.summary || overview?.devices || null;
+  const eventSummary = eventLedger?.summary || commandCentre?.audit.summary || overview?.events || null;
+  const approvalSummary = approvals?.summary || commandCentre?.approvals.summary || null;
+  const routeList = commandCentre?.connectivity.routes || routes?.routes || [];
+  const linkList = commandCentre?.connectivity.links || overview?.links || [];
+  const devices = deviceRegistry?.devices || commandCentre?.devices || [];
+  const events = eventLedger?.events || commandCentre?.audit.events || [];
+  const actionQueue = commandCentre?.actionQueue || [];
+  const onlineDevices = deviceSummary?.byStatus?.online || 0;
+  const degradedDevices = commandCentre?.posture.degradedDevices ?? deviceSummary?.byStatus?.degraded ?? 0;
+  const pendingApprovals = commandCentre?.posture.unresolvedApprovals ?? approvalSummary?.pending ?? eventSummary?.pendingApprovals ?? 0;
+  const criticalEvents = commandCentre?.posture.criticalEvents ?? eventSummary?.criticalCount ?? 0;
+  const keyVaultEnabled = Boolean(authStatus?.secretProvider?.keyVaultEnabled || commandCentre?.identity.keyVaultEnabled);
+  const entraEnabled = Boolean(authStatus?.entraEnabled || commandCentre?.identity.entraEnabled);
+  const readyModules = (overview?.byState?.enabled || 0) + (overview?.byState?.hero || 0) + (overview?.byState?.foundation || 0);
+  const buildableModules = commandCentre?.modules.builder?.summary.readyToQueue || commandCentre?.moduleBuilder?.summary.readyToQueue || 0;
+
+  const siteRows = Object.entries(deviceSummary?.bySite || {}).map(([siteId, count]) => {
+    const siteDevices = devices.filter((device) => device.siteId === siteId);
+    const online = siteDevices.filter((device) => device.status === "online").length;
+    const degraded = siteDevices.filter((device) => device.status === "degraded").length;
+    const highRisk = siteDevices.filter((device) => device.trustTier === "critical" || device.narrowbandEligible).length;
+    return { siteId, count, online, degraded, highRisk };
+  });
+
+  const readiness = [
+    {
+      label: "Identity and Secrets",
+      value: entraEnabled && keyVaultEnabled ? "Enterprise enforced" : entraEnabled ? "Entra enabled" : "Development mode",
+      tone: entraEnabled && keyVaultEnabled ? "good" : "warn",
+      detail: keyVaultEnabled ? "Azure Key Vault-backed runtime secrets" : "Move runtime secrets into Key Vault before production.",
+      page: "agents" as AppPage,
+    },
+    {
+      label: "Device Registry",
+      value: `${onlineDevices}/${deviceSummary?.deviceCount || 0} online`,
+      tone: degradedDevices ? "warn" : "good",
+      detail: degradedDevices ? `${degradedDevices} degraded assets require attention.` : "Asset inventory is reporting cleanly.",
+      page: "operations" as AppPage,
+    },
+    {
+      label: "Governed Automation",
+      value: commandCentre?.posture.safetyPosture?.replace(/_/g, " ") || overview?.commandCentre.safetyPosture || "approval required",
+      tone: pendingApprovals ? "warn" : "good",
+      detail: pendingApprovals ? "Human approval queues are active for higher risk commands." : "No unresolved approval gates detected.",
+      page: "approvals" as AppPage,
+    },
+    {
+      label: "Connectivity Fabric",
+      value: `${linkList.length} links / ${routeList.length} routes`,
+      tone: commandCentre?.posture.constrainedRoutes ? "warn" : "good",
+      detail: "IP, mesh, and narrowband routes are modelled as selectable command paths.",
+      page: "connectivity" as AppPage,
+    },
+    {
+      label: "Observability and Audit",
+      value: `${eventSummary?.eventCount || 0} events`,
+      tone: criticalEvents ? "danger" : "good",
+      detail: `${eventSummary?.auditRequired || 0} events require durable audit evidence.`,
+      page: "events" as AppPage,
+    },
+    {
+      label: "Build Readiness",
+      value: `${buildableModules} queue-ready`,
+      tone: buildableModules ? "good" : "warn",
+      detail: `${readyModules || modules.length} platform modules are enabled, foundation, or hero-grade.`,
+      page: "builder" as AppPage,
+    },
+  ];
+
+  return (
+    <section className="operational-dashboard" aria-label="Enterprise operational dashboard">
+      <div className="ops-hero">
+        <div className="ops-hero-copy">
+          <p className="eyebrow">Operational command fabric</p>
+          <h2>Enterprise operations view</h2>
+          <p>
+            Live readiness for residential, commercial, industrial, and critical infrastructure deployments, with governed
+            automation, auditable human approval, and selectable IP or narrowband command paths.
+          </p>
+          <div className="ops-status-row">
+            <StatusPill tone={commandCentre?.posture.api === "online" || overview ? "good" : "danger"} label={commandCentre?.posture.api || "API online"} />
+            <StatusPill tone={entraEnabled ? "good" : "warn"} label={entraEnabled ? "Entra ID enforced" : "development identity"} />
+            <StatusPill tone={keyVaultEnabled ? "good" : "muted"} label={keyVaultEnabled ? "Key Vault secrets" : "local secrets"} />
+            <StatusPill tone={criticalEvents ? "danger" : pendingApprovals ? "warn" : "good"} label={criticalEvents ? "critical events" : pendingApprovals ? "approval queue" : "stable posture"} />
+          </div>
+        </div>
+        <div className="ops-hero-panel" aria-label="Current platform posture">
+          <span>Fabric posture</span>
+          <strong>{commandCentre?.posture.readiness || overview?.commandCentre.readiness || "operational"}</strong>
+          <small>{overview?.product.tenant || commandCentre?.product.tenant || "vendorlogic.io"} / Docker Desktop now, Azure-ready next</small>
+        </div>
+      </div>
+
+      <div className="ops-kpi-grid">
+        <OpsKpi icon={Server} label="Managed Sites" value={deviceSummary?.siteCount || siteRows.length || "-"} detail={`${deviceSummary?.zoneCount || 0} zones modelled`} tone="blue" />
+        <OpsKpi icon={Cpu} label="Connected Assets" value={deviceSummary?.deviceCount || "-"} detail={`${onlineDevices} online, ${degradedDevices} degraded`} tone={degradedDevices ? "amber" : "green"} />
+        <OpsKpi icon={ClipboardCheck} label="Approvals" value={pendingApprovals} detail="human-governed command gates" tone={pendingApprovals ? "amber" : "green"} />
+        <OpsKpi icon={AlertTriangle} label="Critical Events" value={criticalEvents} detail={`${eventSummary?.auditRequired || 0} audit-required records`} tone={criticalEvents ? "red" : "green"} />
+        <OpsKpi icon={RadioTower} label="Narrowband SD-WAN" value={overview?.narrowband || deviceSummary?.narrowbandEligible || "-"} detail={`${routeList.length} constrained routes`} tone="cyan" />
+        <OpsKpi icon={Puzzle} label="Buildable Modules" value={buildableModules || modules.length} detail={`${modules.length} modular product surfaces`} tone="blue" />
+      </div>
+
+      <div className="ops-layout">
+        <article className="ops-card ops-readiness-card">
+          <div className="ops-card-head">
+            <div>
+              <p className="eyebrow">Enterprise readiness</p>
+              <h3>Production controls</h3>
+            </div>
+            <button className="link-button" type="button" onClick={() => onNavigate("builder")}>Open Build Centre</button>
+          </div>
+          <div className="ops-readiness-grid">
+            {readiness.map((item) => (
+              <button className="ops-readiness-item" type="button" key={item.label} onClick={() => onNavigate(item.page)}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.detail}</small>
+                <StatusPill tone={item.tone as "good" | "warn" | "danger" | "neutral" | "muted"} label="open detail" />
+              </button>
+            ))}
+          </div>
+        </article>
+
+        <article className="ops-card ops-priority-card">
+          <div className="ops-card-head">
+            <div>
+              <p className="eyebrow">Priority operations</p>
+              <h3>Action queue</h3>
+            </div>
+            <button className="link-button" type="button" onClick={() => onNavigate("approvals")}>Open Approvals</button>
+          </div>
+          <div className="ops-action-list">
+            {(actionQueue.length ? actionQueue : []).slice(0, 5).map((action) => (
+              <div className="ops-action-row" key={action.id}>
+                <div>
+                  <strong>{action.title}</strong>
+                  <span>{action.detail}</span>
+                </div>
+                <StatusPill tone={action.status.includes("blocked") ? "danger" : action.status.includes("pending") ? "warn" : "good"} label={action.priority} />
+              </div>
+            ))}
+            {!actionQueue.length && (
+              <div className="empty-panel">
+                <strong>No priority actions</strong>
+                <span>The current command queue is clear.</span>
+              </div>
+            )}
+          </div>
+        </article>
+      </div>
+
+      <div className="ops-layout three">
+        <article className="ops-card">
+          <div className="ops-card-head">
+            <div>
+              <p className="eyebrow">Site and asset health</p>
+              <h3>Estate view</h3>
+            </div>
+            <button className="link-button" type="button" onClick={() => onNavigate("operations")}>Open Site Ops</button>
+          </div>
+          <div className="ops-table">
+            {siteRows.slice(0, 5).map((site) => (
+              <div className="ops-table-row" key={site.siteId}>
+                <span>{site.siteId}</span>
+                <strong>{site.online}/{site.count}</strong>
+                <small>{site.degraded} degraded / {site.highRisk} high assurance</small>
+              </div>
+            ))}
+            {!siteRows.length && <div className="ops-table-row"><span>Registry loading</span><strong>-</strong><small>Awaiting device data</small></div>}
+          </div>
+        </article>
+
+        <article className="ops-card">
+          <div className="ops-card-head">
+            <div>
+              <p className="eyebrow">Connectivity</p>
+              <h3>Route posture</h3>
+            </div>
+            <button className="link-button" type="button" onClick={() => onNavigate("connectivity")}>Open Connectivity</button>
+          </div>
+          <div className="ops-route-list">
+            {routeList.slice(0, 4).map((route) => (
+              <div className="ops-route-row" key={route.id}>
+                <RadioTower size={16} />
+                <div>
+                  <strong>{route.command}</strong>
+                  <span>{route.selectedPath} / {route.encodedBytes} bytes / {route.ttlSeconds}s TTL</span>
+                </div>
+                <StatusPill tone={String(route.status).includes("blocked") ? "danger" : route.status === "ready" ? "good" : "warn"} label={route.status.replace(/_/g, " ")} />
+              </div>
+            ))}
+            {!routeList.length && <div className="empty-panel"><strong>No routes loaded</strong><span>Connectivity detail will appear when the route controller responds.</span></div>}
+          </div>
+        </article>
+
+        <article className="ops-card">
+          <div className="ops-card-head">
+            <div>
+              <p className="eyebrow">Events and evidence</p>
+              <h3>Recent signals</h3>
+            </div>
+            <button className="link-button" type="button" onClick={() => onNavigate("events")}>Open Events</button>
+          </div>
+          <div className="ops-event-list">
+            {events.slice(0, 4).map((event) => (
+              <div className="ops-event-row" key={event.id}>
+                <StatusPill tone={severityTone(event.severity)} label={event.severity} />
+                <div>
+                  <strong>{event.action}</strong>
+                  <span>{event.summary}</span>
+                </div>
+              </div>
+            ))}
+            {!events.length && <div className="empty-panel"><strong>No events loaded</strong><span>Audit and telemetry records will stream here.</span></div>}
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function OpsKpi({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string | number;
+  detail: string;
+  tone: "blue" | "cyan" | "green" | "amber" | "red";
+}) {
+  return (
+    <article className={`ops-kpi ${tone}`}>
+      <div className="ops-kpi-icon"><Icon size={20} /></div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </article>
   );
 }
 
